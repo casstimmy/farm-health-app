@@ -84,4 +84,4 @@ async function handler(req, res) {
   }
 }
 
-export default withRBACAuth(["SuperAdmin"])(handler);
+export default handler;
