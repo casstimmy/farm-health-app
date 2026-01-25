@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaSpinner, FaCheckCircle, FaUser, FaEnvelope, FaLock, FaPhone } from "react-icons/fa";
+import { FaSpinner, FaCheckCircle, FaUser, FaEnvelope, FaLock, FaPhone, FaArrowRight } from "react-icons/fa";
 
 export default function Register() {
   const router = useRouter();
@@ -26,6 +26,16 @@ export default function Register() {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
     setError("");
+  };
+
+  const handleKeypad = (value, field) => {
+    if (value === "clear") {
+      setFormData((prev) => ({ ...prev, [field]: "" }));
+    } else if (value === "back") {
+      setFormData((prev) => ({ ...prev, [field]: prev[field].slice(0, -1) }));
+    } else if (formData[field].length < 4) {
+      setFormData((prev) => ({ ...prev, [field]: prev[field] + value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -84,176 +94,184 @@ export default function Register() {
   };
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-emerald-600 via-green-700 to-teal-800 flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+      </div>
+
       {/* Register Card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative w-full max-w-md"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-1">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl mb-4 shadow-lg"
+          >
             <span className="text-3xl">🐑</span>
-            <h1 className="text-xl font-bold text-white">Farm Health</h1>
-          </div>
-          <p className="text-green-100 text-xs">Create your account</p>
+          </motion.div>
+          <h1 className="text-3xl font-bold text-white mb-2">Farm Health</h1>
+          <p className="text-emerald-200 text-sm">Create your account</p>
         </div>
 
-        <AnimatePresence mode="wait">
-          {success ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-8 text-center"
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FaCheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Account Created! 🎉</h3>
-              <p className="text-gray-600 text-sm mb-4">Redirecting to login...</p>
-              <div className="animate-pulse text-green-600 font-semibold text-sm">⏳ Please wait...</div>
-            </motion.div>
-          ) : (
-            <motion.form
-              key="form"
-              onSubmit={handleSubmit}
-              className="p-5 space-y-3"
-            >
-              {/* Name */}
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-                  <FaUser className="text-green-600" size={12} />
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
-                />
-              </div>
+        {/* Main Card */}
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+          {/* Card Content */}
+          <div className="px-6 py-8">
+            <AnimatePresence mode="wait">
+              {success ? (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-8"
+                >
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaCheckCircle className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Account Created! 🎉</h3>
+                  <p className="text-emerald-200 text-sm mb-4">Redirecting to login...</p>
+                  <div className="animate-pulse text-emerald-400 font-semibold text-sm">⏳ Please wait...</div>
+                </motion.div>
+              ) : (
+                <motion.form
+                  key="form"
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                >
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                      <FaUser size={14} /> Full Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="John Doe"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
 
-              {/* Email */}
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-                  <FaEnvelope className="text-green-600" size={12} />
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="john@example.com"
-                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
-                />
-              </div>
+                  {/* Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                      <FaEnvelope size={14} /> Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="john@example.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
 
-              {/* Phone */}
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-                  <FaPhone className="text-green-600" size={12} />
-                  Phone <span className="text-gray-400 text-xs">(Optional)</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="+234 XXX XXX XXXX"
-                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500"
-                />
-              </div>
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                      <FaPhone size={14} /> Phone <span className="text-emerald-400/60 text-xs font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+234 XXX XXX XXXX"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
 
-              {/* PIN Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-                    <FaLock className="text-green-600" size={12} />
-                    PIN <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="pin"
-                    value={formData.pin}
-                    onChange={handleChange}
-                    placeholder="••••"
-                    maxLength="4"
-                    className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 text-center tracking-widest font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-                    <FaLock className="text-green-600" size={12} />
-                    Confirm <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="confirmPin"
-                    value={formData.confirmPin}
-                    onChange={handleChange}
-                    placeholder="••••"
-                    maxLength="4"
-                    className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 text-center tracking-widest font-bold"
-                  />
-                </div>
-              </div>
+                  {/* PIN Inputs */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                        <FaLock size={14} /> PIN
+                      </label>
+                      <input
+                        type="password"
+                        name="pin"
+                        value={formData.pin}
+                        onChange={handleChange}
+                        placeholder="••••"
+                        maxLength="4"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                        <FaLock size={14} /> Confirm
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPin"
+                        value={formData.confirmPin}
+                        onChange={handleChange}
+                        placeholder="••••"
+                        maxLength="4"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
+                      />
+                    </div>
+                  </div>
 
-              <p className="text-xs text-gray-400">💡 PIN must be 4 digits</p>
+                  <p className="text-xs text-emerald-400/60">💡 PIN must be 4 digits</p>
 
-              {/* Error */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-red-50 border-l-4 border-red-500 text-red-700 px-3 py-2 rounded text-xs font-medium"
+                  {/* Error */}
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="bg-red-500/20 border border-red-400/50 rounded-lg px-4 py-2 text-red-300 text-sm font-medium flex items-center gap-2"
+                      >
+                        <span>⚠️</span> {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Submit */}
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg"
                   >
-                    ⚠️ {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    {loading ? (
+                      <>
+                        <FaSpinner className="animate-spin" size={16} />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <span>Create Account</span>
+                        <FaArrowRight size={14} />
+                      </>
+                    )}
+                  </motion.button>
 
-              {/* Submit */}
-              <motion.button
-                type="submit"
-                disabled={loading}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full py-3 rounded-lg font-bold text-white text-sm flex items-center justify-center gap-2 ${
-                  loading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-lg"
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <FaSpinner className="animate-spin" size={14} />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <FaCheckCircle size={14} />
-                    Create Account
-                  </>
-                )}
-              </motion.button>
-
-              {/* Footer */}
-              <p className="text-center text-xs text-gray-500 pt-1">
-                Already have an account?{" "}
-                <Link href="/login" className="text-green-600 font-semibold hover:underline">
-                  Sign in
-                </Link>
-              </p>
-            </motion.form>
-          )}
-        </AnimatePresence>
+                  {/* Footer */}
+                  <p className="text-center text-sm text-emerald-200 pt-2">
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
+                      Sign in
+                    </Link>
+                  </p>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

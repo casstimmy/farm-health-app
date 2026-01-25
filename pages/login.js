@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt, FaCheckCircle } from "react-icons/fa";
+import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt, FaArrowRight } from "react-icons/fa";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Location from "@/models/Location";
@@ -87,170 +87,214 @@ export default function Login({ staffList = [], locations = [] }) {
   };
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+      </div>
+
       {/* Login Card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative w-full max-w-md"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-1">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl mb-4 shadow-lg"
+          >
             <span className="text-3xl">🐑</span>
-            <h1 className="text-xl font-bold text-white">Farm Health</h1>
-          </div>
-          <p className="text-green-100 text-xs">Enter your PIN to continue</p>
+          </motion.div>
+          <h1 className="text-3xl font-bold text-white mb-2">Farm Health</h1>
+          <p className="text-emerald-200 text-sm">Animal Welfare & Operations</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="p-5 space-y-3">
-          {/* User Selection */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-              <FaUser className="text-green-600" size={12} />
-              Select User
-            </label>
-            <select
-              value={selectedUser?.email || ""}
-              onChange={(e) => {
-                const user = staffList.find(u => u.email === e.target.value);
-                setSelectedUser(user || null);
-                setError("");
-              }}
-              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 bg-gray-50 font-medium"
-            >
-              <option value="">Choose user...</option>
-              {staffByRole.SuperAdmin.length > 0 && (
-                <optgroup label="👑 Super Admins">
-                  {staffByRole.SuperAdmin.map((user) => (
-                    <option key={user.email} value={user.email}>{user.name}</option>
+        {/* Main Card */}
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+          {/* Card Content */}
+          <div className="px-6 py-8">
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* Staff Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
+                  <FaUser size={14} /> Select Staff
+                </label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {Object.entries(staffByRole).map(([role, users]) => (
+                    users.length > 0 && (
+                      <div key={role}>
+                        <p className="text-xs text-emerald-400/60 font-semibold px-3 py-1 mb-1">{role}</p>
+                        {users.map((user) => (
+                          <motion.button
+                            key={user.email}
+                            type="button"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setPin("");
+                              setError("");
+                            }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`w-full text-left px-4 py-2.5 rounded-xl transition-all ${
+                              selectedUser?.email === user.email
+                                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                                : "bg-white/5 hover:bg-white/10 text-emerald-100 border border-white/10"
+                            }`}
+                          >
+                            <p className="font-medium text-sm">{user.name}</p>
+                            <p className="text-xs opacity-70">{user.email}</p>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )
                   ))}
-                </optgroup>
-              )}
-              {staffByRole.Manager.length > 0 && (
-                <optgroup label="📋 Managers">
-                  {staffByRole.Manager.map((user) => (
-                    <option key={user.email} value={user.email}>{user.name}</option>
-                  ))}
-                </optgroup>
-              )}
-              {staffByRole.Attendant.length > 0 && (
-                <optgroup label="👤 Attendants">
-                  {staffByRole.Attendant.map((user) => (
-                    <option key={user.email} value={user.email}>{user.name}</option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </div>
-
-          {/* Location Selection */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-              <FaMapMarkerAlt className="text-green-600" size={12} />
-              Location
-            </label>
-            <select
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 bg-gray-50 font-medium"
-            >
-              <option value="">Select location...</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* PIN Display */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
-              <FaLock className="text-green-600" size={12} />
-              4-Digit PIN
-            </label>
-            <div className="flex items-center justify-center gap-2 py-2">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl font-bold transition-all ${
-                    pin.length > i
-                      ? "bg-green-600 text-white shadow-md"
-                      : "bg-gray-100 border-2 border-gray-200"
-                  }`}
-                >
-                  {pin.length > i ? "●" : ""}
                 </div>
-              ))}
-            </div>
+              </div>
+
+              {/* Location Selection */}
+              {selectedUser && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+                    <FaMapMarkerAlt size={14} /> Location
+                  </label>
+                  <select
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 hover:bg-white/10 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc} value={loc} className="bg-slate-900 text-white">
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </motion.div>
+              )}
+
+              {/* PIN Input - Modern Design */}
+              <AnimatePresence>
+                {selectedUser && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <label className="block text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
+                      <FaLock size={14} /> 4-Digit PIN
+                    </label>
+
+                    {/* PIN Display Dots */}
+                    <div className="flex justify-center gap-2 mb-6">
+                      {[0, 1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ scale: pin.length > i ? 1.1 : 1 }}
+                          className={`w-4 h-4 rounded-full border-2 transition-all ${
+                            pin.length > i
+                              ? "bg-emerald-500 border-emerald-400"
+                              : "bg-white/10 border-white/20"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Keypad */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                        <motion.button
+                          key={num}
+                          type="button"
+                          onClick={() => handleKeypad(num)}
+                          whileTap={{ scale: 0.95 }}
+                          className="py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-all"
+                        >
+                          {num}
+                        </motion.button>
+                      ))}
+                      <motion.button
+                        type="button"
+                        onClick={() => handleKeypad("0")}
+                        whileTap={{ scale: 0.95 }}
+                        className="col-span-1 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-all"
+                      >
+                        0
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => handleKeypad("back")}
+                        whileTap={{ scale: 0.95 }}
+                        className="col-span-1 py-3 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold border border-red-400/30 transition-all text-sm"
+                      >
+                        ← Back
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => handleKeypad("clear")}
+                        whileTap={{ scale: 0.95 }}
+                        className="col-span-1 py-3 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 font-semibold border border-yellow-400/30 transition-all text-sm"
+                      >
+                        Clear
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-red-500/20 border border-red-400/50 rounded-lg px-4 py-2 text-red-300 text-sm font-medium flex items-center gap-2"
+                  >
+                    <span>⚠️</span> {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Submit Button */}
+              {selectedUser && (
+                <motion.button
+                  type="submit"
+                  disabled={loading || pin.length !== 4}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <FaSpinner className="animate-spin" size={16} />
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <FaArrowRight size={14} />
+                    </>
+                  )}
+                </motion.button>
+              )}
+
+              {/* Footer */}
+              <p className="text-center text-sm text-emerald-200 pt-2">
+                New user?{" "}
+                <Link href="/register" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
+                  Create account
+                </Link>
+              </p>
+            </form>
           </div>
-
-          {/* Keypad */}
-          <div className="grid grid-cols-3 gap-1.5">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "⌫"].map((key) => (
-              <motion.button
-                key={key}
-                type="button"
-                onClick={() => handleKeypad(key === "C" ? "clear" : key === "⌫" ? "back" : key)}
-                whileTap={{ scale: 0.95 }}
-                className={`h-11 rounded-lg font-bold text-base transition-all ${
-                  key === "C" || key === "⌫"
-                    ? "bg-red-100 text-red-600 hover:bg-red-200"
-                    : "bg-gray-100 text-gray-700 hover:bg-green-100 hover:text-green-700"
-                }`}
-              >
-                {key}
-              </motion.button>
-            ))}
-          </div>
-
-          {/* Error Message */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="bg-red-50 border-l-4 border-red-500 text-red-700 px-3 py-2 rounded text-xs font-medium"
-              >
-                ⚠️ {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Login Button */}
-          <motion.button
-            type="submit"
-            disabled={loading || pin.length !== 4}
-            whileTap={{ scale: 0.98 }}
-            className={`w-full py-3 rounded-lg font-bold text-white text-sm transition-all flex items-center justify-center gap-2 ${
-              loading || pin.length !== 4
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
-            }`}
-          >
-            {loading ? (
-              <>
-                <FaSpinner className="animate-spin" size={14} />
-                Logging in...
-              </>
-            ) : (
-              <>
-                <FaCheckCircle size={14} />
-                Log In
-              </>
-            )}
-          </motion.button>
-
-          {/* Footer */}
-          <p className="text-center text-xs text-gray-500 pt-1">
-            New user?{" "}
-            <Link href="/register" className="text-green-600 font-semibold hover:underline">
-              Register
-            </Link>
-          </p>
-        </form>
+        </div>
       </motion.div>
     </div>
   );
