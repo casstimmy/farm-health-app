@@ -41,9 +41,12 @@ const VaccinationSchema = new mongoose.Schema({
 
 const AnimalSchema = new mongoose.Schema({
   tagId: { type: String, required: true, unique: true },
+  myNotes: String,
   name: String,
   species: String,
   breed: String,
+  origin: String,
+  class: String,
   gender: String,
   dob: Date,
   color: String,
@@ -58,6 +61,16 @@ const AnimalSchema = new mongoose.Schema({
     required: true,
   },
   paddock: String,
+  weight: { type: Number, default: 0 },
+  weightDate: Date,
+  recordedBy: String,
+  images: [
+    {
+      full: { type: String, required: true },
+      thumb: { type: String, required: true },
+      uploadedAt: { type: Date, default: Date.now }
+    }
+  ],
   treatmentHistory: [TreatmentSchema],
   feedingHistory: [FeedingSchema],
   weightHistory: [WeightSchema],

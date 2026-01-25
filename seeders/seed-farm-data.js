@@ -113,7 +113,7 @@ async function seed() {
     const animals = await Animal.insertMany([
       {
         tagId: "BGM001",
-        animalId: "BGM001",
+        myNotes: "Stud male",
         name: "Gentle Kay",
         species: "Goat",
         breed: "Boer",
@@ -123,8 +123,8 @@ async function seed() {
         dob: new Date("2023-05-20"),
         acquisitionType: "Imported",
         acquisitionDate: new Date("2024-10-12"),
-        sireId: null,
-        damId: null,
+        sireId: "",
+        damId: "",
         status: "Alive",
         location: locations[0]._id,
         paddock: "Isolation",
@@ -132,11 +132,12 @@ async function seed() {
         weightDate: new Date(),
         recordedBy: "Azeezat",
         notes: "Good breeding potential",
+        images: [],
         healthRecords: []
       },
       {
         tagId: "BGF001",
-        animalId: "BGF001",
+        myNotes: "Mum of 2",
         name: "Wisdom",
         species: "Goat",
         breed: "Boer",
@@ -147,7 +148,7 @@ async function seed() {
         acquisitionType: "Imported",
         acquisitionDate: new Date("2024-10-13"),
         sireId: "BGM001",
-        damId: null,
+        damId: "",
         status: "Alive",
         location: locations[0]._id,
         paddock: "RP1",
@@ -155,11 +156,12 @@ async function seed() {
         weightDate: new Date(),
         recordedBy: "Azeezat",
         notes: "Mum of 2",
+        images: [],
         healthRecords: []
       },
       {
         tagId: "SGF001",
-        animalId: "SGF001",
+        myNotes: "Sahel breed",
         name: "SGF001",
         species: "Goat",
         breed: "Sahel",
@@ -169,8 +171,8 @@ async function seed() {
         dob: new Date("2024-01-01"),
         acquisitionType: "Local",
         acquisitionDate: new Date("2024-10-12"),
-        sireId: null,
-        damId: null,
+        sireId: "",
+        damId: "",
         status: "Alive",
         location: locations[0]._id,
         paddock: "Main",
@@ -178,6 +180,7 @@ async function seed() {
         weightDate: new Date(),
         recordedBy: "Azeezat",
         notes: "Sahel breed",
+        images: [],
         healthRecords: [
           {
             date: new Date("2024-10-12"),
@@ -231,7 +234,7 @@ async function seed() {
       },
       {
         tagId: "BGF002",
-        animalId: "BGF002",
+        myNotes: "Boer breed",
         name: "BGF002",
         species: "Goat",
         breed: "Boer",
@@ -241,8 +244,8 @@ async function seed() {
         dob: new Date("2024-01-01"),
         acquisitionType: "Local",
         acquisitionDate: new Date("2024-10-12"),
-        sireId: null,
-        damId: null,
+        sireId: "",
+        damId: "",
         status: "Alive",
         location: locations[0]._id,
         paddock: "Main",
@@ -250,6 +253,7 @@ async function seed() {
         weightDate: new Date(),
         recordedBy: "Azeezat",
         notes: "Boer breed",
+        images: [],
         healthRecords: [
           {
             date: new Date("2024-10-23"),
@@ -267,7 +271,7 @@ async function seed() {
       },
       {
         tagId: "BGKM001",
-        animalId: "BGKM001",
+        myNotes: "3 days old",
         name: "KKM",
         species: "Goat",
         breed: "Boer",
@@ -286,11 +290,12 @@ async function seed() {
         weightDate: new Date("2024-11-05"),
         recordedBy: "Azeezat",
         notes: "3 days old",
+        images: [],
         healthRecords: []
       },
       {
         tagId: "BGKF001",
-        animalId: "BGKF001",
+        myNotes: "3 days old",
         name: "KKF",
         species: "Goat",
         breed: "Boer",
@@ -309,11 +314,12 @@ async function seed() {
         weightDate: new Date("2024-11-05"),
         recordedBy: "Azeezat",
         notes: "3 days old",
+        images: [],
         healthRecords: []
       },
       {
         tagId: "BGWM001",
-        animalId: "BGWM001",
+        myNotes: "5 days old",
         name: "WKM",
         species: "Goat",
         breed: "Boer",
@@ -323,8 +329,8 @@ async function seed() {
         dob: new Date("2024-10-31"),
         acquisitionType: "Born",
         acquisitionDate: new Date("2024-10-31"),
-        sireId: null,
-        damId: null,
+        sireId: "",
+        damId: "",
         status: "Alive",
         location: locations[0]._id,
         paddock: "Main",
@@ -332,6 +338,7 @@ async function seed() {
         weightDate: new Date("2024-11-05"),
         recordedBy: "Azeezat",
         notes: "5 days old",
+        images: [],
         healthRecords: []
       }
     ]);
