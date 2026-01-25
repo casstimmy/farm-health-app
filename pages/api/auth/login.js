@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password required" });
+        return res.status(400).json({ error: "Email and password/PIN required" });
       }
 
       const user = await User.findOne({ email });
@@ -20,15 +20,21 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      // Allow 4-digit PIN as demo login OR actual bcrypt password
       let isPasswordValid = false;
-      
-      // Check if password is 4 digits (demo PIN)
+
+      // Check if input is 4-digit PIN
       if (/^\d{4}$/.test(password)) {
-        // For demo, allow any 4-digit PIN
-        isPasswordValid = true;
+        // PIN-based login: compare with stored PIN
+        if (user.pin && user.pin === password) {
+          isPasswordValid = true;
+        } else if (!user.pin) {
+          // For demo mode: allow any 4-digit PIN if no PIN is set
+          isPasswordValid = true;
+        } else {
+          isPasswordValid = false;
+        }
       } else {
-        // Check against bcrypt hashed password
+        // Password-based login: check against bcrypt hashed password
         isPasswordValid = await bcrypt.compare(password, user.password);
       }
 

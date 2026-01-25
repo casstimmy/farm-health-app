@@ -1,31 +1,33 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
-import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "POST") {
     try {
-      const { name, email, password, pin, role } = req.body;
+      const { name, email, password, role } = req.body;
 
       if (!email || !password || !name) {
-        return res.status(400).json({ error: "Name, email, and password required" });
+        return res.status(400).json({ error: "Name, email, and PIN required" });
+      }
+
+      // Validate PIN is 4 digits
+      if (!/^\d{4}$/.test(password)) {
+        return res.status(400).json({ error: "PIN must be exactly 4 digits" });
       }
 
       const existingUser = await User.findOne({ email });
 
       if (existingUser) {
-        return res.status(409).json({ error: "User already exists" });
+        return res.status(409).json({ error: "User with this email already exists" });
       }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
 
       const newUser = new User({
         name,
         email,
-        password: hashedPassword,
-        pin: pin || "",
+        password: "", // Store empty password since we're using PIN
+        pin: password, // Store PIN directly (4 digits)
         role: role || "Attendant"
       });
 

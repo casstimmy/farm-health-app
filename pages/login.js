@@ -355,21 +355,50 @@ export default function Login({ staffList, locations }) {
 }
 
 export async function getServerSideProps() {
-  // Default staff list with demo accounts
-  const defaultStaffList = [
-    { name: "Admin User", email: "admin@farm.com", role: "admin" },
-    { name: "Manager User", email: "manager@farm.com", role: "manager" },
-    { name: "Attendant User", email: "attendant@farm.com", role: "attendant" },
-  ];
+  try {
+    // Fetch users from database
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const usersRes = await fetch(`${baseUrl}/api/users`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).catch(() => null);
 
-  const defaultLocations = ["Default Farm"];
+    const staffList = usersRes && usersRes.ok
+      ? (await usersRes.json()).map((user) => ({
+          name: user.name,
+          email: user.email,
+          role: user.role?.toLowerCase() || "attendant",
+        }))
+      : []; // Empty if API fails
 
-  return {
-    props: {
-      staffList: defaultStaffList,
-      locations: defaultLocations,
-    },
-  };
+    // Fetch locations from database
+    const locationsRes = await fetch(`${baseUrl}/api/locations`, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).catch(() => null);
+
+    const locations = locationsRes && locationsRes.ok
+      ? (await locationsRes.json()).map((loc) => loc.name || loc._id)
+      : ["Default Farm"]; // Fallback
+
+    return {
+      props: {
+        staffList: staffList.length > 0 ? staffList : [],
+        locations: locations.length > 0 ? locations : ["Default Farm"],
+      },
+      revalidate: 60, // Revalidate every 60 seconds
+    };
+  } catch (error) {
+    console.error("Error fetching login data:", error);
+    return {
+      props: {
+        staffList: [],
+        locations: ["Default Farm"],
+      },
+    };
+  }
 }
 
 // Specify layout for this page
