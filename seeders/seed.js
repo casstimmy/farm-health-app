@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -38,36 +37,38 @@ async function seed() {
 
     console.log("Old data cleared.");
 
-    // --- SEED USERS ---
-    const hashedPasswordAdmin = await bcrypt.hash("admin123", 10);
-    const hashedPasswordManager = await bcrypt.hash("manager123", 10);
-    const hashedPasswordAttendant = await bcrypt.hash("attendant123", 10);
-
+    // --- SEED USERS (PIN-only authentication) ---
     const users = [
       { 
         name: "Super Admin", 
         email: "admin@farm.com", 
-        password: hashedPasswordAdmin, 
         pin: "1234",
-        role: "SuperAdmin" 
+        role: "SuperAdmin",
+        phone: "+234-800-000-0001",
+        isActive: true
       },
       { 
         name: "Farm Manager", 
         email: "manager@farm.com", 
-        password: hashedPasswordManager, 
         pin: "5678",
-        role: "Manager" 
+        role: "Manager",
+        phone: "+234-800-000-0002",
+        isActive: true
       },
       { 
         name: "Farm Attendant", 
         email: "attendant@farm.com", 
-        password: hashedPasswordAttendant, 
         pin: "9012",
-        role: "Attendant" 
+        role: "Attendant",
+        phone: "+234-800-000-0003",
+        isActive: true
       }
     ];
     await User.insertMany(users);
-    console.log("Users seeded.");
+    console.log("Users seeded (PIN-only system).");
+    console.log("  - Admin: admin@farm.com / PIN: 1234");
+    console.log("  - Manager: manager@farm.com / PIN: 5678");
+    console.log("  - Attendant: attendant@farm.com / PIN: 9012");
 
     // --- SEED LOCATIONS ---
     const locations = [

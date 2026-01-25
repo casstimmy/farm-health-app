@@ -158,6 +158,8 @@ export default function Sidebar() {
         { href: "/manage/animals", label: "Animal List", icon: <FaLeaf className="w-4 h-4" /> },
         { href: "/manage/health-records", label: "Health Records", icon: <FaStethoscope className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/treatments", label: "Treatments", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
+        { href: "/manage/breeding", label: "💕 Breeding", icon: null, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
+        { href: "/manage/mortality", label: "📊 Mortality", icon: null, roles: ['SuperAdmin', 'Manager'] },
       ],
     },
     {

@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
-import bcrypt from "bcryptjs";
 import { generateToken } from "@/utils/auth";
 
 export default async function handler(req, res) {
@@ -8,10 +7,15 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      const { email, password } = req.body;
+      const { email, pin } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ error: "Email and password/PIN required" });
+      if (!email || !pin) {
+        return res.status(400).json({ error: "Email and PIN are required" });
+      }
+
+      // Validate PIN format
+      if (!/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ error: "PIN must be exactly 4 digits" });
       }
 
       const user = await User.findOne({ email });
@@ -20,27 +24,19 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      let isPasswordValid = false;
-
-      // Check if input is 4-digit PIN
-      if (/^\d{4}$/.test(password)) {
-        // PIN-based login: compare with stored PIN
-        if (user.pin && user.pin === password) {
-          isPasswordValid = true;
-        } else if (!user.pin) {
-          // For demo mode: allow any 4-digit PIN if no PIN is set
-          isPasswordValid = true;
-        } else {
-          isPasswordValid = false;
-        }
-      } else {
-        // Password-based login: check against bcrypt hashed password
-        isPasswordValid = await bcrypt.compare(password, user.password);
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(401).json({ error: "Account is deactivated. Contact administrator." });
       }
 
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Invalid credentials" });
+      // Verify PIN
+      if (user.pin !== pin) {
+        return res.status(401).json({ error: "Invalid PIN" });
       }
+
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
 
       const token = generateToken(user);
 
@@ -51,11 +47,14 @@ export default async function handler(req, res) {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          avatar: user.avatar || "",
+          phone: user.phone || ""
         }
       });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Server error. Please try again." });
     }
   } else {
     res.status(405).json({ error: "Method not allowed" });

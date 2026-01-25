@@ -6,29 +6,31 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, pin, role, phone } = req.body;
 
-      if (!email || !password || !name) {
-        return res.status(400).json({ error: "Name, email, and PIN required" });
+      if (!email || !pin || !name) {
+        return res.status(400).json({ error: "Name, email, and PIN are required" });
       }
 
       // Validate PIN is 4 digits
-      if (!/^\d{4}$/.test(password)) {
+      if (!/^\d{4}$/.test(pin)) {
         return res.status(400).json({ error: "PIN must be exactly 4 digits" });
       }
 
+      // Check for existing user
       const existingUser = await User.findOne({ email });
-
       if (existingUser) {
         return res.status(409).json({ error: "User with this email already exists" });
       }
 
+      // Create new user with PIN only (no password)
       const newUser = new User({
-        name,
-        email,
-        password: "", // Store empty password since we're using PIN
-        pin: password, // Store PIN directly (4 digits)
-        role: role || "Attendant"
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        pin: pin,
+        role: role || "Attendant",
+        phone: phone || "",
+        isActive: true
       });
 
       await newUser.save();
@@ -43,7 +45,11 @@ export default async function handler(req, res) {
         }
       });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error("Registration error:", error);
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Server error. Please try again." });
     }
   } else {
     res.status(405).json({ error: "Method not allowed" });

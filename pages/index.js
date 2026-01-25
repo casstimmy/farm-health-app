@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { FaSpinner } from "react-icons/fa";
+import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine } from "react-icons/fa";
 import { Bar } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import {
@@ -220,6 +221,19 @@ export default function Home() {
         </div>
       ) : (
         <>
+          {/* Quick Actions */}
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <QuickActionCard href="/manage/animals" icon={<FaPlus />} label="Add Animal" color="from-blue-500 to-blue-600" />
+              <QuickActionCard href="/manage/breeding" icon={<FaHeart />} label="Breeding" color="from-pink-500 to-rose-600" />
+              <QuickActionCard href="/manage/weight" icon={<FaWeight />} label="Record Weight" color="from-purple-500 to-purple-600" />
+              <QuickActionCard href="/manage/treatments" icon={<FaPills />} label="Treatment" color="from-teal-500 to-teal-600" />
+              <QuickActionCard href="/manage/inventory" icon={<FaBoxOpen />} label="Inventory" color="from-orange-500 to-orange-600" />
+              <QuickActionCard href="/manage/reports" icon={<FaChartLine />} label="Reports" color="from-green-500 to-green-600" />
+            </div>
+          </div>
+
           {/* Period Selector */}
           <div className="mb-8 flex gap-4">
             {['today', 'week', 'month'].map((p) => (
@@ -401,6 +415,23 @@ function ListCard({ title, items }) {
         )}
       </ul>
     </motion.div>
+  );
+}
+
+function QuickActionCard({ href, icon, label, color }) {
+  return (
+    <Link href={href}>
+      <motion.div
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        className={`bg-gradient-to-r ${color} text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer`}
+      >
+        <div className="flex flex-col items-center text-center gap-2">
+          <span className="text-2xl">{icon}</span>
+          <span className="text-sm font-bold">{label}</span>
+        </div>
+      </motion.div>
+    </Link>
   );
 }
 

@@ -23,11 +23,11 @@ export default function StatsSummary({ stats = [] }) {
           } p-6 hover:shadow-xl transition-all`}
         >
           <div className="flex items-start justify-between">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                 {stat.label}
               </p>
-              <p className={`text-3xl font-black mt-3 ${stat.textColor || "text-gray-900"}`}>
+              <p className={`${stat.isText ? "text-lg truncate" : "text-3xl"} font-black mt-3 ${stat.textColor || "text-gray-900"}`}>
                 {stat.value}
               </p>
               {stat.subtitle && (
@@ -35,7 +35,7 @@ export default function StatsSummary({ stats = [] }) {
               )}
             </div>
             {stat.icon && (
-              <span className="text-3xl ml-2">{stat.icon}</span>
+              <span className="text-3xl ml-2 flex-shrink-0">{stat.icon}</span>
             )}
           </div>
         </motion.div>

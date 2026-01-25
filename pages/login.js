@@ -1,40 +1,31 @@
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { motion } from "framer-motion";
-import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt, FaLeaf, FaCheckCircle, FaShieldAlt, FaChartLine } from "react-icons/fa";
 
-export default function Login({ staffList, locations }) {
-  const [name, setName] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
+export default function Login({ staffList = [], locations = [] }) {
+  const [selectedUser, setSelectedUser] = useState(null);
   const [location, setLocation] = useState(locations?.[0] || "");
-  const [availableLocations, setAvailableLocations] = useState(locations || []);
-  const [showAllLocations, setShowAllLocations] = useState(false);
-  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Filter and organize users by role
+  // Group users by role
   const staffByRole = useMemo(() => {
-    console.log("📊 Staff List from props:", staffList);
     return {
-      superadmin: staffList.filter((s) => s.role === "superadmin"),
-      admin: staffList.filter((s) => s.role === "admin"),
-      manager: staffList.filter((s) => s.role === "manager"),
-      staff: staffList.filter((s) => s.role === "staff"),
-      attendant: staffList.filter((s) => s.role === "attendant"),
+      SuperAdmin: staffList.filter((s) => s.role?.toLowerCase() === "superadmin"),
+      Manager: staffList.filter((s) => s.role?.toLowerCase() === "manager"),
+      Attendant: staffList.filter((s) => s.role?.toLowerCase() === "attendant"),
     };
   }, [staffList]);
-
-  const selectedUser = staffList.find((u) => u.name === name);
-  const isAdminSelected = selectedUser?.role === "admin";
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!name) {
+    if (!selectedUser) {
       setError("Please select a user.");
       return;
     }
@@ -44,7 +35,7 @@ export default function Login({ staffList, locations }) {
       return;
     }
 
-    if (password.length !== 4) {
+    if (pin.length !== 4) {
       setError("PIN must be 4 digits.");
       return;
     }
@@ -52,21 +43,12 @@ export default function Login({ staffList, locations }) {
     setLoading(true);
 
     try {
-      const selectedUser = staffList.find((u) => u.name === name);
-      
-      if (!selectedUser?.email) {
-        setError("User email not found. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Login with actual email from database
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: selectedUser.email,
-          password: password,
+          pin: pin,
         }),
       });
 
@@ -74,7 +56,7 @@ export default function Login({ staffList, locations }) {
 
       if (!res.ok) {
         setError(data.error || "Login failed. Invalid credentials.");
-        setPassword("");
+        setPin("");
         setLoading(false);
         return;
       }
@@ -89,7 +71,7 @@ export default function Login({ staffList, locations }) {
       router.push("/");
     } catch (err) {
       setError("Login failed. Please try again.");
-      setPassword("");
+      setPin("");
     } finally {
       setLoading(false);
     }
@@ -97,269 +79,294 @@ export default function Login({ staffList, locations }) {
 
   const handleKeypad = (value) => {
     if (value === "clear") {
-      setPassword("");
+      setPin("");
     } else if (value === "back") {
-      setPassword((prev) => prev.slice(0, -1));
-    } else if (password.length < 4) {
-      setPassword((prev) => prev + value);
+      setPin((prev) => prev.slice(0, -1));
+    } else if (pin.length < 4) {
+      setPin((prev) => prev + value);
     }
   };
 
+  const features = [
+    { icon: <FaLeaf className="w-5 h-5" />, text: "Complete Livestock Management" },
+    { icon: <FaShieldAlt className="w-5 h-5" />, text: "Secure PIN-Based Access" },
+    { icon: <FaChartLine className="w-5 h-5" />, text: "Real-time Analytics & Reports" },
+  ];
+
   return (
-    <div className="min-h-[50vh] w-screen bg-gradient-to-br from-green-50 via-emerald-50 to-cyan-50 flex items-center justify-center overflow-hidden">
-      {/* Full Screen Container */}
+    <div className="h-screen w-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex overflow-hidden">
+      {/* Left Panel - Branding (Hidden on mobile) */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full flex items-center justify-center"
-        style={{ minHeight: "50vh" }}
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6 }}
+        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 flex-col justify-between p-10 relative overflow-hidden"
       >
-        {/* Left Section - Hero (Hidden on Mobile) */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="hidden lg:flex flex-col justify-center w-1/2 px-12"
-        >
-          <div className="mb-4 inline-block">
-            <span className="text-6xl">🐑</span>
-          </div>
-          <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-            Farm Health <span className="text-green-600">System</span>
-          </h1>
-          <p className="text-xl text-gray-700 mb-8 leading-relaxed">
-            Complete farm management system for livestock health records, inventory tracking, and seamless operations management.
-          </p>
-          <div className="flex flex-col gap-4">
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl w-fit"
-            >
-              ➕ Create New Account
-            </Link>
-            <a
-              href="#features"
-              className="inline-flex items-center justify-center gap-2 bg-white text-green-600 font-bold px-8 py-4 rounded-xl border-2 border-green-200 hover:border-green-400 transition-all duration-200 w-fit"
-            >
-              Learn More
-            </a>
-          </div>
-        </motion.div>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-60 h-60 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-white rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
 
-        {/* Right Section - Login Form (Centered on Mobile) */}
-        <motion.div
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full lg:w-1/2 flex items-center justify-center px-4 py-6"
-        >
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-[calc(100vh-3rem)] overflow-y-auto">
-            <div className="p-6 md:p-10">
-              {/* Logo */}
+        {/* Logo & Title */}
+        <div className="relative z-10">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: "spring" }}
+            className="flex items-center gap-4 mb-8"
+          >
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <span className="text-4xl">🐑</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Farm Health</h1>
+              <p className="text-green-200 text-sm font-medium">Management System</p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Main Content */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-4xl font-bold text-white mb-6 leading-tight"
+          >
+            Manage Your Farm<br />
+            <span className="text-green-200">With Confidence</span>
+          </motion.h2>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-green-100 text-lg mb-10 max-w-md"
+          >
+            Track livestock health, manage inventory, and streamline operations all in one secure platform.
+          </motion.p>
+
+          {/* Feature List */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="space-y-4"
+          >
+            {features.map((feature, idx) => (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.4 }}
-                className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl mx-auto mb-3"
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.7 + idx * 0.1 }}
+                className="flex items-center gap-4 text-white"
               >
-                <span className="text-xl">🐑</span>
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  {feature.icon}
+                </div>
+                <span className="font-medium">{feature.text}</span>
               </motion.div>
+            ))}
+          </motion.div>
+        </div>
 
-              <h2 className="text-xl font-bold text-center text-gray-900 mb-1">
-                Welcome Back
-              </h2>
-              <p className="text-center text-xs text-gray-600 mb-4 font-medium">
-                Access your farm management system
-              </p>
+        {/* Footer */}
+        <div className="relative z-10">
+          <p className="text-green-200 text-sm">© 2025 Farm Health System. All rights reserved.</p>
+        </div>
+      </motion.div>
 
-              <form onSubmit={handleLogin} className="space-y-3">
-                {/* User Dropdown */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
+      {/* Right Panel - Login Form */}
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-10"
+      >
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="lg:hidden flex items-center justify-center gap-3 mb-6"
+          >
+            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">🐑</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Farm Health</h1>
+              <p className="text-gray-500 text-xs">Management System</p>
+            </div>
+          </motion.div>
+
+          {/* Login Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5 text-center">
+              <h2 className="text-xl font-bold text-white">Welcome Back</h2>
+              <p className="text-green-100 text-sm mt-1">Enter your PIN to continue</p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="p-6 space-y-4">
+              {/* User Selection */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <FaUser className="text-green-600" />
+                  Select User
+                </label>
+                <select
+                  value={selectedUser?.email || ""}
+                  onChange={(e) => {
+                    const user = staffList.find(u => u.email === e.target.value);
+                    setSelectedUser(user || null);
+                    setError("");
+                  }}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all bg-gray-50 font-medium text-gray-700"
                 >
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <FaUser className="text-green-600" size={13} />
-                    Select User
-                  </label>
-                  <select
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-200 transition-all bg-white font-medium text-xs"
-                  >
-                  <option value="" disabled>
-                    Choose a user...
-                  </option>
-                  {staffByRole.superadmin.length > 0 && (
-                    <optgroup label="👑 Super Administrators">
-                      {staffByRole.superadmin.map((user, idx) => (
-                        <option key={`superadmin-${idx}`} value={user.name}>
-                          {user.name}
-                        </option>
+                  <option value="">Choose a user...</option>
+                  {staffByRole.SuperAdmin.length > 0 && (
+                    <optgroup label="👑 Super Admins">
+                      {staffByRole.SuperAdmin.map((user) => (
+                        <option key={user.email} value={user.email}>{user.name}</option>
                       ))}
                     </optgroup>
                   )}
-                  {staffByRole.admin.length > 0 && (
-                    <optgroup label="👑 Administrators">
-                      {staffByRole.admin.map((user, idx) => (
-                        <option key={`admin-${idx}`} value={user.name}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {staffByRole.manager.length > 0 && (
+                  {staffByRole.Manager.length > 0 && (
                     <optgroup label="📋 Managers">
-                      {staffByRole.manager.map((user, idx) => (
-                        <option key={`manager-${idx}`} value={user.name}>
-                          {user.name}
-                        </option>
+                      {staffByRole.Manager.map((user) => (
+                        <option key={user.email} value={user.email}>{user.name}</option>
                       ))}
                     </optgroup>
                   )}
-                  {staffByRole.attendant.length > 0 && (
+                  {staffByRole.Attendant.length > 0 && (
                     <optgroup label="👤 Attendants">
-                      {staffByRole.attendant.map((user, idx) => (
-                        <option key={`attendant-${idx}`} value={user.name}>
-                          {user.name}
-                        </option>
+                      {staffByRole.Attendant.map((user) => (
+                        <option key={user.email} value={user.email}>{user.name}</option>
                       ))}
                     </optgroup>
                   )}
                 </select>
-                </motion.div>
+              </div>
 
-                {/* Location Dropdown */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55 }}
+              {/* Location Selection */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <FaMapMarkerAlt className="text-green-600" />
+                  Farm Location
+                </label>
+                <select
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all bg-gray-50 font-medium text-gray-700"
                 >
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <FaMapMarkerAlt className="text-green-600" size={13} />
-                    Farm Location
-                  </label>
-                  <select
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-1.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-200 transition-all bg-white font-medium text-xs"
-                  >
                   <option value="">Select Location</option>
-                  {availableLocations && availableLocations.length > 0 ? (
-                    availableLocations.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>No locations available</option>
-                  )}
+                  {locations.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
                 </select>
-              </motion.div>
+              </div>
 
               {/* PIN Display */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <FaLock className="text-green-600" size={13} />
-                  Password (4-Digit PIN)
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <FaLock className="text-green-600" />
+                  4-Digit PIN
                 </label>
-                <div className="w-full h-16 px-3 py-2 border-2 border-gray-300 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 text-3xl tracking-widest font-bold flex items-center justify-center text-green-600">
-                  {"●".repeat(password.length)}
+                <div className="w-full h-14 px-4 border-2 border-gray-200 rounded-xl bg-gray-50 flex items-center justify-center gap-3">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-2xl font-bold transition-all ${
+                        pin.length > i
+                          ? "bg-green-600 text-white"
+                          : "bg-gray-200 text-gray-400"
+                      }`}
+                    >
+                      {pin.length > i ? "●" : ""}
+                    </div>
+                  ))}
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Numeric Keypad */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.65 }}
-                className="grid grid-cols-3 gap-1"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "←"].map((key, idx) => (
+              {/* Keypad */}
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "⌫"].map((key) => (
                   <motion.button
                     key={key}
                     type="button"
-                    onClick={() =>
-                      handleKeypad(
-                        key === "C" ? "clear" : key === "←" ? "back" : key
-                      )
-                    }
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                    className={`py-3 rounded-lg font-bold text-base transition-all active:ring-2 active:ring-offset-1 ${
-                      key === "C" || key === "←"
-                        ? "bg-red-500 hover:bg-red-600 active:bg-red-700 text-white shadow-lg"
-                        : "bg-green-100 hover:bg-green-200 active:bg-green-300 text-green-800 font-semibold shadow-md"
+                    onClick={() => handleKeypad(key === "C" ? "clear" : key === "⌫" ? "back" : key)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`h-12 rounded-xl font-bold text-lg transition-all ${
+                      key === "C" || key === "⌫"
+                        ? "bg-red-100 hover:bg-red-200 text-red-600"
+                        : "bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-700"
                     }`}
                   >
                     {key}
                   </motion.button>
                 ))}
-              </motion.div>
+              </div>
 
               {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-50 border-l-4 border-red-500 text-red-700 px-3 py-2 rounded-lg text-xs font-medium"
-                >
-                  ⚠️ {error}
-                </motion.div>
-              )}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm font-medium"
+                  >
+                    ⚠️ {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Login Button */}
               <motion.button
                 type="submit"
-                disabled={loading}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.94 }}
-                className={`w-full py-4 rounded-lg font-bold text-white text-base transition-all shadow-lg flex items-center justify-center gap-2 active:ring-2 active:ring-offset-2 active:ring-green-300 ${
-                  loading
+                disabled={loading || pin.length !== 4}
+                whileHover={{ scale: loading ? 1 : 1.02 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+                className={`w-full py-4 rounded-xl font-bold text-white text-lg transition-all shadow-lg flex items-center justify-center gap-2 ${
+                  loading || pin.length !== 4
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-xl active:from-green-700 active:to-emerald-700"
+                    : "bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-xl hover:from-green-700 hover:to-emerald-700"
                 }`}
               >
                 {loading ? (
                   <>
-                    <FaSpinner className="animate-spin" size={12} />
+                    <FaSpinner className="animate-spin" />
                     Logging in...
                   </>
                 ) : (
-                  "✓ Log In"
+                  <>
+                    <FaCheckCircle />
+                    Log In
+                  </>
                 )}
               </motion.button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-white text-gray-500 font-medium text-xs">or</span>
-              </div>
-            </div>
-
             {/* Footer */}
-            <p className="text-center text-xs text-gray-600 font-medium">
-              Don't have an account?{" "}
-              <Link href="/register" className="text-green-600 font-bold hover:text-green-700 hover:underline transition">
-                Register here
-              </Link>
-            </p>
+            <div className="px-6 pb-6 text-center">
+              <p className="text-gray-600 text-sm">
+                Don't have an account?{" "}
+                <Link href="/register" className="text-green-600 font-bold hover:text-green-700 hover:underline">
+                  Register here
+                </Link>
+              </p>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </motion.div>
     </div>
   );
@@ -367,49 +374,37 @@ export default function Login({ staffList, locations }) {
 
 export async function getServerSideProps() {
   try {
-    // Fetch users from database
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     
     let staffList = [];
     let locations = ["Default Farm"];
 
     try {
-      const usersRes = await fetch(`${baseUrl}/api/users`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
+      const usersRes = await fetch(`${baseUrl}/api/users`);
       if (usersRes && usersRes.ok) {
         const usersData = await usersRes.json();
         staffList = Array.isArray(usersData)
           ? usersData.map((user) => ({
               name: user.name,
               email: user.email,
-              role: user.role?.toLowerCase() || "attendant",
+              role: user.role || "Attendant",
             }))
           : [];
       }
-    } catch (userError) {
-      console.error("Error fetching users:", userError);
+    } catch (e) {
+      console.error("Error fetching users:", e);
     }
 
-    // Fetch locations from database
     try {
-      const locationsRes = await fetch(`${baseUrl}/api/locations`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
+      const locationsRes = await fetch(`${baseUrl}/api/locations`);
       if (locationsRes && locationsRes.ok) {
         const locData = await locationsRes.json();
         locations = Array.isArray(locData)
           ? locData.map((loc) => loc.name || loc._id)
           : ["Default Farm"];
       }
-    } catch (locError) {
-      console.error("Error fetching locations:", locError);
+    } catch (e) {
+      console.error("Error fetching locations:", e);
     }
 
     return {
@@ -420,15 +415,8 @@ export async function getServerSideProps() {
     };
   } catch (error) {
     console.error("Error in getServerSideProps:", error);
-    return {
-      props: {
-        staffList: [],
-        locations: ["Default Farm"],
-      },
-    };
+    return { props: { staffList: [], locations: ["Default Farm"] } };
   }
 }
 
-// Specify layout for this page
-Login.layoutType = 'auth';
-Login.layoutProps = { title: 'Login' };
+Login.layoutType = 'empty';
