@@ -388,7 +388,6 @@ export async function getServerSideProps() {
         staffList: staffList.length > 0 ? staffList : [],
         locations: locations.length > 0 ? locations : ["Default Farm"],
       },
-      revalidate: 60, // Revalidate every 60 seconds
     };
   } catch (error) {
     console.error("Error fetching login data:", error);
