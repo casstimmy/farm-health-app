@@ -17,7 +17,9 @@ export default function Login({ staffList, locations }) {
 
   // Filter and organize users by role
   const staffByRole = useMemo(() => {
+    console.log("📊 Staff List from props:", staffList);
     return {
+      superadmin: staffList.filter((s) => s.role === "superadmin"),
       admin: staffList.filter((s) => s.role === "admin"),
       manager: staffList.filter((s) => s.role === "manager"),
       staff: staffList.filter((s) => s.role === "staff"),
@@ -190,6 +192,15 @@ export default function Login({ staffList, locations }) {
                   <option value="" disabled>
                     Choose a user...
                   </option>
+                  {staffByRole.superadmin.length > 0 && (
+                    <optgroup label="👑 Super Administrators">
+                      {staffByRole.superadmin.map((user, idx) => (
+                        <option key={`superadmin-${idx}`} value={user.name}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                   {staffByRole.admin.length > 0 && (
                     <optgroup label="👑 Administrators">
                       {staffByRole.admin.map((user, idx) => (
@@ -358,30 +369,48 @@ export async function getServerSideProps() {
   try {
     // Fetch users from database
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const usersRes = await fetch(`${baseUrl}/api/users`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).catch(() => null);
+    
+    let staffList = [];
+    let locations = ["Default Farm"];
 
-    const staffList = usersRes && usersRes.ok
-      ? (await usersRes.json()).map((user) => ({
-          name: user.name,
-          email: user.email,
-          role: user.role?.toLowerCase() || "attendant",
-        }))
-      : []; // Empty if API fails
+    try {
+      const usersRes = await fetch(`${baseUrl}/api/users`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (usersRes && usersRes.ok) {
+        const usersData = await usersRes.json();
+        staffList = Array.isArray(usersData)
+          ? usersData.map((user) => ({
+              name: user.name,
+              email: user.email,
+              role: user.role?.toLowerCase() || "attendant",
+            }))
+          : [];
+      }
+    } catch (userError) {
+      console.error("Error fetching users:", userError);
+    }
 
     // Fetch locations from database
-    const locationsRes = await fetch(`${baseUrl}/api/locations`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).catch(() => null);
+    try {
+      const locationsRes = await fetch(`${baseUrl}/api/locations`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    const locations = locationsRes && locationsRes.ok
-      ? (await locationsRes.json()).map((loc) => loc.name || loc._id)
-      : ["Default Farm"]; // Fallback
+      if (locationsRes && locationsRes.ok) {
+        const locData = await locationsRes.json();
+        locations = Array.isArray(locData)
+          ? locData.map((loc) => loc.name || loc._id)
+          : ["Default Farm"];
+      }
+    } catch (locError) {
+      console.error("Error fetching locations:", locError);
+    }
 
     return {
       props: {
@@ -390,7 +419,7 @@ export async function getServerSideProps() {
       },
     };
   } catch (error) {
-    console.error("Error fetching login data:", error);
+    console.error("Error in getServerSideProps:", error);
     return {
       props: {
         staffList: [],

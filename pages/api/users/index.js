@@ -1,13 +1,12 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
-import { withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
     try {
-      const users = await User.find().select("-password").sort({ createdAt: -1 });
+      const users = await User.find().select("-password -pin").sort({ createdAt: -1 });
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ error: error.message });
