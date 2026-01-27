@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useRouter } from "next/router";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
+import Loader from "../Loader";
 
 export default function AddAnimalForm({ onSuccess }) {
   const router = useRouter();
@@ -10,8 +12,8 @@ export default function AddAnimalForm({ onSuccess }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState([]);
-  const [imageFiles, setImageFiles] = useState([]);
+  const [images, setImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(false);
   
   const [formData, setFormData] = useState({
     tagId: "",
@@ -72,75 +74,35 @@ export default function AddAnimalForm({ onSuccess }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files);
-    setImageFiles(files);
-    const previews = [];
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        previews.push(reader.result);
-        if (previews.length === files.length) {
-          setImagePreview(previews);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+  const handleImageSelect = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setLoadingImages(true);
+    const formData = new FormData();
+    for (const f of files) formData.append("file", f);
+    // Show temp previews
+    const previews = Array.from(files).map((f) => ({
+      full: URL.createObjectURL(f),
+      thumb: URL.createObjectURL(f),
+      isTemp: true,
+    }));
+    setImages((prev) => [...prev, ...previews]);
+    try {
+      const res = await axios.post("/api/upload", formData);
+      const uploaded = res.data?.links || [];
+      setImages((prev) => [
+        ...prev.filter((img) => !img.isTemp),
+        ...uploaded,
+      ]);
+      setFormData((prev) => ({ ...prev, images: [...prev.images, ...uploaded] }));
+    } catch {
+      setImages((prev) => prev.filter((img) => !img.isTemp));
+    } finally {
+      setLoadingImages(false);
+    }
   };
 
-  const uploadImage = async () => {
-    if (!imageFiles.length) {
-      setError("Please select image(s) first");
-      return;
-    }
-    setUploadingImage(true);
-    setError("");
-    try {
-      const token = localStorage.getItem("token");
-      const uploadedImages = [];
-      for (const file of imageFiles) {
-        const reader = new FileReader();
-        const fileReadPromise = new Promise((resolve, reject) => {
-          reader.onload = async () => {
-            try {
-              const res = await fetch("/api/upload", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ file: reader.result })
-              });
-              const data = await res.json();
-              if (!res.ok) {
-                reject(data.error || "Failed to upload image");
-                return;
-              }
-              uploadedImages.push({ full: data.full, thumb: data.thumb });
-              resolve();
-            } catch (err) {
-              reject(err.message || "Error uploading image");
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        await fileReadPromise;
-      }
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...uploadedImages]
-      }));
-      setImagePreview([]);
-      setImageFiles([]);
-      setSuccess(`✓ ${uploadedImages.length} image(s) uploaded successfully!`);
-      setTimeout(() => setSuccess("") , 2000);
-      setUploadingImage(false);
-    } catch (err) {
-      setError(err.message || "Error uploading image");
-      setUploadingImage(false);
-    }
-  };
+  // No uploadImage function needed, handled in handleImageSelect
 
   const removeImage = (index) => {
     setFormData(prev => ({
@@ -560,57 +522,54 @@ export default function AddAnimalForm({ onSuccess }) {
 
         {/* Image Preview and Upload */}
         <div className="flex gap-4 mb-4">
-          <div className="flex-1">
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-indigo-300 rounded-lg p-6 cursor-pointer hover:bg-indigo-100 transition-all">
-              <FaCamera className="text-indigo-600 text-3xl mb-2" />
-              <span className="text-sm font-semibold text-indigo-700">Click to select images</span>
-              <span className="text-xs text-indigo-600">PNG, JPG, GIF up to 5MB each</span>
+          <div className="flex gap-2 md:gap-3 flex-wrap">
+            <label className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center border-2 border-dashed rounded-md cursor-pointer bg-gray-50 text-gray-400 hover:bg-gray-100 text-xs md:text-sm text-center p-1">
+              + Upload
               <input
                 type="file"
-                accept="image/*"
                 multiple
+                accept="image/*"
                 onChange={handleImageSelect}
                 className="hidden"
               />
             </label>
-          </div>
 
-          {imagePreview && imagePreview.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {imagePreview.map((src, idx) => (
-                <div key={idx} className="relative">
-                  <img
-                    src={src}
-                    alt={`Preview ${idx + 1}`}
-                    className="w-24 h-24 object-cover rounded-lg border-2 border-indigo-300"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+            {images.map((img, i) => (
+              <div
+                key={i}
+                className="relative w-24 h-24 md:w-28 md:h-28 rounded-md overflow-hidden border"
+              >
+                <img
+                  src={img.thumb || img.full}
+                  alt="Animal"
+                  className="object-cover w-full h-full"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
+                  onClick={() => {
+                    setImages(images.filter((_, idx) => idx !== i));
+                    setFormData((prev) => ({
+                      ...prev,
+                      images: prev.images.filter((_, idx) => idx !== i),
+                    }));
+                  }}
+                >
+                  <FaTimes size={12} />
+                </button>
+              </div>
+            ))}
+
+            {loadingImages && (
+              <div className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center">
+                <Loader />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Upload Button */}
-        {imageFiles.length > 0 && (
-          <button
-            type="button"
-            onClick={uploadImage}
-            disabled={uploadingImage}
-            className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg disabled:opacity-60 flex items-center justify-center gap-2 mb-4"
-          >
-            {uploadingImage ? (
-              <>
-                <FaSpinner className="animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <FaCamera />
-                Upload {imageFiles.length > 1 ? `(${imageFiles.length}) Images` : "Image"}
-              </>
-            )}
-          </button>
-        )}
+        {/* No upload button needed, handled automatically */}
 
         {/* Uploaded Images */}
         {formData.images.length > 0 && (
