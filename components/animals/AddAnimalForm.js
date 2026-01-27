@@ -10,8 +10,8 @@ export default function AddAnimalForm({ onSuccess }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   
   const [formData, setFormData] = useState({
     tagId: "",
@@ -73,71 +73,69 @@ export default function AddAnimalForm({ onSuccess }) {
   };
 
   const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
+    const files = Array.from(e.target.files);
+    setImageFiles(files);
+    const previews = [];
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        previews.push(reader.result);
+        if (previews.length === files.length) {
+          setImagePreview(previews);
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
 
   const uploadImage = async () => {
-    if (!imageFile) {
-      setError("Please select an image first");
+    if (!imageFiles.length) {
+      setError("Please select image(s) first");
       return;
     }
-
+    setUploadingImage(true);
+    setError("");
     try {
-      setUploadingImage(true);
-      setError("");
-      
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const token = localStorage.getItem("token");
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              file: reader.result
-            })
-          });
-
-          const data = await res.json();
-          
-          if (!res.ok) {
-            setError(data.error || "Failed to upload image");
-            setUploadingImage(false);
-            return;
-          }
-
-          // Add image to form data
-          setFormData(prev => ({
-            ...prev,
-            images: [...prev.images, {
-              full: data.full,
-              thumb: data.thumb
-            }]
-          }));
-
-          setImagePreview(null);
-          setImageFile(null);
-          setSuccess("✓ Image uploaded successfully!");
-          setTimeout(() => setSuccess(""), 2000);
-          setUploadingImage(false);
-        } catch (err) {
-          setError(err.message || "Error uploading image");
-          setUploadingImage(false);
-        }
-      };
-      reader.readAsDataURL(imageFile);
+      const token = localStorage.getItem("token");
+      const uploadedImages = [];
+      for (const file of imageFiles) {
+        const reader = new FileReader();
+        const fileReadPromise = new Promise((resolve, reject) => {
+          reader.onload = async () => {
+            try {
+              const res = await fetch("/api/upload", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ file: reader.result })
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                reject(data.error || "Failed to upload image");
+                return;
+              }
+              uploadedImages.push({ full: data.full, thumb: data.thumb });
+              resolve();
+            } catch (err) {
+              reject(err.message || "Error uploading image");
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        await fileReadPromise;
+      }
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...uploadedImages]
+      }));
+      setImagePreview([]);
+      setImageFiles([]);
+      setSuccess(`✓ ${uploadedImages.length} image(s) uploaded successfully!`);
+      setTimeout(() => setSuccess("");
+      setUploadingImage(false);
     } catch (err) {
       setError(err.message || "Error uploading image");
       setUploadingImage(false);
@@ -565,30 +563,35 @@ export default function AddAnimalForm({ onSuccess }) {
           <div className="flex-1">
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-indigo-300 rounded-lg p-6 cursor-pointer hover:bg-indigo-100 transition-all">
               <FaCamera className="text-indigo-600 text-3xl mb-2" />
-              <span className="text-sm font-semibold text-indigo-700">Click to select image</span>
-              <span className="text-xs text-indigo-600">PNG, JPG, GIF up to 5MB</span>
+              <span className="text-sm font-semibold text-indigo-700">Click to select images</span>
+              <span className="text-xs text-indigo-600">PNG, JPG, GIF up to 5MB each</span>
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageSelect}
                 className="hidden"
               />
             </label>
           </div>
 
-          {imagePreview && (
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-32 h-32 object-cover rounded-lg border-2 border-indigo-300"
-              />
+          {imagePreview && imagePreview.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {imagePreview.map((src, idx) => (
+                <div key={idx} className="relative">
+                  <img
+                    src={src}
+                    alt={`Preview ${idx + 1}`}
+                    className="w-24 h-24 object-cover rounded-lg border-2 border-indigo-300"
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* Upload Button */}
-        {imageFile && (
+        {imageFiles.length > 0 && (
           <button
             type="button"
             onClick={uploadImage}
@@ -603,7 +606,7 @@ export default function AddAnimalForm({ onSuccess }) {
             ) : (
               <>
                 <FaCamera />
-                Upload Image
+                Upload {imageFiles.length > 1 ? `(${imageFiles.length}) Images` : "Image"}
               </>
             )}
           </button>

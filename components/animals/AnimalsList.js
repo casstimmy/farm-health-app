@@ -178,6 +178,7 @@ export default function AnimalsList() {
               <tr className="bg-gray-100 border-b-2 border-gray-300">
                 <th className="px-2 py-4 text-left text-xs font-bold text-gray-800 w-16">Edit</th>
                 <th className="px-2 py-4 text-left text-xs font-bold text-gray-800 w-16">Adv</th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">Photo</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">Tag ID</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800 hidden sm:table-cell">Name</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800 hidden md:table-cell">Species</th>
@@ -197,6 +198,18 @@ export default function AnimalsList() {
                       index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     } ${isEditing ? 'bg-blue-50' : 'hover:bg-green-50'}`}
                   >
+                    {/* Photo */}
+                    <td className="px-2 py-4">
+                      {animal.images && animal.images.length > 0 ? (
+                        <img
+                          src={animal.images[0].thumb || animal.images[0].full}
+                          alt="Animal"
+                          className="w-12 h-12 object-cover rounded-lg border"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-xs">No image</span>
+                      )}
+                    </td>
                     {/* Edit Button */}
                     <td className="px-2 py-4">
                       {isEditing ? (
