@@ -134,7 +134,7 @@ export default function AddAnimalForm({ onSuccess }) {
       setImagePreview([]);
       setImageFiles([]);
       setSuccess(`✓ ${uploadedImages.length} image(s) uploaded successfully!`);
-      setTimeout(() => setSuccess("");
+      setTimeout(() => setSuccess("") , 2000);
       setUploadingImage(false);
     } catch (err) {
       setError(err.message || "Error uploading image");
