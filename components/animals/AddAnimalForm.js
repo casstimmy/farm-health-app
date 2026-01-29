@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
@@ -78,8 +78,8 @@ export default function AddAnimalForm({ onSuccess }) {
     const files = e.target.files;
     if (!files?.length) return;
     setLoadingImages(true);
-    const formData = new FormData();
-    for (const f of files) formData.append("file", f);
+    const formDataUpload = new FormData();
+    for (const f of files) formDataUpload.append("file", f);
     // Show temp previews
     const previews = Array.from(files).map((f) => ({
       full: URL.createObjectURL(f),
@@ -88,15 +88,19 @@ export default function AddAnimalForm({ onSuccess }) {
     }));
     setImages((prev) => [...prev, ...previews]);
     try {
-      const res = await axios.post("/api/upload", formData);
+      const res = await axios.post("/api/upload", formDataUpload);
       const uploaded = res.data?.links || [];
+      // keep any existing non-temp previews and append uploaded images
       setImages((prev) => [
-        ...prev.filter((img) => !img.isTemp),
+        ...prev.filter((img) => img.isTemp),
         ...uploaded,
       ]);
+      // append uploaded objects to formData.images (source of truth for saved images)
       setFormData((prev) => ({ ...prev, images: [...prev.images, ...uploaded] }));
-    } catch {
+    } catch (err) {
+      // remove temp previews on error
       setImages((prev) => prev.filter((img) => !img.isTemp));
+      console.error("Image upload failed", err);
     } finally {
       setLoadingImages(false);
     }
@@ -104,11 +108,49 @@ export default function AddAnimalForm({ onSuccess }) {
 
   // No uploadImage function needed, handled in handleImageSelect
 
-  const removeImage = (index) => {
-    setFormData(prev => ({
+  const removeImage = (image) => {
+    // image can be an object with full/thumb or a temp preview
+    const url = image?.full || image?.thumb;
+    if (!url) return;
+    setImages((prev) => prev.filter((img) => img.full !== url && img.thumb !== url));
+    setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((img) => img.full !== url && img.thumb !== url),
     }));
+  };
+
+  // Drag-and-drop reordering (HTML5)
+  const dragSrc = useRef(null);
+
+  const handleDragStart = (e, index) => {
+    dragSrc.current = index;
+    try {
+      e.dataTransfer.effectAllowed = "move";
+    } catch (err) {}
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = "move";
+    } catch (err) {}
+  };
+
+  const handleDrop = (e, index) => {
+    e.preventDefault();
+    const src = dragSrc.current;
+    if (src === null || src === undefined) return;
+    if (src === index) {
+      dragSrc.current = null;
+      return;
+    }
+    setFormData((prev) => {
+      const arr = [...prev.images];
+      const [item] = arr.splice(src, 1);
+      arr.splice(index, 0, item);
+      return { ...prev, images: arr };
+    });
+    dragSrc.current = null;
   };
 
   const handleSubmit = async (e) => {
@@ -547,13 +589,7 @@ export default function AddAnimalForm({ onSuccess }) {
                 <button
                   type="button"
                   className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
-                  onClick={() => {
-                    setImages(images.filter((_, idx) => idx !== i));
-                    setFormData((prev) => ({
-                      ...prev,
-                      images: prev.images.filter((_, idx) => idx !== i),
-                    }));
-                  }}
+                  onClick={() => removeImage(img)}
                 >
                   <FaTimes size={12} />
                 </button>
@@ -577,19 +613,29 @@ export default function AddAnimalForm({ onSuccess }) {
             <h4 className="font-semibold text-indigo-900 mb-2">Uploaded Images ({formData.images.length})</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {formData.images.map((image, index) => (
-                <div key={index} className="relative group">
+                <div
+                  key={index}
+                  className="relative group"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                >
                   <img
                     src={image.thumb}
                     alt={`Animal ${index + 1}`}
                     className="w-full h-24 object-cover rounded-lg border-2 border-indigo-300"
                   />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <FaTimes size={12} />
-                  </button>
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => removeImage(image)}
+                      className="bg-red-600 text-white rounded-full p-1"
+                      title="Remove"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
