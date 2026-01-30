@@ -57,7 +57,12 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         console.error("Error parsing user data");
       }
     }
-  }, []);
+    // if editing an existing animal, seed previews
+    if (animal && animal.images && animal.images.length > 0) {
+      setImages(animal.images);
+      setFormData(prev => ({ ...prev, images: animal.images }));
+    }
+  }, [animal]);
 
   const fetchLocations = async () => {
     try {
@@ -185,8 +190,13 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         acquisitionDate: formData.acquisitionDate || null
       };
 
-      const res = await fetch("/api/animals", {
-        method: "POST",
+      // determine if we're editing or creating
+      const isEdit = animal && (animal._id || animal.id);
+      const url = isEdit ? `/api/animals/${animal._id || animal.id}` : "/api/animals";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
@@ -197,39 +207,46 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to add animal");
+        setError(data.error || (isEdit ? "Failed to update animal" : "Failed to add animal"));
         return;
       }
 
-      setSuccess(`✓ ${formData.name || formData.tagId} has been added successfully!`);
-      
-      setFormData({
-        tagId: "",
-        myNotes: "",
-        name: "",
-        species: "Goat",
-        breed: "",
-        origin: "",
-        class: "",
-        gender: "Male",
-        dob: "",
-        acquisitionType: "Bred on farm",
-        acquisitionDate: "",
-        sireId: "",
-        damId: "",
-        status: "Alive",
-        location: "",
-        paddock: "",
-        weight: "",
-        weightDate: "",
-        recordedBy: "",
-        notes: "",
-        images: []
-      });
+      if (isEdit) {
+        setSuccess(`✓ ${formData.name || formData.tagId} has been updated successfully!`);
+        // keep form data (updated) and call onSuccess
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 1000);
+      } else {
+        setSuccess(`✓ ${formData.name || formData.tagId} has been added successfully!`);
+        setFormData({
+          tagId: "",
+          myNotes: "",
+          name: "",
+          species: "Goat",
+          breed: "",
+          origin: "",
+          class: "",
+          gender: "Male",
+          dob: "",
+          acquisitionType: "Bred on farm",
+          acquisitionDate: "",
+          sireId: "",
+          damId: "",
+          status: "Alive",
+          location: "",
+          paddock: "",
+          weight: "",
+          weightDate: "",
+          recordedBy: "",
+          notes: "",
+          images: []
+        });
 
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-      }, 1500);
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 1500);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -668,7 +685,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         ) : (
           <>
             <FaCheck />
-            Add Animal
+            {animal ? "Save Changes" : "Add Animal"}
           </>
         )}
       </button>
