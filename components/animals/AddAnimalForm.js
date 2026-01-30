@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
 import Loader from "../Loader";
 
-export default function AddAnimalForm({ onSuccess }) {
 export default function AddAnimalForm({ onSuccess, animal }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
