@@ -5,6 +5,7 @@ import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "re
 import Loader from "../Loader";
 
 export default function AddAnimalForm({ onSuccess }) {
+export default function AddAnimalForm({ onSuccess, animal }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -16,7 +17,7 @@ export default function AddAnimalForm({ onSuccess }) {
   const [loadingImages, setLoadingImages] = useState(false);
   
   const [formData, setFormData] = useState({
-    tagId: "",
+          tagId: animal?.tagId || "",
     myNotes: "",
     name: "",
     species: "Goat",
@@ -38,6 +39,12 @@ export default function AddAnimalForm({ onSuccess }) {
     notes: "",
     images: []
   });
+        
+        useEffect(() => {
+          if (animal) {
+            setFormData(prev => ({ ...prev, ...animal }));
+          }
+        }, [animal]);
 
   useEffect(() => {
     fetchLocations();
@@ -646,13 +653,18 @@ export default function AddAnimalForm({ onSuccess }) {
       {/* SUBMIT BUTTON */}
       <button
         type="submit"
-        disabled={loading || !formData.location}
+        disabled={loading || loadingImages || !formData.location}
         className="btn-primary-lg w-full flex items-center justify-center gap-2 disabled:opacity-60 sticky bottom-0 bg-green-600 hover:bg-green-700"
       >
         {loading ? (
           <>
             <FaSpinner className="animate-spin" />
             Adding Animal...
+          </>
+        ) : loadingImages ? (
+          <>
+            <FaSpinner className="animate-spin" />
+            Uploading Images...
           </>
         ) : (
           <>
