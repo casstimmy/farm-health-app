@@ -101,9 +101,9 @@ export default function AddAnimalForm({ onSuccess, animal }) {
     try {
       const res = await axios.post("/api/upload", formDataUpload);
       const uploaded = res.data?.links || [];
-      // keep any existing non-temp previews and append uploaded images
+      // replace temp previews with uploaded images, keep any existing uploaded images
       setImages((prev) => [
-        ...prev.filter((img) => img.isTemp),
+        ...prev.filter((img) => !img.isTemp),
         ...uploaded,
       ]);
       // append uploaded objects to formData.images (source of truth for saved images)
