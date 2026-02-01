@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { FaPlus, FaTimes } from "react-icons/fa";
+import { FaPlus, FaTimes, FaEdit, FaArrowRight, FaCheck, FaTimes as FaTimesIcon } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import dynamic from "next/dynamic";
@@ -11,6 +11,47 @@ import dynamic from "next/dynamic";
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
 export default function Treatments() {
+    const [editIndex, setEditIndex] = useState(null);
+    const [editableTreatment, setEditableTreatment] = useState({});
+    // Inline edit handlers
+    const handleEditClick = (idx, treatment) => {
+      setEditIndex(idx);
+      setEditableTreatment({ ...treatment });
+    };
+    const handleCancelEdit = () => {
+      setEditIndex(null);
+      setEditableTreatment({});
+    };
+    const handleEditChange = (e) => {
+      const { name, value } = e.target;
+      setEditableTreatment((prev) => ({ ...prev, [name]: value }));
+    };
+    const handleSaveEdit = async (_id) => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/treatment/${_id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(editableTreatment),
+        });
+        if (res.ok) {
+          fetchTreatments();
+          setEditIndex(null);
+          setEditableTreatment({});
+        }
+      } catch (err) {
+        // handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+    const handleAdvance = (animalId) => {
+      if (animalId) router.push(`/manage/animals/${animalId}`);
+    };
   const router = useRouter();
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -190,35 +231,69 @@ export default function Treatments() {
             <tbody className="divide-y divide-gray-200">
               {filteredTreatments.map((treatment, idx) => {
                 const animal = treatment.animal || {};
+                const isEditing = editIndex === idx;
                 return (
                   <motion.tr
                     key={treatment._id || idx}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: idx * 0.03 }}
-                    className="hover:bg-blue-50 transition-colors"
+                    className={"hover:bg-blue-50 transition-colors" + (isEditing ? " bg-yellow-50" : "")}
                   >
-                    <td className="px-2 py-2">{treatment.date ? new Date(treatment.date).toLocaleDateString() : ""}</td>
+                    {/* Inline Edit Button */}
+                    <td className="px-2 py-2">
+                      {isEditing ? (
+                        <>
+                          <button className="text-green-600 mr-1" onClick={() => handleSaveEdit(treatment._id)} title="Save"><FaCheck /></button>
+                          <button className="text-gray-500" onClick={handleCancelEdit} title="Cancel"><FaTimesIcon /></button>
+                        </>
+                      ) : (
+                        <button className="text-blue-600" onClick={() => handleEditClick(idx, treatment)} title="Edit"><FaEdit /></button>
+                      )}
+                    </td>
+                    {/* Advance Button */}
+                    <td className="px-2 py-2">
+                      <button className="text-purple-600" onClick={() => handleAdvance(animal._id)} title="Go to Animal"><FaArrowRight /></button>
+                    </td>
+                    {/* Date */}
+                    <td className="px-2 py-2">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "")}</td>
+                    {/* Animal ID only */}
                     <td className="px-2 py-2">{animal.tagId || ""}</td>
-                    <td className="px-2 py-2">{animal.breed || ""}</td>
-                    <td className="px-2 py-2">{animal.gender || ""}</td>
-                    <td className="px-2 py-2">{treatment.routine || ""}</td>
-                    <td className="px-2 py-2">{treatment.symptoms || ""}</td>
-                    <td className="px-2 py-2">{treatment.possibleCause || ""}</td>
-                    <td className="px-2 py-2">{treatment.diagnosis || ""}</td>
-                    <td className="px-2 py-2">{treatment.prescribedDays || ""}</td>
-                    <td className="px-2 py-2">{treatment.type || ""}</td>
-                    <td className="px-2 py-2">{treatment.preWeight || ""}</td>
-                    <td className="px-2 py-2">{treatment.medication || ""}</td>
-                    <td className="px-2 py-2">{treatment.dosage || ""}</td>
-                    <td className="px-2 py-2">{treatment.route || ""}</td>
-                    <td className="px-2 py-2">{treatment.treatedBy || ""}</td>
-                    <td className="px-2 py-2">{treatment.postObservation || ""}</td>
-                    <td className="px-2 py-2">{treatment.observationTime || ""}</td>
-                    <td className="px-2 py-2">{treatment.completionDate ? new Date(treatment.completionDate).toLocaleDateString() : ""}</td>
-                    <td className="px-2 py-2">{treatment.recoveryStatus || ""}</td>
-                    <td className="px-2 py-2">{treatment.postWeight || ""}</td>
-                    <td className="px-2 py-2">{treatment.notes || ""}</td>
+                    {/* Breed and Gender columns removed as per request */}
+                    {/* Routine */}
+                    <td className="px-2 py-2">{isEditing ? <input name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.routine || "")}</td>
+                    {/* Symptoms */}
+                    <td className="px-2 py-2">{isEditing ? <input name="symptoms" value={editableTreatment.symptoms || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.symptoms || "")}</td>
+                    {/* Possible Cause */}
+                    <td className="px-2 py-2">{isEditing ? <input name="possibleCause" value={editableTreatment.possibleCause || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.possibleCause || "")}</td>
+                    {/* Diagnosis */}
+                    <td className="px-2 py-2">{isEditing ? <input name="diagnosis" value={editableTreatment.diagnosis || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.diagnosis || "")}</td>
+                    {/* Prescribed Days */}
+                    <td className="px-2 py-2">{isEditing ? <input name="prescribedDays" value={editableTreatment.prescribedDays || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.prescribedDays || "")}</td>
+                    {/* Type of Treatment */}
+                    <td className="px-2 py-2">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.type || "")}</td>
+                    {/* Pre-Treatment Weight */}
+                    <td className="px-2 py-2">{isEditing ? <input name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.preWeight || "")}</td>
+                    {/* Treatment/Medication */}
+                    <td className="px-2 py-2">{isEditing ? <input name="medication" value={editableTreatment.medication || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.medication || "")}</td>
+                    {/* Dosage */}
+                    <td className="px-2 py-2">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.dosage || "")}</td>
+                    {/* Route */}
+                    <td className="px-2 py-2">{isEditing ? <input name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.route || "")}</td>
+                    {/* Treated by */}
+                    <td className="px-2 py-2">{isEditing ? <input name="treatedBy" value={editableTreatment.treatedBy || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.treatedBy || "")}</td>
+                    {/* Post Treatment Observation */}
+                    <td className="px-2 py-2">{isEditing ? <input name="postObservation" value={editableTreatment.postObservation || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.postObservation || "")}</td>
+                    {/* Observation Time */}
+                    <td className="px-2 py-2">{isEditing ? <input name="observationTime" value={editableTreatment.observationTime || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.observationTime || "")}</td>
+                    {/* Treatment Completion Date */}
+                    <td className="px-2 py-2">{isEditing ? <input type="date" name="completionDate" value={editableTreatment.completionDate ? editableTreatment.completionDate.slice(0,10) : ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.completionDate ? new Date(treatment.completionDate).toLocaleDateString() : "")}</td>
+                    {/* Recovery Status */}
+                    <td className="px-2 py-2">{isEditing ? <input name="recoveryStatus" value={editableTreatment.recoveryStatus || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.recoveryStatus || "")}</td>
+                    {/* Post-Treatment Weight */}
+                    <td className="px-2 py-2">{isEditing ? <input name="postWeight" value={editableTreatment.postWeight || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.postWeight || "")}</td>
+                    {/* Notes / Plan */}
+                    <td className="px-2 py-2">{isEditing ? <input name="notes" value={editableTreatment.notes || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.notes || "")}</td>
                   </motion.tr>
                 );
               })}
