@@ -666,29 +666,42 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         )}
       </div>
 
-      {/* SUBMIT BUTTON */}
-      <button
-        type="submit"
-        disabled={loading || loadingImages || !formData.location}
-        className="btn-primary-lg w-full flex items-center justify-center gap-2 disabled:opacity-60 sticky bottom-0 bg-green-600 hover:bg-green-700"
-      >
-        {loading ? (
-          <>
-            <FaSpinner className="animate-spin" />
-            Adding Animal...
-          </>
-        ) : loadingImages ? (
-          <>
-            <FaSpinner className="animate-spin" />
-            Uploading Images...
-          </>
-        ) : (
-          <>
-            <FaCheck />
-            {animal ? "Save Changes" : "Add Animal"}
-          </>
-        )}
-      </button>
+      {/* ACTIONS: Cancel + Submit */}
+      <div className="flex gap-3 sticky bottom-0 bg-white py-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (onSuccess) return onSuccess();
+            router.back();
+          }}
+          className="flex-1 btn-secondary-lg disabled:opacity-60 border rounded-lg px-4 py-2"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          disabled={loading || loadingImages || !formData.location}
+          className="flex-1 btn-primary-lg flex items-center justify-center gap-2 disabled:opacity-60 bg-green-600 hover:bg-green-700 rounded-lg px-4 py-2"
+        >
+          {loading ? (
+            <>
+              <FaSpinner className="animate-spin" />
+              {animal ? "Saving..." : "Adding Animal..."}
+            </>
+          ) : loadingImages ? (
+            <>
+              <FaSpinner className="animate-spin" />
+              Uploading Images...
+            </>
+          ) : (
+            <>
+              <FaCheck />
+              {animal ? "Save Changes" : "Add Animal"}
+            </>
+          )}
+        </button>
+      </div>
     </form>
   );
 }

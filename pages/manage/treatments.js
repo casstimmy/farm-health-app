@@ -6,6 +6,9 @@ import { motion } from "framer-motion";
 import { FaPlus, FaTimes } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
+import dynamic from "next/dynamic";
+
+const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
 export default function Treatments() {
   const router = useRouter();
@@ -14,6 +17,57 @@ export default function Treatments() {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [formLoading, setFormLoading] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedMessage, setSeedMessage] = useState("");
+  // Handle new treatment form submit
+  const handleFormSubmit = async (form) => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/treatment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        fetchTreatments();
+        setShowForm(false);
+      }
+    } catch (err) {
+      // handle error
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // Seed sample data
+  const handleSeedData = async () => {
+    setSeedLoading(true);
+    setSeedMessage("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/treatment/seed", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        setSeedMessage("Sample data seeded!");
+        fetchTreatments();
+      } else {
+        setSeedMessage("Failed to seed data.");
+      }
+    } catch (err) {
+      setSeedMessage("Error seeding data.");
+    } finally {
+      setSeedLoading(false);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -62,21 +116,41 @@ export default function Treatments() {
         icon="💊"
       />
 
-      {/* Controls */}
-      <FilterBar
-        searchPlaceholder="Search by animal name or treatment type..."
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterOptions={[
-          { value: "all", label: "All Types" },
-          ...treatmentTypes.map((type) => ({ value: type, label: type })),
-        ]}
-        filterValue={filterType}
-        onFilterChange={setFilterType}
-        showAddButton={true}
-        onAddClick={() => setShowForm(!showForm)}
-        isAddActive={showForm}
-      />
+
+      {/* Controls + Seed Button */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <div className="flex-1">
+          <FilterBar
+            searchPlaceholder="Search by animal name or treatment type..."
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterOptions={[
+              { value: "all", label: "All Types" },
+              ...treatmentTypes.map((type) => ({ value: type, label: type })),
+            ]}
+            filterValue={filterType}
+            onFilterChange={setFilterType}
+            showAddButton={true}
+            onAddClick={() => setShowForm(!showForm)}
+            isAddActive={showForm}
+          />
+        </div>
+        <button
+          className="btn-primary whitespace-nowrap"
+          onClick={handleSeedData}
+          disabled={seedLoading}
+        >
+          {seedLoading ? "Seeding..." : "Seed Sample Data"}
+        </button>
+      </div>
+      {seedMessage && <div className="text-green-600 font-semibold py-2">{seedMessage}</div>}
+
+      {/* Treatment Form */}
+      {showForm && (
+        <div className="my-6">
+          <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} />
+        </div>
+      )}
 
       {/* Treatments Table */}
       {loading ? (
