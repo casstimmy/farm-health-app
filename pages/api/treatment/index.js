@@ -8,14 +8,17 @@ async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
+      console.log("[Treatment API] POST body:", req.body);
       const { animal, ...treatmentData } = req.body;
       if (!animal) {
+        console.error("[Treatment API] Missing animal field in POST body:", req.body);
         return res.status(400).json({ error: "animal (ObjectId) required" });
       }
       const treatment = await Treatment.create({ ...treatmentData, animal });
       res.status(201).json({ message: "Treatment record added", treatment });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error("[Treatment API] Error:", error);
+      res.status(500).json({ error: error.message, stack: error.stack });
     }
   } else if (req.method === "GET") {
     try {
