@@ -191,7 +191,7 @@ export default function AnimalsList() {
       
       const formData = new FormData();
       Array.from(files).forEach((file) => {
-        formData.append("images", file);
+        formData.append("file", file);
       });
 
       const token = localStorage.getItem("token");
@@ -208,7 +208,15 @@ export default function AnimalsList() {
         throw new Error(errorData.error || "Failed to upload images");
       }
 
-      const uploadedImages = await res.json();
+      const responseData = await res.json();
+      console.log("Upload response:", responseData);
+      
+      // Extract the links from the response (API returns { links, failedUploads, fields, message })
+      const uploadedImages = responseData.links || [];
+      
+      if (!uploadedImages || uploadedImages.length === 0) {
+        throw new Error("No images were uploaded successfully");
+      }
       
       // Find the current animal
       const animal = animals.find((a) => a._id === animalId);
@@ -244,6 +252,7 @@ export default function AnimalsList() {
       e.target.value = "";
       
       setUploadingImages(false);
+      alert("Images uploaded successfully!");
       
     } catch (error) {
       console.error("Failed to add images:", error);
