@@ -59,12 +59,9 @@ export default function Treatments() {
   const router = useRouter();
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(false);
-  // Only one showForm/setShowForm state should exist. Remove this duplicate declaration.
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [formLoading, setFormLoading] = useState(false);
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [seedMessage, setSeedMessage] = useState("");
   // Handle treatment form submit (create or update)
   const handleFormSubmit = async (form) => {
     setFormLoading(true);
@@ -105,30 +102,7 @@ export default function Treatments() {
     }
   };
 
-  // Seed sample data (animals + treatments)
-  const handleSeedData = async () => {
-    setSeedLoading(true);
-    setSeedMessage("");
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/seed-all", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        setSeedMessage("Animals and treatments seeded!");
-        fetchTreatments();
-      } else {
-        setSeedMessage("Failed to seed data.");
-      }
-    } catch (err) {
-      setSeedMessage("Error seeding data.");
-    } finally {
-      setSeedLoading(false);
-    }
-  };
+
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -178,7 +152,7 @@ export default function Treatments() {
       />
 
 
-      {/* Controls + Seed Button */}
+      {/* Controls Section */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1">
           <FilterBar
@@ -196,134 +170,152 @@ export default function Treatments() {
             isAddActive={showForm}
           />
         </div>
-        <button
-          className="btn-primary whitespace-nowrap"
-          onClick={handleSeedData}
-          disabled={seedLoading}
-        >
-          {seedLoading ? "Seeding..." : "Seed Sample Data"}
-        </button>
       </div>
-      {seedMessage && <div className="text-green-600 font-semibold py-2">{seedMessage}</div>}
 
-      {/* Treatment Form */}
+      {/* Treatment Form Modal */}
       {showForm && (
-        <div className="my-6">
-          <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} initialData={editTreatmentData} onClose={() => { setShowForm(false); setEditTreatmentData(null); }} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl">
+              <h2 className="text-2xl font-bold text-gray-800">{editTreatmentData?._id ? "Edit Treatment Record" : "New Treatment Record"}</h2>
+              <p className="text-gray-600 text-sm mt-1">Fill in the treatment details below</p>
+            </div>
+            <div className="p-6 max-h-[calc(90vh-150px)] overflow-y-auto">
+              <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} initialData={editTreatmentData} onClose={() => { setShowForm(false); setEditTreatmentData(null); }} />
+            </div>
+          </div>
         </div>
       )}
 
       {/* Treatments Table */}
       {loading ? (
-        <div className="text-center py-12">Loading...</div>
+        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="inline-block">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-gray-600 mt-4">Loading treatments...</p>
+          </div>
+        </div>
       ) : filteredTreatments.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-100">
-          <p className="text-gray-500 text-lg">No treatments found</p>
+        <div className="bg-white rounded-2xl shadow-lg p-16 text-center border border-gray-200">
+          <div className="text-5xl mb-4">📋</div>
+          <p className="text-gray-600 text-lg font-medium">No treatments found</p>
+          <p className="text-gray-500 text-sm mt-2">Click the "+" button to add your first treatment record</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
-              <tr>
-                <th className="px-3 py-3 text-left font-bold text-gray-700 sticky left-0 bg-gradient-to-r from-gray-50 to-gray-100 z-20">Edit</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700 sticky left-12 bg-gradient-to-r from-gray-50 to-gray-100 z-20">Advance</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Date</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Animal ID</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Routine</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Symptoms</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Possible Cause</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Diagnosis</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Prescribed Days</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Type of Treatment</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Pre-Treatment Weight</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Treatment/Medication</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Dosage</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Route</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Treated by</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Post Treatment Observation</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Observation Time</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Treatment Completion Date</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Recovery Status</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Post-Treatment Weight</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Notes / Plan</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-700">Delete</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredTreatments.map((treatment, idx) => {
-                const animal = treatment.animal || {};
-                const isEditing = editIndex === idx;
-                const rowBg = idx % 2 === 0 ? "bg-white" : "bg-gray-50";
-                return (
-                  <motion.tr
-                    key={treatment._id || idx}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className={`transition-colors ${rowBg} ${isEditing ? "bg-yellow-100" : "hover:bg-blue-50"}`}
-                  >
-                    {/* Inline Edit Button */}
-                    <td className="px-2 py-2">
-                      {isEditing ? (
-                        <>
-                          <button className="text-green-600 mr-1" onClick={() => handleSaveEdit(treatment._id)} title="Save"><FaCheck /></button>
-                          <button className="text-gray-500" onClick={handleCancelEdit} title="Cancel"><FaTimesIcon /></button>
-                        </>
-                      ) : (
-                        <button className="text-blue-600" onClick={() => handleEditClick(idx, treatment)} title="Edit"><FaEdit /></button>
-                      )}
-                    </td>
-                    {/* Delete Button */}
-                    <td className="px-2 py-2">
-                      <button className="text-red-600" onClick={() => handleDeleteTreatment(treatment._id)} title="Delete"><FaTimes /></button>
-                    </td>
-
-                    {/* Advance Button (edit treatment) */}
-                    <td className="px-2 py-2">
-                      <button className="text-purple-600" onClick={() => handleAdvance(treatment)} title="Edit Treatment"><FaArrowRight /></button>
-                    </td>
-                    {/* Date */}
-                    <td className="px-2 py-2">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "")}</td>
-                    {/* Animal ID only */}
-                    <td className="px-2 py-2">{animal.tagId || ""}</td>
-                    {/* Routine */}
-                    <td className="px-2 py-2">{isEditing ? <input name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.routine || "")}</td>
-                    {/* Symptoms */}
-                    <td className="px-2 py-2">{isEditing ? <input name="symptoms" value={editableTreatment.symptoms || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.symptoms || "")}</td>
-                    {/* Possible Cause */}
-                    <td className="px-2 py-2">{isEditing ? <input name="possibleCause" value={editableTreatment.possibleCause || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.possibleCause || "")}</td>
-                    {/* Diagnosis */}
-                    <td className="px-2 py-2">{isEditing ? <input name="diagnosis" value={editableTreatment.diagnosis || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.diagnosis || "")}</td>
-                    {/* Prescribed Days */}
-                    <td className="px-2 py-2">{isEditing ? <input name="prescribedDays" value={editableTreatment.prescribedDays || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.prescribedDays || "")}</td>
-                    {/* Type of Treatment */}
-                    <td className="px-2 py-2">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.type || "")}</td>
-                    {/* Pre-Treatment Weight */}
-                    <td className="px-2 py-2">{isEditing ? <input name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.preWeight || "")}</td>
-                    {/* Treatment/Medication */}
-                    <td className="px-2 py-2">{isEditing ? <input name="medication" value={editableTreatment.medication || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.medication || "")}</td>
-                    {/* Dosage */}
-                    <td className="px-2 py-2">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.dosage || "")}</td>
-                    {/* Route */}
-                    <td className="px-2 py-2">{isEditing ? <input name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.route || "")}</td>
-                    {/* Treated by */}
-                    <td className="px-2 py-2">{isEditing ? <input name="treatedBy" value={editableTreatment.treatedBy || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.treatedBy || "")}</td>
-                    {/* Post Treatment Observation */}
-                    <td className="px-2 py-2">{isEditing ? <input name="postObservation" value={editableTreatment.postObservation || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.postObservation || "")}</td>
-                    {/* Observation Time */}
-                    <td className="px-2 py-2">{isEditing ? <input name="observationTime" value={editableTreatment.observationTime || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.observationTime || "")}</td>
-                    {/* Treatment Completion Date */}
-                    <td className="px-2 py-2">{isEditing ? <input type="date" name="completionDate" value={editableTreatment.completionDate ? editableTreatment.completionDate.slice(0,10) : ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.completionDate ? new Date(treatment.completionDate).toLocaleDateString() : "")}</td>
-                    {/* Recovery Status */}
-                    <td className="px-2 py-2">{isEditing ? <input name="recoveryStatus" value={editableTreatment.recoveryStatus || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.recoveryStatus || "")}</td>
-                    {/* Post-Treatment Weight */}
-                    <td className="px-2 py-2">{isEditing ? <input name="postWeight" value={editableTreatment.postWeight || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.postWeight || "")}</td>
-                    {/* Notes / Plan */}
-                    <td className="px-2 py-2">{isEditing ? <input name="notes" value={editableTreatment.notes || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.notes || "")}</td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+              <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
+                <tr>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Actions</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Date</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Animal ID</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Routine</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Symptoms</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Diagnosis</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Type</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Medication</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Dosage</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Route</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Treated By</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Pre-Weight</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Post-Weight</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredTreatments.map((treatment, idx) => {
+                  const animal = treatment.animal || {};
+                  const isEditing = editIndex === idx;
+                  const rowBg = idx % 2 === 0 ? "bg-white" : "bg-gray-50";
+                  return (
+                    <motion.tr
+                      key={treatment._id || idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className={`transition-all duration-200 ${rowBg} ${isEditing ? "bg-amber-50" : "hover:bg-blue-50"}`}
+                    >
+                      {/* Action Buttons */}
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          {isEditing ? (
+                            <>
+                              <button 
+                                className="text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded transition" 
+                                onClick={() => handleSaveEdit(treatment._id)} 
+                                title="Save"
+                              >
+                                <FaCheck size={16} />
+                              </button>
+                              <button 
+                                className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded transition" 
+                                onClick={handleCancelEdit} 
+                                title="Cancel"
+                              >
+                                <FaTimesIcon size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button 
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-1 rounded transition" 
+                                onClick={() => handleEditClick(idx, treatment)} 
+                                title="Quick Edit"
+                              >
+                                <FaEdit size={16} />
+                              </button>
+                              <button 
+                                className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 p-1 rounded transition" 
+                                onClick={() => handleAdvance(treatment)} 
+                                title="Full Edit"
+                              >
+                                <FaArrowRight size={16} />
+                              </button>
+                              <button 
+                                className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded transition" 
+                                onClick={() => handleDeleteTreatment(treatment._id)} 
+                                title="Delete"
+                              >
+                                <FaTimes size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      {/* Date */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className="input input-sm w-32" /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "-")}</td>
+                      {/* Animal ID */}
+                      <td className="px-4 py-3 font-medium text-gray-900">{animal.tagId || "-"}</td>
+                      {/* Routine */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <select name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className="input input-sm"><option value="">-</option><option value="NO">NO</option><option value="YES">YES</option></select> : (treatment.routine || "-")}</td>
+                      {/* Symptoms */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="symptoms" value={editableTreatment.symptoms || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.symptoms || "-")}</td>
+                      {/* Diagnosis */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="diagnosis" value={editableTreatment.diagnosis || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.diagnosis || "-")}</td>
+                      {/* Type */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.type || "-")}</td>
+                      {/* Medication */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="medication" value={editableTreatment.medication || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.medication || "-")}</td>
+                      {/* Dosage */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.dosage || "-")}</td>
+                      {/* Route */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.route || "-")}</td>
+                      {/* Treated by */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="treatedBy" value={editableTreatment.treatedBy || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.treatedBy || "-")}</td>
+                      {/* Pre-Weight */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.preWeight || "-")}</td>
+                      {/* Post-Weight */}
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="postWeight" value={editableTreatment.postWeight || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.postWeight || "-")}</td>
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${treatment.recoveryStatus ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {treatment.recoveryStatus || "Pending"}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
           </table>
         </div>
       )}
