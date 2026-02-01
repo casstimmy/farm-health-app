@@ -207,40 +207,43 @@ export default function Treatments() {
       ) : (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
               <tr>
-                <th className="px-2 py-2">Date</th>
-                <th className="px-2 py-2">Animal ID</th>
-                <th className="px-2 py-2">Routine</th>
-                <th className="px-2 py-2">Symptoms</th>
-                <th className="px-2 py-2">Possible Cause</th>
-                <th className="px-2 py-2">Diagnosis</th>
-                <th className="px-2 py-2">Prescribed Days</th>
-                <th className="px-2 py-2">Type of Treatment</th>
-                <th className="px-2 py-2">Pre-Treatment Weight</th>
-                <th className="px-2 py-2">Treatment/Medication</th>
-                <th className="px-2 py-2">Dosage</th>
-                <th className="px-2 py-2">Route</th>
-                <th className="px-2 py-2">Treated by</th>
-                <th className="px-2 py-2">Post Treatment Observation</th>
-                <th className="px-2 py-2">Observation Time</th>
-                <th className="px-2 py-2">Treatment Completion Date</th>
-                <th className="px-2 py-2">Recovery Status</th>
-                <th className="px-2 py-2">Post-Treatment Weight</th>
-                <th className="px-2 py-2">Notes / Plan</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700 sticky left-0 bg-gradient-to-r from-gray-50 to-gray-100 z-20">Edit</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700 sticky left-12 bg-gradient-to-r from-gray-50 to-gray-100 z-20">Advance</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Date</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Animal ID</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Routine</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Symptoms</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Possible Cause</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Diagnosis</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Prescribed Days</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Type of Treatment</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Pre-Treatment Weight</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Treatment/Medication</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Dosage</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Route</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Treated by</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Post Treatment Observation</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Observation Time</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Treatment Completion Date</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Recovery Status</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Post-Treatment Weight</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Notes / Plan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredTreatments.map((treatment, idx) => {
                 const animal = treatment.animal || {};
                 const isEditing = editIndex === idx;
+                const rowBg = idx % 2 === 0 ? "bg-white" : "bg-gray-50";
                 return (
                   <motion.tr
                     key={treatment._id || idx}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: idx * 0.03 }}
-                    className={"hover:bg-blue-50 transition-colors" + (isEditing ? " bg-yellow-50" : "")}
+                    className={`transition-colors ${rowBg} ${isEditing ? "bg-yellow-100" : "hover:bg-blue-50"}`}
                   >
                     {/* Inline Edit Button */}
                     <td className="px-2 py-2">
