@@ -160,35 +160,68 @@ export default function Treatments() {
           <p className="text-gray-500 text-lg">No treatments found</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-x-auto">
+          <table className="w-full text-xs">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Animal</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Type</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Notes</th>
+                <th className="px-2 py-2">Date</th>
+                <th className="px-2 py-2">Animal ID</th>
+                <th className="px-2 py-2">Breed</th>
+                <th className="px-2 py-2">Gender</th>
+                <th className="px-2 py-2">Routine</th>
+                <th className="px-2 py-2">Symptoms</th>
+                <th className="px-2 py-2">Possible Cause</th>
+                <th className="px-2 py-2">Diagnosis</th>
+                <th className="px-2 py-2">Prescribed Days</th>
+                <th className="px-2 py-2">Type of Treatment</th>
+                <th className="px-2 py-2">Pre-Treatment Weight</th>
+                <th className="px-2 py-2">Treatment/Medication</th>
+                <th className="px-2 py-2">Dosage</th>
+                <th className="px-2 py-2">Route</th>
+                <th className="px-2 py-2">Treated by</th>
+                <th className="px-2 py-2">Post Treatment Observation</th>
+                <th className="px-2 py-2">Observation Time</th>
+                <th className="px-2 py-2">Treatment Completion Date</th>
+                <th className="px-2 py-2">Recovery Status</th>
+                <th className="px-2 py-2">Post-Treatment Weight</th>
+                <th className="px-2 py-2">Notes / Plan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredTreatments.map((treatment, idx) => (
-                <motion.tr
-                  key={treatment._id || idx}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="hover:bg-blue-50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {treatment.animalName || "Unknown"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{treatment.type || "N/A"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(treatment.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{treatment.notes || "N/A"}</td>
-                </motion.tr>
-              ))}
+              {filteredTreatments.map((treatment, idx) => {
+                const animal = treatment.animal || {};
+                return (
+                  <motion.tr
+                    key={treatment._id || idx}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="hover:bg-blue-50 transition-colors"
+                  >
+                    <td className="px-2 py-2">{treatment.date ? new Date(treatment.date).toLocaleDateString() : ""}</td>
+                    <td className="px-2 py-2">{animal.tagId || ""}</td>
+                    <td className="px-2 py-2">{animal.breed || ""}</td>
+                    <td className="px-2 py-2">{animal.gender || ""}</td>
+                    <td className="px-2 py-2">{treatment.routine || ""}</td>
+                    <td className="px-2 py-2">{treatment.symptoms || ""}</td>
+                    <td className="px-2 py-2">{treatment.possibleCause || ""}</td>
+                    <td className="px-2 py-2">{treatment.diagnosis || ""}</td>
+                    <td className="px-2 py-2">{treatment.prescribedDays || ""}</td>
+                    <td className="px-2 py-2">{treatment.type || ""}</td>
+                    <td className="px-2 py-2">{treatment.preWeight || ""}</td>
+                    <td className="px-2 py-2">{treatment.medication || ""}</td>
+                    <td className="px-2 py-2">{treatment.dosage || ""}</td>
+                    <td className="px-2 py-2">{treatment.route || ""}</td>
+                    <td className="px-2 py-2">{treatment.treatedBy || ""}</td>
+                    <td className="px-2 py-2">{treatment.postObservation || ""}</td>
+                    <td className="px-2 py-2">{treatment.observationTime || ""}</td>
+                    <td className="px-2 py-2">{treatment.completionDate ? new Date(treatment.completionDate).toLocaleDateString() : ""}</td>
+                    <td className="px-2 py-2">{treatment.recoveryStatus || ""}</td>
+                    <td className="px-2 py-2">{treatment.postWeight || ""}</td>
+                    <td className="px-2 py-2">{treatment.notes || ""}</td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
