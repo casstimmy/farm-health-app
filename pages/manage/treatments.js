@@ -59,7 +59,7 @@ export default function Treatments() {
   const router = useRouter();
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  // Only one showForm/setShowForm state should exist. Remove this duplicate declaration.
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [formLoading, setFormLoading] = useState(false);
