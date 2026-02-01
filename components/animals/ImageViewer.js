@@ -25,9 +25,16 @@ export default function ImageViewer({
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    setLocalImages(images);
-    setSelectedIndex(0);
-  }, [images]);
+    // If images array grew (new images added), show the last image
+    // Otherwise reset to first image
+    if (images.length > localImages.length && images.length > 0) {
+      setLocalImages(images);
+      setSelectedIndex(images.length - 1);
+    } else {
+      setLocalImages(images);
+      setSelectedIndex(0);
+    }
+  }, [images, localImages.length]);
 
   if (!localImages || localImages.length === 0) {
     return (
@@ -184,12 +191,20 @@ export default function ImageViewer({
       {localImages.length > 1 && (
         <div className="bg-gray-100 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-3 font-semibold">Select Image</p>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth" ref={(el) => {
+            if (el && selectedIndex > 2) {
+              const targetButton = el.querySelector(`[data-index="${selectedIndex}"]`);
+              if (targetButton) {
+                targetButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              }
+            }
+          }}>
             {localImages.map((img, idx) => {
               const thumbUrl = img?.thumb || img?.full || img;
               return (
                 <motion.button
                   key={idx}
+                  data-index={idx}
                   onClick={() => setSelectedIndex(idx)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

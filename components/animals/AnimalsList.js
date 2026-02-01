@@ -252,7 +252,6 @@ export default function AnimalsList() {
       e.target.value = "";
       
       setUploadingImages(false);
-      alert("Images uploaded successfully!");
       
     } catch (error) {
       console.error("Failed to add images:", error);
