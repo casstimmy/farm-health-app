@@ -2,7 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { FaSpinner, FaCheckCircle, FaTimesCircle, FaTimes, FaCheck, FaEdit, FaTrash } from "react-icons/fa";
 import Link from "next/link";
 
+import Modal from "../shared/Modal";
+
 export default function AnimalsList() {
+    // Modal state for image viewer
+    const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [modalImages, setModalImages] = useState([]);
+    const [modalAnimal, setModalAnimal] = useState(null);
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editIndex, setEditIndex] = useState(null);
@@ -141,6 +147,12 @@ export default function AnimalsList() {
     );
   }
 
+  const handleImageClick = (animal) => {
+    setModalImages(animal.images || []);
+    setModalAnimal(animal);
+    setImageModalOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -204,7 +216,9 @@ export default function AnimalsList() {
                         <img
                           src={animal.images[0].thumb || animal.images[0].full}
                           alt="Animal"
-                          className="w-12 h-12 object-cover rounded-lg border"
+                          className="w-12 h-12 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                          onClick={() => handleImageClick(animal)}
+                          title="Click to view all images"
                         />
                       ) : (
                         <span className="text-gray-400 text-xs">No image</span>
@@ -391,6 +405,23 @@ export default function AnimalsList() {
           </button>
         </div>
       )}
+      {/* Image Modal */}
+      <Modal isOpen={imageModalOpen} onClose={() => setImageModalOpen(false)} title={modalAnimal ? `Images for ${modalAnimal.name || modalAnimal.tagId}` : "Animal Images"} size="xl">
+        {modalImages && modalImages.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {modalImages.map((img, idx) => (
+              <img
+                key={idx}
+                src={img.full || img.thumb}
+                alt={`Animal Image ${idx + 1}`}
+                className="w-full h-64 object-cover rounded-xl border"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500">No images available for this animal.</div>
+        )}
+      </Modal>
     </div>
   );
 }
