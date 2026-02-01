@@ -224,6 +224,7 @@ export default function Treatments() {
       ) : (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+            <table className="w-full">
               <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
                 <tr>
                   <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Actions</th>
@@ -338,8 +339,8 @@ export default function Treatments() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
