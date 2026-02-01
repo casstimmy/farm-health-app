@@ -65,24 +65,38 @@ export default function Treatments() {
   const [formLoading, setFormLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
   const [seedMessage, setSeedMessage] = useState("");
-  // Handle new treatment form submit
+  // Handle treatment form submit (create or update)
   const handleFormSubmit = async (form) => {
     setFormLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Remove _id, __v, createdAt, updatedAt if present
       const { _id, __v, createdAt, updatedAt, ...cleanForm } = form;
-      const res = await fetch("/api/treatment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(cleanForm),
-      });
+      let res;
+      if (_id) {
+        // Update existing treatment
+        res = await fetch(`/api/treatment/${_id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(cleanForm),
+        });
+      } else {
+        // Create new treatment
+        res = await fetch("/api/treatment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(cleanForm),
+        });
+      }
       if (res.ok) {
         fetchTreatments();
         setShowForm(false);
+        setEditTreatmentData(null);
       }
     } catch (err) {
       // handle error
@@ -232,6 +246,7 @@ export default function Treatments() {
                 <th className="px-3 py-3 text-left font-bold text-gray-700">Recovery Status</th>
                 <th className="px-3 py-3 text-left font-bold text-gray-700">Post-Treatment Weight</th>
                 <th className="px-3 py-3 text-left font-bold text-gray-700">Notes / Plan</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-700">Delete</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -258,6 +273,31 @@ export default function Treatments() {
                         <button className="text-blue-600" onClick={() => handleEditClick(idx, treatment)} title="Edit"><FaEdit /></button>
                       )}
                     </td>
+                    {/* Delete Button */}
+                    <td className="px-2 py-2">
+                      <button className="text-red-600" onClick={() => handleDeleteTreatment(treatment._id)} title="Delete"><FaTimes /></button>
+                    </td>
+                      // Delete treatment handler
+                      const handleDeleteTreatment = async (id) => {
+                        if (!window.confirm("Are you sure you want to delete this treatment?")) return;
+                        setLoading(true);
+                        try {
+                          const token = localStorage.getItem("token");
+                          const res = await fetch(`/api/treatment/${id}`, {
+                            method: "DELETE",
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                            },
+                          });
+                          if (res.ok) {
+                            fetchTreatments();
+                          }
+                        } catch (err) {
+                          // handle error
+                        } finally {
+                          setLoading(false);
+                        }
+                      };
                     {/* Advance Button (edit treatment) */}
                     <td className="px-2 py-2">
                       <button className="text-purple-600" onClick={() => handleAdvance(treatment)} title="Edit Treatment"><FaArrowRight /></button>
