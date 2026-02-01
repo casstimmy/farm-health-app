@@ -237,6 +237,23 @@ export default function Treatments() {
                     >
                       {/* Action Buttons */}
                       <td className="px-4 py-3">
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${treatment.recoveryStatus ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {treatment.recoveryStatus || "Pending"}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
                         <div className="flex gap-2">
                           {isEditing ? (
                             <>
