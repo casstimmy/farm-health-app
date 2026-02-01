@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight, FaTimes, FaTrash, FaImage, FaPlus } from "react-icons/fa";
+import Loader from "../Loader";
 
 /**
  * Advanced Image Viewer Component
@@ -16,7 +17,8 @@ export default function ImageViewer({
   images = [], 
   animalName = "Animal",
   onDeleteImage = null,
-  onAddImage = null
+  onAddImage = null,
+  isUploading = false
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [localImages, setLocalImages] = useState(images);
@@ -29,15 +31,17 @@ export default function ImageViewer({
 
   if (!localImages || localImages.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg space-y-4">
+      <div className="text-center py-12 bg-gray-50 rounded-lg space-y-4 relative">
+        {isUploading && <Loader variant="overlay" />}
         <FaImage className="mx-auto text-4xl text-gray-400" />
         <p className="text-gray-500">No images available</p>
         {onAddImage && (
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-all"
+            disabled={isUploading}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-semibold transition-all"
           >
-            Add First Image
+            {isUploading ? "Uploading..." : "Add First Image"}
           </button>
         )}
         <input
@@ -46,6 +50,7 @@ export default function ImageViewer({
           multiple
           accept="image/*"
           onChange={onAddImage}
+          disabled={isUploading}
           className="hidden"
         />
       </div>
@@ -97,6 +102,7 @@ export default function ImageViewer({
     <div className="w-full space-y-4">
       {/* Main Image Display */}
       <div className="relative bg-black rounded-xl overflow-hidden">
+        {isUploading && <Loader variant="overlay" />}
         <motion.div
           key={selectedIndex}
           initial={{ opacity: 0 }}
@@ -143,17 +149,19 @@ export default function ImageViewer({
             {onAddImage && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
-                title="Add new image"
+                disabled={isUploading}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+                title={isUploading ? "Uploading..." : "Add new image"}
               >
                 <FaPlus size={16} />
-                <span className="hidden sm:inline">Add</span>
+                <span className="hidden sm:inline">{isUploading ? "Uploading..." : "Add"}</span>
               </button>
             )}
             <button
               onClick={handleDeleteImage}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
-              title="Delete image (Delete key)"
+              disabled={isUploading}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+              title={isUploading ? "Uploading..." : "Delete image (Delete key)"}
             >
               <FaTrash size={16} />
               <span className="hidden sm:inline">Delete</span>
@@ -167,6 +175,7 @@ export default function ImageViewer({
           multiple
           accept="image/*"
           onChange={handleAddImage}
+          disabled={isUploading}
           className="hidden"
         />
       </div>

@@ -21,6 +21,7 @@ export default function AnimalsList() {
   const [filteredAnimals, setFilteredAnimals] = useState([]);
   const [error, setError] = useState("");
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -186,43 +187,69 @@ export default function AnimalsList() {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
+      setUploadingImages(true);
+      
       const formData = new FormData();
       Array.from(files).forEach((file) => {
         formData.append("images", file);
       });
 
       const token = localStorage.getItem("token");
+      
+      // Upload images to server
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` },
         body: formData,
       });
 
-      if (res.ok) {
-        const uploadedImages = await res.json();
-        const animal = animals.find((a) => a._id === animalId);
-        if (!animal) return;
-
-        const updatedImages = [...(animal.images || []), ...uploadedImages];
-
-        const updateRes = await fetch(`/api/animals/${animalId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({ ...animal, images: updatedImages }),
-        });
-
-        if (updateRes.ok) {
-          setModalImages(updatedImages);
-          setAnimals((prev) =>
-            prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
-          );
-        }
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to upload images");
       }
+
+      const uploadedImages = await res.json();
+      
+      // Find the current animal
+      const animal = animals.find((a) => a._id === animalId);
+      if (!animal) {
+        throw new Error("Animal not found");
+      }
+
+      // Combine existing and new images
+      const updatedImages = [...(animal.images || []), ...uploadedImages];
+
+      // Update animal record in database
+      const updateRes = await fetch(`/api/animals/${animalId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...animal, images: updatedImages }),
+      });
+
+      if (!updateRes.ok) {
+        const errorData = await updateRes.json();
+        throw new Error(errorData.error || "Failed to save images to animal record");
+      }
+
+      // Update local state
+      setModalImages(updatedImages);
+      setAnimals((prev) =>
+        prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
+      );
+      
+      // Reset file input
+      e.target.value = "";
+      
+      setUploadingImages(false);
+      
     } catch (error) {
       console.error("Failed to add images:", error);
+      setError(`Error uploading images: ${error.message}`);
+      setUploadingImages(false);
+      setTimeout(() => setError(""), 5000);
     }
   };
 
@@ -491,6 +518,7 @@ export default function AnimalsList() {
           animalName={modalAnimal?.name || modalAnimal?.tagId || "Animal"}
           onDeleteImage={(imageIndex) => handleDeleteImage(modalAnimal._id, imageIndex)}
           onAddImage={(e) => handleAddImage(modalAnimal._id, e)}
+          isUploading={uploadingImages}
         />
       </Modal>
     </div>
