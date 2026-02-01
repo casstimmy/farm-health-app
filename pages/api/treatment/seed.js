@@ -147,14 +147,14 @@ export default async function handler(req, res) {
     // Prepare treatments with animal ObjectId
     const docs = sampleTreatments.map(t => ({
       ...t,
-      animal: animalMap[t.animalTag],
+      animal: animalMap[t.animalTag] || null,
       date: t.date ? new Date(t.date) : undefined,
       completionDate: t.completionDate ? new Date(t.completionDate) : undefined,
     }));
     // Remove animalTag from docs
     docs.forEach(d => { delete d.animalTag; });
     await Treatment.insertMany(docs);
-    return res.status(200).json({ message: "Sample treatments seeded" });
+    return res.status(200).json({ message: "Sample treatments seeded (animal may be null)" });
   } catch (err) {
     return res.status(500).json({ error: "Failed to seed treatments" });
   }
