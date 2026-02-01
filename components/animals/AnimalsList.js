@@ -242,10 +242,12 @@ export default function AnimalsList() {
         throw new Error(errorData.error || "Failed to save images to animal record");
       }
 
-      // Update local state
+      // Update local state - keep modal open with fresh data
+      const updatedAnimal = { ...animal, images: updatedImages };
       setModalImages(updatedImages);
+      setModalAnimal(updatedAnimal);
       setAnimals((prev) =>
-        prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
+        prev.map((a) => (a._id === animalId ? updatedAnimal : a))
       );
       
       // Reset file input
