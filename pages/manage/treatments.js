@@ -277,7 +277,8 @@ export default function Treatments() {
                     <td className="px-2 py-2">
                       <button className="text-red-600" onClick={() => handleDeleteTreatment(treatment._id)} title="Delete"><FaTimes /></button>
                     </td>
-                      // Delete treatment handler
+
+                      // Delete treatment handler (moved to top level)
                       const handleDeleteTreatment = async (id) => {
                         if (!window.confirm("Are you sure you want to delete this treatment?")) return;
                         setLoading(true);
