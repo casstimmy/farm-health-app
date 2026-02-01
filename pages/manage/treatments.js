@@ -194,7 +194,7 @@ export default function Treatments() {
 
       {/* Treatment Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 backdrop-blur-md bg-black bg-opacity-20 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8">
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl">
               <h2 className="text-2xl font-bold text-gray-800">{editTreatmentData?._id ? "Edit Treatment Record" : "New Treatment Record"}</h2>

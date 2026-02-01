@@ -38,16 +38,26 @@ const MEDICATION_OPTIONS = [
 const DOSAGE_OPTIONS = ["2ml", "4ml", "0.5ml", "5ml /Backline", "1ml"];
 const ROUTE_OPTIONS = ["IM", "Subcutaneous"];
 export default function TreatmentForm({ onSubmit, loading, initialData, onClose }) {
-  const [form, setForm] = useState(initialData ? { ...initialForm, ...initialData } : initialForm);
+  const [form, setForm] = useState(() => {
+    if (initialData) {
+      return {
+        ...initialForm,
+        ...initialData,
+        animalId: initialData.animal?._id || initialData.animalId || "",
+        date: initialData.date ? initialData.date.split('T')[0] : "",
+      };
+    }
+    return initialForm;
+  });
   const [animals, setAnimals] = useState([]);
-  const [customSymptom, setCustomSymptom] = useState("");
-  const [customCause, setCustomCause] = useState("");
-  const [customDiagnosis, setCustomDiagnosis] = useState("");
-  const [customPrescribed, setCustomPrescribed] = useState("");
-  const [customType, setCustomType] = useState("");
-  const [customMedication, setCustomMedication] = useState("");
-  const [customDosage, setCustomDosage] = useState("");
-  const [customRoute, setCustomRoute] = useState("");
+  const [showCustomSymptom, setShowCustomSymptom] = useState(form.symptoms && !SYMPTOM_OPTIONS.includes(form.symptoms));
+  const [showCustomCause, setShowCustomCause] = useState(form.possibleCause && !CAUSE_OPTIONS.includes(form.possibleCause));
+  const [showCustomDiagnosis, setShowCustomDiagnosis] = useState(form.diagnosis && !DIAGNOSIS_OPTIONS.includes(form.diagnosis));
+  const [showCustomPrescribed, setShowCustomPrescribed] = useState(form.prescribedDays && !PRESCRIBED_DAYS_OPTIONS.includes(form.prescribedDays));
+  const [showCustomType, setShowCustomType] = useState(form.type && !TYPE_OPTIONS.includes(form.type));
+  const [showCustomMedication, setShowCustomMedication] = useState(form.medication && !MEDICATION_OPTIONS.includes(form.medication));
+  const [showCustomDosage, setShowCustomDosage] = useState(form.dosage && !DOSAGE_OPTIONS.includes(form.dosage));
+  const [showCustomRoute, setShowCustomRoute] = useState(form.route && !ROUTE_OPTIONS.includes(form.route));
 
   useEffect(() => {
     // Fetch animal list for dropdown
@@ -71,18 +81,17 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
   };
 
   // Generic handler for dropdowns with custom option
-  const handleDropdownChange = (field, value, setCustom) => {
+  const handleDropdownChange = (field, value, setShowCustom) => {
     if (value === "custom") {
+      setShowCustom(true);
       setForm({ ...form, [field]: "" });
-      setCustom("");
     } else {
+      setShowCustom(false);
       setForm({ ...form, [field]: value });
-      setCustom("");
     }
   };
 
-  const handleCustomInput = (field, value, setCustom) => {
-    setCustom(value);
+  const handleCustomInput = (field, value) => {
     setForm({ ...form, [field]: value });
   };
 
@@ -129,57 +138,57 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Symptoms</label>
-          <select name="symptoms" value={SYMPTOM_OPTIONS.includes(form.symptoms) ? form.symptoms : "custom"} onChange={e => handleDropdownChange("symptoms", e.target.value, setCustomSymptom)} className="input w-full">
+          <select name="symptoms" value={showCustomSymptom ? "custom" : form.symptoms} onChange={e => handleDropdownChange("symptoms", e.target.value, setShowCustomSymptom)} className="input w-full">
             <option value="">Select</option>
             {SYMPTOM_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.symptoms && !SYMPTOM_OPTIONS.includes(form.symptoms) && (
-            <input name="customSymptom" value={customSymptom} onChange={e => handleCustomInput("symptoms", e.target.value, setCustomSymptom)} className="input w-full mt-1" placeholder="Enter custom symptom" />
+          {showCustomSymptom && (
+            <input name="customSymptom" value={form.symptoms} onChange={e => handleCustomInput("symptoms", e.target.value)} className="input w-full mt-2" placeholder="Enter custom symptom" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Possible Cause</label>
-          <select name="possibleCause" value={CAUSE_OPTIONS.includes(form.possibleCause) ? form.possibleCause : "custom"} onChange={e => handleDropdownChange("possibleCause", e.target.value, setCustomCause)} className="input w-full">
+          <select name="possibleCause" value={showCustomCause ? "custom" : form.possibleCause} onChange={e => handleDropdownChange("possibleCause", e.target.value, setShowCustomCause)} className="input w-full">
             <option value="">Select</option>
             {CAUSE_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.possibleCause && !CAUSE_OPTIONS.includes(form.possibleCause) && (
-            <input name="customCause" value={customCause} onChange={e => handleCustomInput("possibleCause", e.target.value, setCustomCause)} className="input w-full mt-1" placeholder="Enter custom cause" />
+          {showCustomCause && (
+            <input name="customCause" value={form.possibleCause} onChange={e => handleCustomInput("possibleCause", e.target.value)} className="input w-full mt-2" placeholder="Enter custom cause" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Diagnosis</label>
-          <select name="diagnosis" value={DIAGNOSIS_OPTIONS.includes(form.diagnosis) ? form.diagnosis : "custom"} onChange={e => handleDropdownChange("diagnosis", e.target.value, setCustomDiagnosis)} className="input w-full">
+          <select name="diagnosis" value={showCustomDiagnosis ? "custom" : form.diagnosis} onChange={e => handleDropdownChange("diagnosis", e.target.value, setShowCustomDiagnosis)} className="input w-full">
             <option value="">Select</option>
             {DIAGNOSIS_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.diagnosis && !DIAGNOSIS_OPTIONS.includes(form.diagnosis) && (
-            <input name="customDiagnosis" value={customDiagnosis} onChange={e => handleCustomInput("diagnosis", e.target.value, setCustomDiagnosis)} className="input w-full mt-1" placeholder="Enter custom diagnosis" />
+          {showCustomDiagnosis && (
+            <input name="customDiagnosis" value={form.diagnosis} onChange={e => handleCustomInput("diagnosis", e.target.value)} className="input w-full mt-2" placeholder="Enter custom diagnosis" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Prescribed Treatment Days</label>
-          <select name="prescribedDays" value={PRESCRIBED_DAYS_OPTIONS.includes(form.prescribedDays) ? form.prescribedDays : "custom"} onChange={e => handleDropdownChange("prescribedDays", e.target.value, setCustomPrescribed)} className="input w-full">
+          <select name="prescribedDays" value={showCustomPrescribed ? "custom" : form.prescribedDays} onChange={e => handleDropdownChange("prescribedDays", e.target.value, setShowCustomPrescribed)} className="input w-full">
             <option value="">Select</option>
             {PRESCRIBED_DAYS_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.prescribedDays && !PRESCRIBED_DAYS_OPTIONS.includes(form.prescribedDays) && (
-            <input name="customPrescribed" value={customPrescribed} onChange={e => handleCustomInput("prescribedDays", e.target.value, setCustomPrescribed)} className="input w-full mt-1" placeholder="Enter custom prescribed days" />
+          {showCustomPrescribed && (
+            <input name="customPrescribed" value={form.prescribedDays} onChange={e => handleCustomInput("prescribedDays", e.target.value)} className="input w-full mt-2" placeholder="Enter custom prescribed days" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Type of Treatment</label>
-          <select name="type" value={TYPE_OPTIONS.includes(form.type) ? form.type : "custom"} onChange={e => handleDropdownChange("type", e.target.value, setCustomType)} className="input w-full">
+          <select name="type" value={showCustomType ? "custom" : form.type} onChange={e => handleDropdownChange("type", e.target.value, setShowCustomType)} className="input w-full">
             <option value="">Select</option>
             {TYPE_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.type && !TYPE_OPTIONS.includes(form.type) && (
-            <input name="customType" value={customType} onChange={e => handleCustomInput("type", e.target.value, setCustomType)} className="input w-full mt-1" placeholder="Enter custom type" />
+          {showCustomType && (
+            <input name="customType" value={form.type} onChange={e => handleCustomInput("type", e.target.value)} className="input w-full mt-2" placeholder="Enter custom type" autoFocus />
           )}
         </div>
       </div>
@@ -192,35 +201,35 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Treatment/Medication</label>
-          <select name="medication" value={MEDICATION_OPTIONS.includes(form.medication) ? form.medication : "custom"} onChange={e => handleDropdownChange("medication", e.target.value, setCustomMedication)} className="input w-full">
+          <select name="medication" value={showCustomMedication ? "custom" : form.medication} onChange={e => handleDropdownChange("medication", e.target.value, setShowCustomMedication)} className="input w-full">
             <option value="">Select</option>
             {MEDICATION_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.medication && !MEDICATION_OPTIONS.includes(form.medication) && (
-            <input name="customMedication" value={customMedication} onChange={e => handleCustomInput("medication", e.target.value, setCustomMedication)} className="input w-full mt-1" placeholder="Enter custom medication" />
+          {showCustomMedication && (
+            <input name="customMedication" value={form.medication} onChange={e => handleCustomInput("medication", e.target.value)} className="input w-full mt-2" placeholder="Enter custom medication" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Dosage</label>
-          <select name="dosage" value={DOSAGE_OPTIONS.includes(form.dosage) ? form.dosage : "custom"} onChange={e => handleDropdownChange("dosage", e.target.value, setCustomDosage)} className="input w-full">
+          <select name="dosage" value={showCustomDosage ? "custom" : form.dosage} onChange={e => handleDropdownChange("dosage", e.target.value, setShowCustomDosage)} className="input w-full">
             <option value="">Select</option>
             {DOSAGE_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.dosage && !DOSAGE_OPTIONS.includes(form.dosage) && (
-            <input name="customDosage" value={customDosage} onChange={e => handleCustomInput("dosage", e.target.value, setCustomDosage)} className="input w-full mt-1" placeholder="Enter custom dosage" />
+          {showCustomDosage && (
+            <input name="customDosage" value={form.dosage} onChange={e => handleCustomInput("dosage", e.target.value)} className="input w-full mt-2" placeholder="Enter custom dosage" autoFocus />
           )}
         </div>
         <div>
           <label className="font-semibold text-gray-700 mb-1 block">Route</label>
-          <select name="route" value={ROUTE_OPTIONS.includes(form.route) ? form.route : "custom"} onChange={e => handleDropdownChange("route", e.target.value, setCustomRoute)} className="input w-full">
+          <select name="route" value={showCustomRoute ? "custom" : form.route} onChange={e => handleDropdownChange("route", e.target.value, setShowCustomRoute)} className="input w-full">
             <option value="">Select</option>
             {ROUTE_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
             <option value="custom">Other (specify below)</option>
           </select>
-          {form.route && !ROUTE_OPTIONS.includes(form.route) && (
-            <input name="customRoute" value={customRoute} onChange={e => handleCustomInput("route", e.target.value, setCustomRoute)} className="input w-full mt-1" placeholder="Enter custom route" />
+          {showCustomRoute && (
+            <input name="customRoute" value={form.route} onChange={e => handleCustomInput("route", e.target.value)} className="input w-full mt-2" placeholder="Enter custom route" autoFocus />
           )}
         </div>
       </div>
