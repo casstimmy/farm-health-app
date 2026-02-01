@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FaShieldAlt, FaCheckCircle, FaTimesCircle, FaKey } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
+import Loader from "@/components/Loader";
 
 export default function RolesPermissions() {
   const router = useRouter();
@@ -113,12 +114,7 @@ export default function RolesPermissions() {
   if (pageLoading || isLoading) {
     return (
       <div className="space-y-8">
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="text-gray-600 mt-4">Loading roles & permissions...</p>
-          </div>
-        </div>
+        <Loader message="Loading roles & permissions..." color="green-600" />
       </div>
     );
   }

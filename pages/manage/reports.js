@@ -8,6 +8,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
+import Loader from "@/components/Loader";
 
 export default function Reports() {
   const { businessSettings } = useContext(BusinessContext);
@@ -111,12 +112,7 @@ export default function Reports() {
 
       {/* Summary Cards */}
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600"></div>
-            <p className="text-gray-600 mt-4">Loading report data...</p>
-          </div>
-        </div>
+        <Loader message="Loading report data..." color="yellow-600" />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

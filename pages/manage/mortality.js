@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaSkull, FaCalendar, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
+import Loader from "@/components/Loader";
 
 export default function MortalityTracking() {
   const router = useRouter();
@@ -390,12 +391,7 @@ export default function MortalityTracking() {
 
       {/* Records List */}
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            <p className="text-gray-600 mt-4">Loading mortality records...</p>
-          </div>
-        </div>
+        <Loader message="Loading mortality records..." color="red-600" />
       ) : filteredRecords.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
           <div className="text-6xl mb-4">📊</div>

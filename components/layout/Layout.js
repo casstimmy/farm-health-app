@@ -53,12 +53,7 @@ export default function Layout({ children, title = "Dashboard", showNav = true }
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100">
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg px-16">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="text-gray-600 mt-4">Loading...</p>
-          </div>
-        </div>
+        <Loader message="Loading..." color="green-600" />
       </div>
     );
   }

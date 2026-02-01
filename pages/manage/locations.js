@@ -8,6 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Modal from "@/components/shared/Modal";
 import { useRole } from "@/hooks/useRole";
+import Loader from "@/components/Loader";
 
 export default function ManageLocations() {
   const router = useRouter();
@@ -228,12 +229,7 @@ export default function ManageLocations() {
       {/* Locations Grid */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-              <p className="text-gray-600 mt-4">Loading locations...</p>
-            </div>
-          </div>
+          <Loader message="Loading locations..." color="green-600" />
         ) : filteredLocations.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
             <p className="text-gray-700 font-semibold mb-2">No locations found</p>

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FaPlus, FaTimes } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
+import Loader from "@/components/Loader";
 
 export default function HealthRecords() {
   const router = useRouter();
@@ -79,12 +80,7 @@ export default function HealthRecords() {
 
       {/* Records Grid */}
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="text-gray-600 mt-4">Loading health records...</p>
-          </div>
-        </div>
+        <Loader message="Loading health records..." color="green-600" />
       ) : filteredRecords.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-gray-200">
           <p className="text-gray-500 text-lg">No health records found</p>

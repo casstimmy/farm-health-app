@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FaPlus, FaTimes, FaEdit, FaArrowRight, FaCheck, FaTimes as FaTimesIcon } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
+import Loader from "@/components/Loader";
 import dynamic from "next/dynamic";
 
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
@@ -195,7 +196,12 @@ export default function Treatments() {
       {/* Treatment Form Modal */}
       {showForm && (
         <div className="fixed inset-0 backdrop-blur-lg bg-gray-100 bg-opacity-10 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full my-8 relative">
+            {formLoading && (
+              <div className="absolute inset-0 bg-white bg-opacity-75 rounded-2xl flex items-center justify-center z-10">
+                <Loader message="Saving treatment record..." color="blue-600" />
+              </div>
+            )}
             <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl">
               <h2 className="text-2xl font-bold text-gray-800">{editTreatmentData?._id ? "Edit Treatment Record" : "New Treatment Record"}</h2>
               <p className="text-gray-600 text-sm mt-1">Fill in the treatment details below</p>
@@ -209,12 +215,7 @@ export default function Treatments() {
 
       {/* Treatments Table */}
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600 mt-4">Loading treatments...</p>
-          </div>
-        </div>
+        <Loader message="Loading treatments..." color="blue-600" />
       ) : filteredTreatments.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center border border-gray-200">
           <div className="text-5xl mb-4">📋</div>

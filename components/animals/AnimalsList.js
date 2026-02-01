@@ -3,6 +3,7 @@ import { FaSpinner, FaCheckCircle, FaTimesCircle, FaTimes, FaCheck, FaEdit, FaTr
 import Link from "next/link";
 
 import Modal from "../shared/Modal";
+import Loader from "@/components/Loader";
 
 export default function AnimalsList() {
     // Modal state for image viewer
@@ -138,12 +139,7 @@ export default function AnimalsList() {
 
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <div className="inline-block">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 mt-4">Loading animals...</p>
-        </div>
-      </div>
+      <Loader message="Loading animals..." color="blue-600" />
     );
   }
 

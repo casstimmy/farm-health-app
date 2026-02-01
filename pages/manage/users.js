@@ -5,6 +5,7 @@ import { FaUsers, FaSpinner, FaSave, FaTimes, FaEdit } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
+import Loader from "@/components/Loader";
 
 export default function ManageUsers() {
   const router = useRouter();
@@ -208,12 +209,7 @@ export default function ManageUsers() {
         )}
 
         {loading || roleLoading ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-            <div className="inline-block">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-              <p className="text-gray-600 mt-4">Loading users...</p>
-            </div>
-          </div>
+          <Loader message="Loading users..." color="green-600" />
         ) : users.length === 0 ? (
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
             <FaUsers className="text-5xl mb-3 mx-auto text-gray-400" />

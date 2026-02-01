@@ -7,6 +7,7 @@ import { FaSpinner } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
+import Loader from "@/components/Loader";
 
 export default function BusinessSetup() {
   const router = useRouter();
@@ -112,10 +113,7 @@ export default function BusinessSetup() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-blue-600 mx-auto mb-3 w-12 h-12" />
-          <p className="text-gray-600">Loading business settings...</p>
-        </div>
+        <Loader message="Loading business settings..." color="blue-600" fullPage />
       </div>
     );
   }

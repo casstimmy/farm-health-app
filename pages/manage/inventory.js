@@ -6,6 +6,7 @@ import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
+import Loader from "@/components/Loader";
 
 export default function ManageInventory() {
   const { businessSettings } = useContext(BusinessContext);
@@ -283,12 +284,7 @@ export default function ManageInventory() {
       {/* Inventory Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-              <p className="text-gray-600 mt-4">Loading inventory...</p>
-            </div>
-          </div>
+          <Loader message="Loading inventory..." color="purple-600" />
         ) : filteredInventory.length === 0 ? (
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
             <FaBox className="text-5xl mb-3 mx-auto text-gray-400" />

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine } from "react-icons/fa";
 import { Bar } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
+import Loader from "@/components/Loader";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -213,12 +214,7 @@ export default function Home() {
       </header>
 
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="inline-block">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="text-gray-600 mt-4">Loading your dashboard...</p>
-          </div>
-        </div>
+        <Loader message="Loading your dashboard..." color="green-600" />
       ) : (
         <>
           {/* Quick Actions */}
