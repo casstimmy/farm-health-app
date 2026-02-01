@@ -278,27 +278,6 @@ export default function Treatments() {
                       <button className="text-red-600" onClick={() => handleDeleteTreatment(treatment._id)} title="Delete"><FaTimes /></button>
                     </td>
 
-                      // Delete treatment handler (moved to top level)
-                      const handleDeleteTreatment = async (id) => {
-                        if (!window.confirm("Are you sure you want to delete this treatment?")) return;
-                        setLoading(true);
-                        try {
-                          const token = localStorage.getItem("token");
-                          const res = await fetch(`/api/treatment/${id}`, {
-                            method: "DELETE",
-                            headers: {
-                              Authorization: `Bearer ${token}`,
-                            },
-                          });
-                          if (res.ok) {
-                            fetchTreatments();
-                          }
-                        } catch (err) {
-                          // handle error
-                        } finally {
-                          setLoading(false);
-                        }
-                      };
                     {/* Advance Button (edit treatment) */}
                     <td className="px-2 py-2">
                       <button className="text-purple-600" onClick={() => handleAdvance(treatment)} title="Edit Treatment"><FaArrowRight /></button>
