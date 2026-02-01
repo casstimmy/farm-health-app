@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Treatment from "@/models/Treatment";
-import { getTokenFromHeader, verifyToken } from "@/utils/auth";
+import { getTokenFromRequest, verifyToken } from "@/utils/auth";
 
 // Sample data from user
 const sampleTreatments = [
@@ -147,7 +147,7 @@ const sampleTreatments = [
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   try {
-    const token = getTokenFromHeader(req);
+    const token = getTokenFromRequest(req);
     if (!token || !verifyToken(token)) return res.status(401).json({ error: "Unauthorized" });
     await dbConnect();
     await Treatment.insertMany(sampleTreatments);
