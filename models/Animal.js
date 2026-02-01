@@ -58,7 +58,7 @@ const AnimalSchema = new mongoose.Schema({
   location: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Location",
-    required: true,
+    required: false,
   },
   paddock: String,
   weight: { type: Number, default: 0 },
