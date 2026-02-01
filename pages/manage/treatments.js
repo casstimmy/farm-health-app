@@ -44,20 +44,20 @@ export default function Treatments() {
     }
   };
 
-  // Seed sample data
+  // Seed sample data (animals + treatments)
   const handleSeedData = async () => {
     setSeedLoading(true);
     setSeedMessage("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/treatment/seed", {
+      const res = await fetch("/api/seed-all", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       if (res.ok) {
-        setSeedMessage("Sample data seeded!");
+        setSeedMessage("Animals and treatments seeded!");
         fetchTreatments();
       } else {
         setSeedMessage("Failed to seed data.");
