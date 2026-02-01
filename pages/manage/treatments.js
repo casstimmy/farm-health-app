@@ -70,13 +70,15 @@ export default function Treatments() {
     setFormLoading(true);
     try {
       const token = localStorage.getItem("token");
+      // Remove _id, __v, createdAt, updatedAt if present
+      const { _id, __v, createdAt, updatedAt, ...cleanForm } = form;
       const res = await fetch("/api/treatment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(cleanForm),
       });
       if (res.ok) {
         fetchTreatments();
