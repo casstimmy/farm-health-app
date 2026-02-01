@@ -294,7 +294,13 @@ export default function AnimalsList() {
                           title="Click to view all images"
                         />
                       ) : (
-                        <span className="text-gray-400 text-xs">No image</span>
+                        <button
+                          onClick={() => handleImageClick(animal)}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-semibold cursor-pointer transition"
+                          title="Click to add image"
+                        >
+                          No image
+                        </button>
                       )}
                     </td>
                     {/* Edit Button */}
