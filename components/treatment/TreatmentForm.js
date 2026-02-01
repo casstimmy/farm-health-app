@@ -22,14 +22,11 @@ const initialForm = {
   notes: ""
 };
 
-const SYMPTOM_OPTIONS = [
-  "Emaciation",
-  "watery feaces",
-  "Body scratching against wall",
-];
+const ROUTINE_OPTIONS = ["NO", "YES"];
+const SYMPTOM_OPTIONS = ["Emaciation", "watery feaces", "Body scratching against wall"];
 const CAUSE_OPTIONS = ["worms", "Lice"];
 const DIAGNOSIS_OPTIONS = ["Diarrhea", "External parasite"];
-const PRESCRIBED_DAYS_OPTIONS = ["3days", "a week interval"];
+const PRESCRIBED_DAYS_OPTIONS = ["3days", "a week interval", "3days Interval"];
 const TYPE_OPTIONS = ["Vitamin Dosing", "Antibiotics", "Deworming", "Ext- Parasite"];
 const MEDICATION_OPTIONS = [
   "100ml VMultinor",
@@ -115,8 +112,9 @@ export default function TreatmentForm({ onSubmit, loading }) {
         </select>
         {/* Routine dropdown */}
         <select name="routine" value={form.routine} onChange={handleChange} className="input">
-          <option value="NO">No</option>
-          <option value="YES">Yes</option>
+          {ROUTINE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
         </select>
         {/* Symptoms dropdown with custom */}
         <select
@@ -125,7 +123,7 @@ export default function TreatmentForm({ onSubmit, loading }) {
           onChange={e => handleDropdownChange("symptoms", e.target.value, setCustomSymptom)}
           className="input"
         >
-          <option value="">Select Symptom</option>
+          <option value="">Symptoms</option>
           {SYMPTOM_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
@@ -228,6 +226,7 @@ export default function TreatmentForm({ onSubmit, loading }) {
             placeholder="Enter custom type"
           />
         )}
+        <input name="preWeight" value={form.preWeight} onChange={handleChange} className="input" placeholder="Pre-Treatment Weight" />
         {/* Medication dropdown with custom */}
         <select
           name="medication"
@@ -294,7 +293,6 @@ export default function TreatmentForm({ onSubmit, loading }) {
             placeholder="Enter custom route"
           />
         )}
-        <input name="possibleCause" value={form.possibleCause} onChange={handleChange} className="input" placeholder="Possible Cause" />
         <input name="diagnosis" value={form.diagnosis} onChange={handleChange} className="input" placeholder="Diagnosis" />
         <input name="prescribedDays" value={form.prescribedDays} onChange={handleChange} className="input" placeholder="Prescribed Treatment Days" />
         <input name="type" value={form.type} onChange={handleChange} className="input" placeholder="Type of Treatment" />
