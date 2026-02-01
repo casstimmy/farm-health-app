@@ -150,6 +150,82 @@ export default function AnimalsList() {
     setImageModalOpen(true);
   };
 
+  const handleDeleteImage = async (animalId, imageIndex) => {
+    try {
+      const token = localStorage.getItem("token");
+      const animal = animals.find((a) => a._id === animalId);
+      if (!animal) return;
+
+      // Remove image from array
+      const updatedImages = animal.images.filter((_, idx) => idx !== imageIndex);
+
+      // Update animal
+      const res = await fetch(`/api/animals/${animalId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...animal, images: updatedImages }),
+      });
+
+      if (res.ok) {
+        // Update local state
+        setModalImages(updatedImages);
+        setAnimals((prev) =>
+          prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to delete image:", error);
+    }
+  };
+
+  const handleAddImage = async (animalId, e) => {
+    try {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      const formData = new FormData();
+      Array.from(files).forEach((file) => {
+        formData.append("images", file);
+      });
+
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const uploadedImages = await res.json();
+        const animal = animals.find((a) => a._id === animalId);
+        if (!animal) return;
+
+        const updatedImages = [...(animal.images || []), ...uploadedImages];
+
+        const updateRes = await fetch(`/api/animals/${animalId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ...animal, images: updatedImages }),
+        });
+
+        if (updateRes.ok) {
+          setModalImages(updatedImages);
+          setAnimals((prev) =>
+            prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to add images:", error);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -404,7 +480,12 @@ export default function AnimalsList() {
       )}
       {/* Image Modal */}
       <Modal isOpen={imageModalOpen} onClose={() => setImageModalOpen(false)} title={modalAnimal ? `${modalAnimal.name || modalAnimal.tagId} - Image Gallery` : "Animal Image Gallery"} size="2xl">
-        <ImageViewer images={modalImages} animalName={modalAnimal?.name || modalAnimal?.tagId || "Animal"} />
+        <ImageViewer 
+          images={modalImages} 
+          animalName={modalAnimal?.name || modalAnimal?.tagId || "Animal"}
+          onDeleteImage={(imageIndex) => handleDeleteImage(modalAnimal._id, imageIndex)}
+          onAddImage={(e) => handleAddImage(modalAnimal._id, e)}
+        />
       </Modal>
     </div>
   );

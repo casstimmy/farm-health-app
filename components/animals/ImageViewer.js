@@ -1,66 +1,97 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaChevronLeft, FaChevronRight, FaTimes, FaDownload } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaTimes, FaTrash, FaImage, FaPlus } from "react-icons/fa";
 
 /**
  * Advanced Image Viewer Component
  * Features:
- * - Main image display with zoom capabilities
+ * - Main image display
  * - Thumbnail navigation at the bottom
  * - Smooth transitions between images
- * - Download capability
+ * - Delete image capability
+ * - Upload new images
  * - Keyboard navigation support
  */
-export default function ImageViewer({ images = [], animalName = "Animal" }) {
+export default function ImageViewer({ 
+  images = [], 
+  animalName = "Animal",
+  onDeleteImage = null,
+  onAddImage = null
+}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [localImages, setLocalImages] = useState(images);
+  const fileInputRef = useRef(null);
 
-  if (!images || images.length === 0) {
+  useEffect(() => {
+    setLocalImages(images);
+    setSelectedIndex(0);
+  }, [images]);
+
+  if (!localImages || localImages.length === 0) {
     return (
-      <div className="text-center py-8 bg-gray-50 rounded-lg">
+      <div className="text-center py-12 bg-gray-50 rounded-lg space-y-4">
+        <FaImage className="mx-auto text-4xl text-gray-400" />
         <p className="text-gray-500">No images available</p>
+        {onAddImage && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-all"
+          >
+            Add First Image
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={onAddImage}
+          className="hidden"
+        />
       </div>
     );
   }
 
-  const currentImage = images[selectedIndex];
+  const currentImage = localImages[selectedIndex];
   const imageUrl = currentImage?.full || currentImage?.thumb || currentImage;
 
   const handlePrevious = () => {
-    setSelectedIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setSelectedIndex((prev) => (prev === 0 ? localImages.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setSelectedIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setSelectedIndex((prev) => (prev === localImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const handleDeleteImage = async () => {
+    if (confirm(`Delete image ${selectedIndex + 1}?`)) {
+      if (onDeleteImage) {
+        await onDeleteImage(selectedIndex);
+      }
+      const newImages = localImages.filter((_, idx) => idx !== selectedIndex);
+      setLocalImages(newImages);
+      if (selectedIndex >= newImages.length && selectedIndex > 0) {
+        setSelectedIndex(selectedIndex - 1);
+      }
+    }
+  };
+
+  const handleAddImage = (e) => {
+    if (onAddImage) {
+      onAddImage(e);
+    }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "ArrowLeft") handlePrevious();
     if (e.key === "ArrowRight") handleNext();
-    if (e.key === "Escape") setIsFullscreen(false);
+    if (e.key === "Delete") handleDeleteImage();
   };
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${animalName}-${selectedIndex + 1}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Download failed:", error);
-    }
-  };
+  }, [localImages, selectedIndex]);
 
   return (
     <div className="w-full space-y-4">
@@ -78,17 +109,16 @@ export default function ImageViewer({ images = [], animalName = "Animal" }) {
             src={imageUrl}
             alt={`${animalName} - Image ${selectedIndex + 1}`}
             className="w-full h-full object-contain"
-            onClick={() => setIsFullscreen(true)}
           />
         </motion.div>
 
         {/* Image Counter */}
         <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-semibold">
-          {selectedIndex + 1} / {images.length}
+          {selectedIndex + 1} / {localImages.length}
         </div>
 
         {/* Navigation Buttons */}
-        {images.length > 1 && (
+        {localImages.length > 1 && (
           <>
             <button
               onClick={handlePrevious}
@@ -108,31 +138,45 @@ export default function ImageViewer({ images = [], animalName = "Animal" }) {
         )}
 
         {/* Action Buttons */}
-        <div className="absolute bottom-4 left-4 right-4 flex gap-2 justify-between">
-          <button
-            onClick={handleDownload}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
-            title="Download image"
-          >
-            <FaDownload size={16} />
-            <span className="hidden sm:inline">Download</span>
-          </button>
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-lg"
-            title="Toggle fullscreen (Esc to exit)"
-          >
-            {isFullscreen ? "Exit" : "Fullscreen"}
-          </button>
+        <div className="absolute bottom-4 left-4 right-4 flex gap-2 justify-between flex-wrap">
+          <div className="flex gap-2">
+            {onAddImage && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+                title="Add new image"
+              >
+                <FaPlus size={16} />
+                <span className="hidden sm:inline">Add</span>
+              </button>
+            )}
+            <button
+              onClick={handleDeleteImage}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+              title="Delete image (Delete key)"
+            >
+              <FaTrash size={16} />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          </div>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleAddImage}
+          className="hidden"
+        />
       </div>
 
       {/* Thumbnail Navigation */}
-      {images.length > 1 && (
+      {localImages.length > 1 && (
         <div className="bg-gray-100 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-3 font-semibold">Select Image</p>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {images.map((img, idx) => {
+            {localImages.map((img, idx) => {
               const thumbUrl = img?.thumb || img?.full || img;
               return (
                 <motion.button
@@ -158,68 +202,9 @@ export default function ImageViewer({ images = [], animalName = "Animal" }) {
               );
             })}
           </div>
+          <p className="text-xs text-gray-500 mt-2">← → keys to navigate</p>
         </div>
       )}
-
-      {/* Fullscreen Modal */}
-      <AnimatePresence>
-        {isFullscreen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-50 flex items-center justify-center p-4"
-            onClick={() => setIsFullscreen(false)}
-          >
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={imageUrl}
-                alt={`${animalName} - Fullscreen`}
-                className="w-full h-full object-contain"
-                onClick={(e) => e.stopPropagation()}
-              />
-
-              {/* Fullscreen Navigation */}
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePrevious();
-                    }}
-                    className="absolute left-6 top-1/2 -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-black p-4 rounded-full transition-all shadow-2xl"
-                  >
-                    <FaChevronLeft size={28} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleNext();
-                    }}
-                    className="absolute right-6 top-1/2 -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-black p-4 rounded-full transition-all shadow-2xl"
-                  >
-                    <FaChevronRight size={28} />
-                  </button>
-                </>
-              )}
-
-              {/* Fullscreen Close Button */}
-              <button
-                onClick={() => setIsFullscreen(false)}
-                className="absolute top-6 right-6 bg-white bg-opacity-90 hover:bg-opacity-100 text-black p-4 rounded-full transition-all shadow-2xl"
-                title="Close fullscreen (Esc)"
-              >
-                <FaTimes size={24} />
-              </button>
-
-              {/* Image Counter in Fullscreen */}
-              <div className="absolute bottom-6 left-6 bg-black bg-opacity-70 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                {selectedIndex + 1} / {images.length}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
