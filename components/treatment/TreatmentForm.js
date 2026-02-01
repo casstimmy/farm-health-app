@@ -103,7 +103,7 @@ export default function TreatmentForm({ onSubmit, loading }) {
           className="input"
           required
         >
-          <option value="">Select Animal</option>
+          <option value="">Animal ID</option>
           {animals.map((a) => (
             <option key={a._id} value={a._id}>
               {a.tagId} - {a.breed} - {a.gender}
@@ -112,6 +112,7 @@ export default function TreatmentForm({ onSubmit, loading }) {
         </select>
         {/* Routine dropdown */}
         <select name="routine" value={form.routine} onChange={handleChange} className="input">
+          <option value="">Routine</option>
           {ROUTINE_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>{opt}</option>
           ))}

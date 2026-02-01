@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 
 const TreatmentSchema = new mongoose.Schema({
   date: Date,
-  animalId: String,
-  breed: String,
-  gender: String,
+  animal: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Animal",
+    required: true
+  },
   routine: String,
   symptoms: String,
   possibleCause: String,

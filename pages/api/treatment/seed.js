@@ -1,14 +1,14 @@
 import dbConnect from "@/lib/mongodb";
 import Treatment from "@/models/Treatment";
+import Animal from "@/models/Animal";
 import { getTokenFromRequest, verifyToken } from "@/utils/auth";
 
-// Sample data from user
+
+// Sample data with animal tagId
 const sampleTreatments = [
   {
     date: "2024-10-12",
-    animalId: "SGF001",
-    breed: "Sahel",
-    gender: "Female",
+    animalTag: "SGF001",
     routine: "NO",
     symptoms: "Emaciation",
     possibleCause: "",
@@ -29,9 +29,7 @@ const sampleTreatments = [
   },
   {
     date: "2024-10-13",
-    animalId: "SGF001",
-    breed: "Sahel",
-    gender: "Female",
+    animalTag: "SGF001",
     routine: "NO",
     symptoms: "watery feaces",
     possibleCause: "",
@@ -52,9 +50,7 @@ const sampleTreatments = [
   },
   {
     date: "2024-10-18",
-    animalId: "SGF001",
-    breed: "Sahel",
-    gender: "Female",
+    animalTag: "SGF001",
     routine: "NO",
     symptoms: "Watery feaces",
     possibleCause: "worms",
@@ -75,9 +71,7 @@ const sampleTreatments = [
   },
   {
     date: "2024-10-23",
-    animalId: "BGF001",
-    breed: "Boar",
-    gender: "Female",
+    animalTag: "BGF001",
     routine: "NO",
     symptoms: "Body scratching against wall",
     possibleCause: "Lice",
@@ -98,9 +92,7 @@ const sampleTreatments = [
   },
   {
     date: "2024-10-23",
-    animalId: "BGF002",
-    breed: "Boar",
-    gender: "Female",
+    animalTag: "BGF002",
     routine: "NO",
     symptoms: "Body Scratching against wall",
     possibleCause: "Lice",
@@ -121,9 +113,7 @@ const sampleTreatments = [
   },
   {
     date: "2024-10-27",
-    animalId: "SGF001",
-    breed: "Sahel",
-    gender: "Female",
+    animalTag: "SGF001",
     routine: "NO",
     symptoms: "Watery feaces",
     possibleCause: "Worm",
@@ -150,7 +140,20 @@ export default async function handler(req, res) {
     const token = getTokenFromRequest(req);
     if (!token || !verifyToken(token)) return res.status(401).json({ error: "Unauthorized" });
     await dbConnect();
-    await Treatment.insertMany(sampleTreatments);
+    // Find all animals by tagId and map to ObjectId
+    const animals = await Animal.find({ tagId: { $in: sampleTreatments.map(t => t.animalTag) } });
+    const animalMap = {};
+    animals.forEach(a => { animalMap[a.tagId] = a._id; });
+    // Prepare treatments with animal ObjectId
+    const docs = sampleTreatments.map(t => ({
+      ...t,
+      animal: animalMap[t.animalTag],
+      date: t.date ? new Date(t.date) : undefined,
+      completionDate: t.completionDate ? new Date(t.completionDate) : undefined,
+    }));
+    // Remove animalTag from docs
+    docs.forEach(d => { delete d.animalTag; });
+    await Treatment.insertMany(docs);
     return res.status(200).json({ message: "Sample treatments seeded" });
   } catch (err) {
     return res.status(500).json({ error: "Failed to seed treatments" });
