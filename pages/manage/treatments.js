@@ -49,6 +49,26 @@ export default function Treatments() {
         setLoading(false);
       }
     };
+    const handleDeleteTreatment = async (_id) => {
+      if (!confirm("Are you sure you want to delete this treatment record?")) return;
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/treatment/${_id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          fetchTreatments();
+        }
+      } catch (err) {
+        console.error("Failed to delete treatment:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
     // Advance button opens the treatment form for editing this treatment
     const [showForm, setShowForm] = useState(false);
     const [editTreatmentData, setEditTreatmentData] = useState(null);
@@ -237,23 +257,6 @@ export default function Treatments() {
                     >
                       {/* Action Buttons */}
                       <td className="px-4 py-3">
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${treatment.recoveryStatus ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {treatment.recoveryStatus || "Pending"}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
                         <div className="flex gap-2">
                           {isEditing ? (
                             <>
@@ -333,9 +336,10 @@ export default function Treatments() {
                   );
                 })}
               </tbody>
-          </table>
-        </div>
-      )}
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
