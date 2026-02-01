@@ -49,8 +49,12 @@ export default function Treatments() {
         setLoading(false);
       }
     };
-    const handleAdvance = (animalId) => {
-      if (animalId) router.push(`/manage/animals/${animalId}`);
+    // Advance button opens the treatment form for editing this treatment
+    const [showForm, setShowForm] = useState(false);
+    const [editTreatmentData, setEditTreatmentData] = useState(null);
+    const handleAdvance = (treatment) => {
+      setEditTreatmentData(treatment);
+      setShowForm(true);
     };
   const router = useRouter();
   const [treatments, setTreatments] = useState([]);
@@ -189,7 +193,7 @@ export default function Treatments() {
       {/* Treatment Form */}
       {showForm && (
         <div className="my-6">
-          <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} />
+          <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} initialData={editTreatmentData} onClose={() => { setShowForm(false); setEditTreatmentData(null); }} />
         </div>
       )}
 
@@ -251,15 +255,14 @@ export default function Treatments() {
                         <button className="text-blue-600" onClick={() => handleEditClick(idx, treatment)} title="Edit"><FaEdit /></button>
                       )}
                     </td>
-                    {/* Advance Button */}
+                    {/* Advance Button (edit treatment) */}
                     <td className="px-2 py-2">
-                      <button className="text-purple-600" onClick={() => handleAdvance(animal._id)} title="Go to Animal"><FaArrowRight /></button>
+                      <button className="text-purple-600" onClick={() => handleAdvance(treatment)} title="Edit Treatment"><FaArrowRight /></button>
                     </td>
                     {/* Date */}
                     <td className="px-2 py-2">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "")}</td>
                     {/* Animal ID only */}
                     <td className="px-2 py-2">{animal.tagId || ""}</td>
-                    {/* Breed and Gender columns removed as per request */}
                     {/* Routine */}
                     <td className="px-2 py-2">{isEditing ? <input name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className="input input-xs" /> : (treatment.routine || "")}</td>
                     {/* Symptoms */}
