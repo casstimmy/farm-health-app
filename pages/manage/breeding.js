@@ -359,8 +359,11 @@ export default function BreedingManagement() {
 
       {/* Records List */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <FaSpinner className="animate-spin text-pink-600 w-8 h-8" />
+        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="inline-block">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
+            <p className="text-gray-600 mt-4">Loading breeding records...</p>
+          </div>
         </div>
       ) : filteredRecords.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">

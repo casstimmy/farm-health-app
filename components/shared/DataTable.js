@@ -13,10 +13,10 @@ export default function DataTable({
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
-        <div className="inline-block animate-spin mb-4">
-          <div className="w-8 h-8 border-3 border-gray-200 border-t-green-600 rounded-full"></div>
+        <div className="inline-block">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <p className="text-gray-600 mt-4">Loading...</p>
         </div>
-        <p className="text-gray-600">Loading...</p>
       </div>
     );
   }

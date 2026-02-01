@@ -30,7 +30,7 @@ export default function Modal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 backdrop-blur-lg bg-black bg-opacity-10"
           />
 
           {/* Modal */}

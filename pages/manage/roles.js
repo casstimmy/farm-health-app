@@ -112,12 +112,12 @@ export default function RolesPermissions() {
 
   if (pageLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100">
-        <div className="text-center">
-          <div className="animate-spin inline-block mb-4">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-green-600 rounded-full"></div>
+      <div className="space-y-8">
+        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="inline-block">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <p className="text-gray-600 mt-4">Loading roles & permissions...</p>
           </div>
-          <p className="text-gray-700 font-semibold text-lg">Loading...</p>
         </div>
       </div>
     );

@@ -295,8 +295,10 @@ export default function Sidebar() {
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
-          <FaSpinner className="animate-spin text-white w-8 h-8" />
+        <div className="fixed inset-0 backdrop-blur-lg bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          </div>
         </div>
       )}
     </>

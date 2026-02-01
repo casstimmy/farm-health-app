@@ -41,8 +41,11 @@ export default function AnimalDetail() {
 		return (
 			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
 				<PageHeader title="Loading..." subtitle="Fetching animal details" gradient="from-blue-600 to-blue-700" icon="🐑" />
-				<div className="flex justify-center items-center py-16">
-					<FaSpinner className="animate-spin text-green-600" size={40} />
+				<div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+					<div className="inline-block">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+						<p className="text-gray-600 mt-4">Loading animal details...</p>
+					</div>
 				</div>
 			</motion.div>
 		);

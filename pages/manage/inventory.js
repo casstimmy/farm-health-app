@@ -283,10 +283,10 @@ export default function ManageInventory() {
       {/* Inventory Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         {loading ? (
-          <div className="flex justify-center items-center py-16">
-            <div className="text-center">
-              <FaSpinner className="animate-spin text-green-600 mx-auto mb-3" size={40} />
-              <p className="text-gray-600 font-medium">Loading inventory...</p>
+          <div className="text-center py-16">
+            <div className="inline-block">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              <p className="text-gray-600 mt-4">Loading inventory...</p>
             </div>
           </div>
         ) : filteredInventory.length === 0 ? (

@@ -228,10 +228,10 @@ export default function ManageLocations() {
       {/* Locations Grid */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="text-center">
-              <FaSpinner className="animate-spin text-green-600 mx-auto mb-3 w-8 h-8" />
-              <p className="text-gray-600">Loading locations...</p>
+          <div className="text-center py-16">
+            <div className="inline-block">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <p className="text-gray-600 mt-4">Loading locations...</p>
             </div>
           </div>
         ) : filteredLocations.length === 0 ? (

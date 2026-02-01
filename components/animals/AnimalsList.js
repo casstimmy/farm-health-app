@@ -138,10 +138,10 @@ export default function AnimalsList() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-16">
-        <div className="text-center">
-          <FaSpinner className="animate-spin text-green-600 mx-auto mb-3" size={40} />
-          <p className="text-gray-600 font-medium">Loading animals...</p>
+      <div className="text-center py-16">
+        <div className="inline-block">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600 mt-4">Loading animals...</p>
         </div>
       </div>
     );

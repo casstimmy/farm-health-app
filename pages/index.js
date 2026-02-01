@@ -213,10 +213,10 @@ export default function Home() {
       </header>
 
       {loading ? (
-        <div className="flex justify-center items-center py-32">
-          <div className="text-center">
-            <FaSpinner className="animate-spin text-green-600 w-16 h-16 mx-auto" />
-            <p className="mt-6 text-gray-600 font-medium text-lg">Loading your data...</p>
+        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="inline-block">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <p className="text-gray-600 mt-4">Loading your dashboard...</p>
           </div>
         </div>
       ) : (
