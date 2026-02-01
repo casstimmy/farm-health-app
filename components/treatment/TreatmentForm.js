@@ -88,7 +88,13 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(form);
+    // Rename animalId to animal for backend compatibility
+    const submitData = { ...form };
+    if (submitData.animalId) {
+      submitData.animal = submitData.animalId;
+      delete submitData.animalId;
+    }
+    onSubmit(submitData);
   };
 
   return (
