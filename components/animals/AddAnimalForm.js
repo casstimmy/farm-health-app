@@ -1,10 +1,32 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import axios from "axios";
 import { useRouter } from "next/router";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
 import Loader from "../Loader";
 
 export default function AddAnimalForm({ onSuccess, animal }) {
+    const [users, setUsers] = useState([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    // Fetch all users for the Recorded By dropdown
+    useEffect(() => {
+      const fetchUsers = async () => {
+        setLoadingUsers(true);
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch("/api/users", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (Array.isArray(data)) setUsers(data);
+        } catch (err) {
+          setUsers([]);
+        } finally {
+          setLoadingUsers(false);
+        }
+      };
+      fetchUsers();
+    }, []);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -47,9 +69,9 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
   useEffect(() => {
     fetchLocations();
-    // Get current user from localStorage
+    // Get current user from localStorage and set as default for recordedBy if not editing
     const user = localStorage.getItem("user");
-    if (user) {
+    if (user && !(animal && (animal._id || animal.id))) {
       try {
         const userData = JSON.parse(user);
         setFormData(prev => ({ ...prev, recordedBy: userData.name }));
@@ -553,14 +575,29 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           {/* Recorded By */}
           <div>
             <label className="label">Recorded By</label>
-            <input
-              type="text"
+            <select
               name="recordedBy"
               value={formData.recordedBy}
               onChange={handleChange}
               className="input-field"
-              placeholder="Your name"
-            />
+              required
+              disabled={loadingUsers}
+            >
+              <option value="">
+                {loadingUsers
+                  ? "Loading users..."
+                  : users.length === 0
+                  ? "No users available"
+                  : formData.recordedBy
+                  ? "Select user"
+                  : "Select user (active user shown)"}
+              </option>
+              {users.map((user) => (
+                <option key={user._id} value={user.name}>
+                  {user.name} {user.role ? `(${user.role})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
