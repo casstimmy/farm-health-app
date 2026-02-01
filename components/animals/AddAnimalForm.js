@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
+import { motion } from "framer-motion";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
 import Loader from "../Loader";
 
@@ -621,89 +622,114 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           <FaImage /> Animal Photos
         </h3>
 
-        {/* Image Preview and Upload */}
-        <div className="flex gap-4 mb-4">
-          <div className="flex gap-2 md:gap-3 flex-wrap">
-            <label className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center border-2 border-dashed rounded-md cursor-pointer bg-gray-50 text-gray-400 hover:bg-gray-100 text-xs md:text-sm text-center p-1">
-              + Upload
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-            </label>
-
-            {images.map((img, i) => (
-              <div
-                key={i}
-                className="relative w-24 h-24 md:w-28 md:h-28 rounded-md overflow-hidden border"
-              >
-                <img
-                  src={img.thumb || img.full}
-                  alt="Animal"
-                  className="object-cover w-full h-full"
-                />
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
-                  onClick={() => removeImage(img)}
-                >
-                  <FaTimes size={12} />
-                </button>
+        {/* Image Upload Section */}
+        <div className="space-y-4">
+          {/* Upload Area */}
+          <label className="relative block border-2 border-dashed border-indigo-300 rounded-xl p-8 text-center cursor-pointer hover:bg-indigo-50 bg-indigo-50 transition-colors">
+            <div className="space-y-3">
+              <FaCamera className="mx-auto text-4xl text-indigo-600" />
+              <div>
+                <p className="font-semibold text-indigo-900">Click to upload images</p>
+                <p className="text-sm text-gray-600">or drag and drop</p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
               </div>
-            ))}
+            </div>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+          </label>
 
-            {loadingImages && (
-              <div className="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center">
-                <Loader />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upload Button */}
-        {/* No upload button needed, handled automatically */}
-
-        {/* Uploaded Images */}
-        {formData.images.length > 0 && (
-          <div className="mt-4">
-            <h4 className="font-semibold text-indigo-900 mb-2">Uploaded Images ({formData.images.length})</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {formData.images.map((image, index) => (
-                <div
-                  key={index}
-                  className="relative group"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
-                >
-                  <img
-                    src={image.thumb}
-                    alt={`Animal ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border-2 border-indigo-300"
-                  />
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Preview Area */}
+          {(images.length > 0 || loadingImages) && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Preview ({images.length})</p>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {images.map((img, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative flex-shrink-0 group"
+                  >
+                    <img
+                      src={img.thumb || img.full}
+                      alt={`Preview ${i + 1}`}
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                    />
                     <button
                       type="button"
-                      onClick={() => removeImage(image)}
-                      className="bg-red-600 text-white rounded-full p-1"
-                      title="Remove"
+                      onClick={() => removeImage(img)}
+                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      title="Remove image"
                     >
-                      <FaTimes size={12} />
+                      <FaTimes size={14} />
                     </button>
+                    <span className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                      {i + 1}
+                    </span>
+                  </motion.div>
+                ))}
+                {loadingImages && (
+                  <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-lg">
+                    <Loader size="sm" />
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Uploaded Images Gallery */}
+          {formData.images.length > 0 && (
+            <div className="bg-white rounded-lg border border-green-200 bg-green-50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-green-900">✓ Uploaded ({formData.images.length})</p>
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Ready</span>
+              </div>
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {formData.images.map((image, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative group rounded-lg overflow-hidden border-2 border-green-300 hover:border-green-500 transition-colors"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, index)}
+                  >
+                    <img
+                      src={image.thumb}
+                      alt={`Uploaded ${index + 1}`}
+                      className="w-full aspect-square object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => removeImage(image)}
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove"
+                      >
+                        <FaTimes size={14} />
+                      </button>
+                    </div>
+                    <span className="absolute top-1 right-1 bg-green-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">
+                      {index + 1}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-3">💡 Drag to reorder images</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ACTIONS: Cancel + Submit */}
-      <div className="flex gap-3 sticky bottom-0 bg-white py-3">
+      <div className="flex gap-3 sticky bottom-0 bg-white py-3 border-t">
         <button
           type="button"
           onClick={() => {

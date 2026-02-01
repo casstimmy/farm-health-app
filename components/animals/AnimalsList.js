@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import Modal from "../shared/Modal";
 import Loader from "@/components/Loader";
+import ImageViewer from "./ImageViewer";
 
 export default function AnimalsList() {
     // Modal state for image viewer
@@ -402,21 +403,8 @@ export default function AnimalsList() {
         </div>
       )}
       {/* Image Modal */}
-      <Modal isOpen={imageModalOpen} onClose={() => setImageModalOpen(false)} title={modalAnimal ? `Images for ${modalAnimal.name || modalAnimal.tagId}` : "Animal Images"} size="xl">
-        {modalImages && modalImages.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {modalImages.map((img, idx) => (
-              <img
-                key={idx}
-                src={img.full || img.thumb}
-                alt={`Animal Image ${idx + 1}`}
-                className="w-full h-64 object-cover rounded-xl border"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-gray-500">No images available for this animal.</div>
-        )}
+      <Modal isOpen={imageModalOpen} onClose={() => setImageModalOpen(false)} title={modalAnimal ? `${modalAnimal.name || modalAnimal.tagId} - Image Gallery` : "Animal Image Gallery"} size="2xl">
+        <ImageViewer images={modalImages} animalName={modalAnimal?.name || modalAnimal?.tagId || "Animal"} />
       </Modal>
     </div>
   );
