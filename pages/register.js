@@ -94,32 +94,70 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-y-auto">
-      {/* Register Card */}
+    <div className="min-h-screen w-full flex flex-col lg:flex-row">
+      {/* Left Side - Hero/Branding */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md my-4 mx-4"
+        initial={{ x: -50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 flex items-center justify-center p-8 lg:p-12"
       >
-        {/* Header Section */}
-        <div className="text-center mb-6">
+        <div className="text-center lg:text-left max-w-md">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-3 shadow-lg"
+            transition={{ delay: 0.3, type: "spring" }}
+            className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl mb-6 shadow-xl"
           >
-            <span className="text-2xl">🐑</span>
+            <span className="text-5xl">🐑</span>
           </motion.div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">Farm Health</h1>
-          <p className="text-gray-500 text-sm">Create your account</p>
+          <motion.h1 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-4xl lg:text-5xl font-bold text-white mb-4"
+          >
+            Farm Health
+          </motion.h1>
+          <motion.p 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-emerald-100 text-lg mb-6"
+          >
+            Join our livestock management platform
+          </motion.p>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="hidden lg:flex flex-wrap gap-3"
+          >
+            {["Easy Setup", "Secure Access", "Team Collaboration", "Real-time Sync"].map((item, i) => (
+              <span key={i} className="px-3 py-1.5 bg-white/10 rounded-full text-sm text-emerald-100">
+                {item}
+              </span>
+            ))}
+          </motion.div>
         </div>
+      </motion.div>
 
-        {/* Main Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
-          {/* Card Content */}
-          <div className="px-5 py-6">
+      {/* Right Side - Form */}
+      <motion.div
+        initial={{ x: 50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="lg:w-1/2 bg-gray-50 flex items-center justify-center p-6 lg:p-12 overflow-y-auto"
+      >
+        <div className="w-full max-w-md">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-1">Create Account</h2>
+            <p className="text-gray-500">Get started with Farm Health</p>
+          </div>
+
+          {/* Main Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+            <div className="px-5 py-6">
             <AnimatePresence mode="wait">
               {success ? (
                 <motion.div
@@ -265,6 +303,7 @@ export default function Register() {
               )}
             </AnimatePresence>
           </div>
+        </div>
         </div>
       </motion.div>
     </div>
