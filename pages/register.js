@@ -100,54 +100,69 @@ export default function Register() {
         initial={{ x: -30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="hidden lg:flex lg:w-1/2 relative"
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
       >
-        {/* Background Image */}
+        {/* Background Image - Goat Farm */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=2074&auto=format&fit=crop')" }}
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1578181545619-1c74f1ff3d0c?q=80&w=2070&auto=format&fit=crop')" }}
         />
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-emerald-900/50" />
+        {/* Animated Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/70 via-emerald-900/50 to-emerald-700/40" />
         
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-between p-16 text-white h-full">
+          {/* Top Section */}
+          <div>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+              className="w-14 h-14 bg-emerald-400/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-emerald-300/30"
+            >
+              <span className="text-3xl">🐐</span>
+            </motion.div>
+            <motion.h1 
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-5xl font-bold mb-3 leading-tight"
+            >
+              Farm Health
+            </motion.h1>
+            <motion.p 
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-emerald-100 text-lg leading-relaxed max-w-md"
+            >
+              Join thousands of farmers managing their livestock with confidence
+            </motion.p>
+          </div>
+
+          {/* Bottom Section - Why Join */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6"
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="space-y-3"
           >
-            <span className="text-4xl">🐑</span>
+            <p className="text-xs font-semibold text-emerald-200 uppercase tracking-wider">Why Farm Health?</p>
+            <div className="space-y-2">
+              {[
+                "✓ Centralized health tracking",
+                "✓ Secure team collaboration",
+                "✓ Instant alerts & insights",
+                "✓ Complete farm analytics"
+              ].map((item, i) => (
+                <p key={i} className="text-sm text-emerald-100 flex items-center gap-2">
+                  {item}
+                </p>
+              ))}
+            </div>
           </motion.div>
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-4xl font-bold mb-3"
-          >
-            Farm Health
-          </motion.h1>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-white/80 text-lg mb-8 max-w-sm"
-          >
-            Join our livestock management platform today
-          </motion.p>
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-wrap gap-2"
-          >
-            {["Easy Setup", "Secure", "Team Access", "Real-time"].map((item, i) => (
-              <span key={i} className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm">
-                {item}
-              </span>
-            ))}
-          </motion.div>
+        </div>
+      </motion.div>
         </div>
       </motion.div>
 

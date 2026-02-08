@@ -93,53 +93,66 @@ export default function Login({ staffList = [], locations = [] }) {
         initial={{ x: -30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="hidden lg:flex lg:w-1/2 relative"
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
       >
-        {/* Background Image */}
+        {/* Background Image - Goat Farm */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=2073&auto=format&fit=crop')" }}
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop')" }}
         />
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-emerald-900/50" />
+        {/* Animated Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/70 via-emerald-900/50 to-emerald-700/40" />
         
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-between p-16 text-white h-full">
+          {/* Top Section */}
+          <div>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+              className="w-14 h-14 bg-emerald-400/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-emerald-300/30"
+            >
+              <span className="text-3xl">🐐</span>
+            </motion.div>
+            <motion.h1 
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-5xl font-bold mb-3 leading-tight"
+            >
+              Farm Health
+            </motion.h1>
+            <motion.p 
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-emerald-100 text-lg leading-relaxed max-w-md"
+            >
+              Professional livestock management and integrated health tracking for modern farms
+            </motion.p>
+          </div>
+
+          {/* Bottom Section - Features */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6"
-          >
-            <span className="text-4xl">🐑</span>
-          </motion.div>
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-4xl font-bold mb-3"
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="space-y-3"
           >
-            Farm Health
-          </motion.h1>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-white/80 text-lg mb-8 max-w-sm"
-          >
-            Complete livestock management and health tracking system
-          </motion.p>
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-wrap gap-2"
-          >
-            {["Health Records", "Treatments", "Inventory", "Reports"].map((item, i) => (
-              <span key={i} className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm">
-                {item}
-              </span>
-            ))}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: "📊", label: "Real-time Tracking" },
+                { icon: "💊", label: "Health Records" },
+                { icon: "👥", label: "Team Collaboration" },
+                { icon: "📈", label: "Performance Analytics" }
+              ].map((feature, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 hover:border-emerald-300/50 transition-all">
+                  <span className="text-lg">{feature.icon}</span>
+                  <span className="text-xs font-medium text-emerald-50">{feature.label}</span>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
       </motion.div>
