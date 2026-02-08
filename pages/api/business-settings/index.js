@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
   if (req.method === "PUT") {
     try {
-      const { businessName, businessEmail, businessPhone, businessAddress, businessDescription, currency, timezone } = req.body;
+      const { businessName, businessEmail, businessPhone, businessAddress, businessDescription, loginHeroImage, currency, timezone } = req.body;
 
       let settings = await BusinessSettings.findOne();
       if (!settings) {
@@ -31,10 +31,11 @@ export default async function handler(req, res) {
       }
 
       if (businessName) settings.businessName = businessName;
-      if (businessEmail) settings.businessEmail = businessEmail;
-      if (businessPhone) settings.businessPhone = businessPhone;
-      if (businessAddress) settings.businessAddress = businessAddress;
-      if (businessDescription) settings.businessDescription = businessDescription;
+      if (businessEmail !== undefined) settings.businessEmail = businessEmail;
+      if (businessPhone !== undefined) settings.businessPhone = businessPhone;
+      if (businessAddress !== undefined) settings.businessAddress = businessAddress;
+      if (businessDescription !== undefined) settings.businessDescription = businessDescription;
+      if (loginHeroImage !== undefined) settings.loginHeroImage = loginHeroImage;
       if (currency) settings.currency = currency;
       if (timezone) settings.timezone = timezone;
 

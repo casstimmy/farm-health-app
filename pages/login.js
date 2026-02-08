@@ -6,8 +6,11 @@ import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt, FaArrowRight } from "react-i
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Location from "@/models/Location";
+import BusinessSettings from "@/models/BusinessSettings";
 
-export default function Login({ staffList = [], locations = [] }) {
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop";
+
+export default function Login({ staffList = [], locations = [], loginHeroImage = "" }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [location, setLocation] = useState(locations?.[0] || "");
   const [pin, setPin] = useState("");
@@ -98,7 +101,7 @@ export default function Login({ staffList = [], locations = [] }) {
         {/* Background Image - Goat Farm */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop')" }}
+          style={{ backgroundImage: `url('${loginHeroImage || DEFAULT_HERO_IMAGE}')` }}
         />
         {/* Animated Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/70 via-emerald-900/50 to-emerald-700/40" />
@@ -382,10 +385,15 @@ export async function getServerSideProps() {
       ? locationDocs.map((loc) => loc.name)
       : ["Default Farm"];
 
+    // Fetch business settings for hero image
+    const settings = await BusinessSettings.findOne().select("loginHeroImage").lean();
+    const loginHeroImage = settings?.loginHeroImage || "";
+
     return {
       props: {
         staffList: JSON.parse(JSON.stringify(staffList)),
         locations: JSON.parse(JSON.stringify(locations)),
+        loginHeroImage,
       },
     };
   } catch (error) {
@@ -393,7 +401,8 @@ export async function getServerSideProps() {
     return { 
       props: { 
         staffList: [], 
-        locations: ["Default Farm"] 
+        locations: ["Default Farm"],
+        loginHeroImage: "",
       } 
     };
   }

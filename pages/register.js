@@ -3,8 +3,12 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSpinner, FaCheckCircle, FaUser, FaEnvelope, FaLock, FaPhone, FaArrowRight } from "react-icons/fa";
+import dbConnect from "@/lib/mongodb";
+import BusinessSettings from "@/models/BusinessSettings";
 
-export default function Register() {
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1578181545619-1c74f1ff3d0c?q=80&w=2070&auto=format&fit=crop";
+
+export default function Register({ loginHeroImage = "" }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
@@ -105,7 +109,7 @@ export default function Register() {
         {/* Background Image - Goat Farm */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1578181545619-1c74f1ff3d0c?q=80&w=2070&auto=format&fit=crop')" }}
+          style={{ backgroundImage: `url('${loginHeroImage || DEFAULT_HERO_IMAGE}')` }}
         />
         {/* Animated Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/70 via-emerald-900/50 to-emerald-700/40" />
@@ -331,6 +335,29 @@ export default function Register() {
       </motion.div>
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  try {
+    await dbConnect();
+
+    // Fetch business settings for hero image
+    const settings = await BusinessSettings.findOne().select("loginHeroImage").lean();
+    const loginHeroImage = settings?.loginHeroImage || "";
+
+    return {
+      props: {
+        loginHeroImage,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getServerSideProps:", error);
+    return { 
+      props: { 
+        loginHeroImage: "",
+      } 
+    };
+  }
 }
 
 Register.layoutType = 'empty';

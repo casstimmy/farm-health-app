@@ -27,6 +27,10 @@ const BusinessSettingsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    loginHeroImage: {
+      type: String,
+      default: "",
+    },
     currency: {
       type: String,
       default: "NGN",

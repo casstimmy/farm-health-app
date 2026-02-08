@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { FaSpinner } from "react-icons/fa";
+import { FaSpinner, FaUpload, FaTrash, FaImage } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
+
+const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop";
 
 export default function BusinessSetup() {
   const router = useRouter();
@@ -15,14 +17,17 @@ export default function BusinessSetup() {
   const { user, isLoading: roleLoading } = useRole();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     businessName: "",
     businessEmail: "",
     businessPhone: "",
     businessAddress: "",
     businessDescription: "",
+    loginHeroImage: "",
     currency: "NGN",
     timezone: "UTC+1",
   });
@@ -58,6 +63,7 @@ export default function BusinessSetup() {
           businessPhone: data.businessPhone || "",
           businessAddress: data.businessAddress || "",
           businessDescription: data.businessDescription || "",
+          loginHeroImage: data.loginHeroImage || "",
           currency: data.currency || "NGN",
           timezone: data.timezone || "UTC+1",
         });
@@ -73,6 +79,60 @@ export default function BusinessSetup() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const imageUrl = data.links?.[0]?.full || data.links?.[0];
+        if (imageUrl) {
+          setFormData((prev) => ({ ...prev, loginHeroImage: imageUrl }));
+          setSuccess("Image uploaded successfully!");
+          setTimeout(() => setSuccess(""), 2000);
+        }
+      } else {
+        setError("Failed to upload image");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Error uploading image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({ ...prev, loginHeroImage: "" }));
   };
 
   const handleSubmit = async (e) => {
@@ -264,6 +324,96 @@ export default function BusinessSetup() {
                   <option value="UTC">UTC (GMT)</option>
                   <option value="UTC-5">UTC-5 (Eastern Time)</option>
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200"></div>
+
+          {/* Section: Login Hero Image */}
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <span className="text-3xl">🖼️</span>
+              Login Page Hero Image
+            </h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Customize the hero image displayed on the login and registration pages. If no custom image is set, a default farm image will be used.
+            </p>
+
+            <div className="space-y-4">
+              {/* Image Preview */}
+              <div className="relative w-full max-w-md aspect-video rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
+                <img
+                  src={formData.loginHeroImage || DEFAULT_HERO_IMAGE}
+                  alt="Login hero preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = DEFAULT_HERO_IMAGE;
+                  }}
+                />
+                {formData.loginHeroImage && (
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">Custom</span>
+                  </div>
+                )}
+                {!formData.loginHeroImage && (
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">Default</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Controls */}
+              <div className="flex flex-wrap gap-3">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <FaUpload />
+                      Upload Image
+                    </>
+                  )}
+                </button>
+                {formData.loginHeroImage && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <FaTrash />
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* URL Input (optional manual entry) */}
+              <div>
+                <label className="label">Or enter image URL directly</label>
+                <input
+                  type="url"
+                  name="loginHeroImage"
+                  placeholder="https://example.com/your-image.jpg"
+                  value={formData.loginHeroImage}
+                  onChange={handleChange}
+                  className="input-field"
+                />
               </div>
             </div>
           </div>
