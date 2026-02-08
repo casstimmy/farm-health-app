@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload } from "react-icons/fa";
+import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaDatabase } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
@@ -52,6 +52,7 @@ export default function ManageInventory() {
     supplier: "",
   });
   const canEdit = user && ["SuperAdmin", "Manager"].includes(user.role);
+  const [seeding, setSeeding] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     quantity: "",
@@ -349,6 +350,32 @@ export default function ManageInventory() {
       setImportError("Error importing medications");
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  const handleSeedInventory = async () => {
+    if (!confirm("This will clear ALL existing inventory and medications, then seed with default medication data. Are you sure?")) {
+      return;
+    }
+    setSeeding(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/seed-inventory", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(`✓ Seeded successfully! Created ${data.results?.inventoryCreated || 0} items, ${data.results?.categoriesCreated || 0} categories, ${data.results?.lookupsCreated || 0} lookups.`);
+        fetchInventory();
+        fetchCategories();
+        fetchLookupOptions();
+      } else {
+        setError(data.error || "Failed to seed inventory");
+      }
+    } catch (err) {
+      console.error("Seed error:", err);
+      setError("Error seeding inventory: " + err.message);
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -699,6 +726,17 @@ export default function ManageInventory() {
         >
           Manage Categories
         </a>
+        {user?.role === "SuperAdmin" && (
+          <button
+            type="button"
+            onClick={handleSeedInventory}
+            disabled={seeding}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold disabled:opacity-50"
+          >
+            {seeding ? <FaSpinner className="animate-spin" /> : <FaDatabase />}
+            {seeding ? "Seeding..." : "Seed Medications"}
+          </button>
+        )}
       </div>
       <FilterBar
         searchPlaceholder="Search by item name..."
