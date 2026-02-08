@@ -94,52 +94,46 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-      </div>
-
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-y-auto">
       {/* Register Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
+        className="relative w-full max-w-md my-4 mx-4"
       >
         {/* Header Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl mb-4 shadow-lg"
+            className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-3 shadow-lg"
           >
-            <span className="text-3xl">🐑</span>
+            <span className="text-2xl">🐑</span>
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">Farm Health</h1>
-          <p className="text-emerald-200 text-sm">Create your account</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Farm Health</h1>
+          <p className="text-gray-500 text-sm">Create your account</p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
           {/* Card Content */}
-          <div className="px-6 py-8">
+          <div className="px-5 py-6">
             <AnimatePresence mode="wait">
               {success ? (
                 <motion.div
                   key="success"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-8"
+                  className="text-center py-6"
                 >
-                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FaCheckCircle className="w-8 h-8 text-emerald-400" />
+                  <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaCheckCircle className="w-7 h-7 text-emerald-500" />
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-2">Account Created! 🎉</h3>
-                  <p className="text-emerald-200 text-sm mb-4">Redirecting to login...</p>
-                  <div className="animate-pulse text-emerald-400 font-semibold text-sm">⏳ Please wait...</div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Account Created! 🎉</h3>
+                  <p className="text-gray-600 text-sm mb-4">Redirecting to login...</p>
+                  <div className="text-emerald-600 font-semibold text-sm">⏳ Please wait...</div>
                 </motion.div>
               ) : (
                 <motion.form
@@ -149,8 +143,8 @@ export default function Register() {
                 >
                   {/* Name */}
                   <div>
-                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                      <FaUser size={14} /> Full Name
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <FaUser size={14} className="text-emerald-600" /> Full Name
                     </label>
                     <input
                       type="text"
@@ -158,14 +152,14 @@ export default function Register() {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="John Doe"
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                      <FaEnvelope size={14} /> Email
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <FaEnvelope size={14} className="text-emerald-600" /> Email
                     </label>
                     <input
                       type="email"
@@ -173,14 +167,14 @@ export default function Register() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="john@example.com"
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* Phone */}
                   <div>
-                    <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                      <FaPhone size={14} /> Phone <span className="text-emerald-400/60 text-xs font-normal">(Optional)</span>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <FaPhone size={14} className="text-emerald-600" /> Phone <span className="text-gray-400 text-xs font-normal">(Optional)</span>
                     </label>
                     <input
                       type="tel"
@@ -188,15 +182,15 @@ export default function Register() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+234 XXX XXX XXXX"
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 placeholder-emerald-400/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* PIN Inputs */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                        <FaLock size={14} /> PIN
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <FaLock size={14} className="text-emerald-600" /> PIN
                       </label>
                       <input
                         type="password"
@@ -205,12 +199,12 @@ export default function Register() {
                         onChange={handleChange}
                         placeholder="••••"
                         maxLength="4"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center tracking-widest font-bold"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                        <FaLock size={14} /> Confirm
+                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <FaLock size={14} className="text-emerald-600" /> Confirm
                       </label>
                       <input
                         type="password"
@@ -219,12 +213,12 @@ export default function Register() {
                         onChange={handleChange}
                         placeholder="••••"
                         maxLength="4"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
+                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center tracking-widest font-bold"
                       />
                     </div>
                   </div>
 
-                  <p className="text-xs text-emerald-400/60">💡 PIN must be 4 digits</p>
+                  <p className="text-xs text-gray-500">💡 PIN must be 4 digits</p>
 
                   {/* Error */}
                   <AnimatePresence>
@@ -233,7 +227,7 @@ export default function Register() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="bg-red-500/20 border border-red-400/50 rounded-lg px-4 py-2 text-red-300 text-sm font-medium flex items-center gap-2"
+                        className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-red-600 text-sm font-medium flex items-center gap-2"
                       >
                         <span>⚠️</span> {error}
                       </motion.div>
@@ -245,7 +239,7 @@ export default function Register() {
                     type="submit"
                     disabled={loading}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg"
+                    className="w-full py-2.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600 shadow-md"
                   >
                     {loading ? (
                       <>
@@ -261,9 +255,9 @@ export default function Register() {
                   </motion.button>
 
                   {/* Footer */}
-                  <p className="text-center text-sm text-emerald-200 pt-2">
+                  <p className="text-center text-sm text-gray-600 pt-2">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
+                    <Link href="/login" className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
                       Sign in
                     </Link>
                   </p>

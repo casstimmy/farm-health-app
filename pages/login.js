@@ -87,49 +87,43 @@ export default function Login({ staffList = [], locations = [] }) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-      </div>
-
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-y-auto">
       {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
+        className="relative w-full max-w-md my-4 mx-4"
       >
         {/* Header Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl mb-4 shadow-lg"
+            className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-3 shadow-lg"
           >
-            <span className="text-3xl">🐑</span>
+            <span className="text-2xl">🐑</span>
           </motion.div>
-          <h1 className="text-3xl font-bold text-white mb-2">Farm Health</h1>
-          <p className="text-emerald-200 text-sm">Animal Welfare & Operations</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Farm Health</h1>
+          <p className="text-gray-500 text-sm">Animal Welfare & Operations</p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
           {/* Card Content */}
-          <div className="px-6 py-8">
-            <form onSubmit={handleLogin} className="space-y-5">
+          <div className="px-5 py-6">
+            <form onSubmit={handleLogin} className="space-y-4">
               {/* Staff Selection */}
               <div>
-                <label className="block text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
-                  <FaUser size={14} /> Select Staff
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <FaUser size={14} className="text-emerald-600" /> Select Staff
                 </label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50">
                   {Object.entries(staffByRole).map(([role, users]) => (
                     users.length > 0 && (
                       <div key={role}>
-                        <p className="text-xs text-emerald-400/60 font-semibold px-3 py-1 mb-1">{role}</p>
+                        <p className="text-xs text-gray-500 font-semibold px-2 py-1">{role}</p>
                         {users.map((user) => (
                           <motion.button
                             key={user.email}
@@ -139,16 +133,16 @@ export default function Login({ staffList = [], locations = [] }) {
                               setPin("");
                               setError("");
                             }}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`w-full text-left px-4 py-2.5 rounded-xl transition-all ${
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
                               selectedUser?.email === user.email
-                                ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
-                                : "bg-white/5 hover:bg-white/10 text-emerald-100 border border-white/10"
+                                ? "bg-emerald-500 text-white shadow-md"
+                                : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
                             }`}
                           >
                             <p className="font-medium text-sm">{user.name}</p>
-                            <p className="text-xs opacity-70">{user.email}</p>
+                            <p className={`text-xs ${selectedUser?.email === user.email ? "text-emerald-100" : "text-gray-500"}`}>{user.email}</p>
                           </motion.button>
                         ))}
                       </div>
@@ -163,16 +157,16 @@ export default function Login({ staffList = [], locations = [] }) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <label className="block text-sm font-semibold text-emerald-300 mb-2 flex items-center gap-2">
-                    <FaMapMarkerAlt size={14} /> Location
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <FaMapMarkerAlt size={14} className="text-emerald-600" /> Location
                   </label>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-emerald-100 hover:bg-white/10 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:border-emerald-400 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     {locations.map((loc) => (
-                      <option key={loc} value={loc} className="bg-slate-900 text-white">
+                      <option key={loc} value={loc}>
                         {loc}
                       </option>
                     ))}
@@ -180,7 +174,7 @@ export default function Login({ staffList = [], locations = [] }) {
                 </motion.div>
               )}
 
-              {/* PIN Input - Modern Design */}
+              {/* PIN Input */}
               <AnimatePresence>
                 {selectedUser && (
                   <motion.div
@@ -188,34 +182,34 @@ export default function Login({ staffList = [], locations = [] }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                   >
-                    <label className="block text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
-                      <FaLock size={14} /> 4-Digit PIN
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <FaLock size={14} className="text-emerald-600" /> 4-Digit PIN
                     </label>
 
                     {/* PIN Display Dots */}
-                    <div className="flex justify-center gap-2 mb-6">
+                    <div className="flex justify-center gap-3 mb-4">
                       {[0, 1, 2, 3].map((i) => (
                         <motion.div
                           key={i}
                           animate={{ scale: pin.length > i ? 1.1 : 1 }}
-                          className={`w-4 h-4 rounded-full border-2 transition-all ${
+                          className={`w-3 h-3 rounded-full border-2 transition-all ${
                             pin.length > i
-                              ? "bg-emerald-500 border-emerald-400"
-                              : "bg-white/10 border-white/20"
+                              ? "bg-emerald-500 border-emerald-500"
+                              : "bg-gray-200 border-gray-300"
                           }`}
                         />
                       ))}
                     </div>
 
                     {/* Keypad */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
                       {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
                         <motion.button
                           key={num}
                           type="button"
                           onClick={() => handleKeypad(num)}
                           whileTap={{ scale: 0.95 }}
-                          className="py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-all"
+                          className="py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold border border-gray-200 transition-all"
                         >
                           {num}
                         </motion.button>
@@ -224,7 +218,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("0")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-all"
+                        className="col-span-1 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold border border-gray-200 transition-all"
                       >
                         0
                       </motion.button>
@@ -232,7 +226,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("back")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-3 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold border border-red-400/30 transition-all text-sm"
+                        className="col-span-1 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold border border-red-200 transition-all text-sm"
                       >
                         ← Back
                       </motion.button>
@@ -240,7 +234,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("clear")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-3 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 font-semibold border border-yellow-400/30 transition-all text-sm"
+                        className="col-span-1 py-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 font-semibold border border-amber-200 transition-all text-sm"
                       >
                         Clear
                       </motion.button>
@@ -256,7 +250,7 @@ export default function Login({ staffList = [], locations = [] }) {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="bg-red-500/20 border border-red-400/50 rounded-lg px-4 py-2 text-red-300 text-sm font-medium flex items-center gap-2"
+                    className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-red-600 text-sm font-medium flex items-center gap-2"
                   >
                     <span>⚠️</span> {error}
                   </motion.div>
@@ -269,7 +263,7 @@ export default function Login({ staffList = [], locations = [] }) {
                   type="submit"
                   disabled={loading || pin.length !== 4}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg"
+                  className="w-full py-2.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600 shadow-md"
                 >
                   {loading ? (
                     <>
@@ -286,9 +280,9 @@ export default function Login({ staffList = [], locations = [] }) {
               )}
 
               {/* Footer */}
-              <p className="text-center text-sm text-emerald-200 pt-2">
+              <p className="text-center text-sm text-gray-600 pt-2">
                 New user?{" "}
-                <Link href="/register" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
+                <Link href="/register" className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
                   Create account
                 </Link>
               </p>
