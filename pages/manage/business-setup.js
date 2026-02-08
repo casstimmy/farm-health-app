@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useRef } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
+import axios from "axios";
 import { FaSpinner, FaUpload, FaTrash, FaImage } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { BusinessContext } from "@/context/BusinessContext";
@@ -104,25 +105,20 @@ export default function BusinessSetup() {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formDataUpload,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const imageUrl = data.links?.[0]?.full || data.links?.[0];
-        if (imageUrl) {
-          setFormData((prev) => ({ ...prev, loginHeroImage: imageUrl }));
-          setSuccess("Image uploaded successfully!");
-          setTimeout(() => setSuccess(""), 2000);
-        }
+      const res = await axios.post("/api/upload", formDataUpload);
+      const uploaded = res.data?.links || [];
+      
+      if (uploaded.length > 0) {
+        const imageUrl = uploaded[0]?.full || uploaded[0];
+        setFormData((prev) => ({ ...prev, loginHeroImage: imageUrl }));
+        setSuccess("Image uploaded successfully!");
+        setTimeout(() => setSuccess(""), 2000);
       } else {
-        setError("Failed to upload image");
+        setError("Failed to upload image - no URL returned");
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setError("Error uploading image");
+      setError("Error uploading image: " + (err.response?.data?.error || err.message));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
