@@ -416,116 +416,139 @@ export default function ManageInventory() {
           {error && <div className="error-message mb-6">{error}</div>}
           {success && <div className="success-message mb-6">{success}</div>}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Item Name <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                name="name"
-                required
-                placeholder="e.g., Antibiotics"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                name="quantity"
-                required
-                placeholder="e.g., 100"
-                value={formData.quantity}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Category <span className="text-red-500">*</span></label>
-              <select
-                name="categoryId"
-                required
-                value={formData.categoryId}
-                onChange={(e) => {
-                  const selected = categories.find((c) => c._id === e.target.value);
-                  setFormData((prev) => ({
-                    ...prev,
-                    categoryId: e.target.value,
-                    category: selected?.name || "",
-                  }));
-                }}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>{cat.name}</option>
-                ))}
-              </select>
-              <div className="text-xs text-gray-500 mt-2">
-                Manage categories in Operations → Categories
+          {/* Basic Information */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm">1</span>
+              Basic Information
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category <span className="text-red-500">*</span></label>
+                <select
+                  name="categoryId"
+                  required
+                  value={formData.categoryId}
+                  onChange={(e) => {
+                    const selected = categories.find((c) => c._id === e.target.value);
+                    setFormData((prev) => ({
+                      ...prev,
+                      categoryId: e.target.value,
+                      category: selected?.name || "",
+                    }));
+                  }}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Min Stock <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                name="minStock"
-                required
-                placeholder="e.g., 10"
-                value={formData.minStock}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Price <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                name="price"
-                required
-                placeholder="e.g., 25.00"
-                value={formData.price}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Unit</label>
-              <input
-                type="text"
-                name="unit"
-                placeholder="e.g., bottle, sachet, kg"
-                value={formData.unit}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-              />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Item Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder={formData.category === "Medication" ? "e.g., Ivermectin 100ml" : formData.category === "Feed" ? "e.g., Groundnut Hay" : formData.category === "Equipment" ? "e.g., Goat Brush" : "e.g., Gloves"}
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  name="quantity"
+                  required
+                  min="0"
+                  placeholder="e.g., 100"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Unit</label>
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                >
+                  <option value="">Select Unit</option>
+                  <option value="unit">Unit</option>
+                  <option value="pieces">Pieces</option>
+                  <option value="bottles">Bottles</option>
+                  <option value="sachets">Sachets</option>
+                  <option value="bags">Bags</option>
+                  <option value="bales">Bales</option>
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="g">Grams (g)</option>
+                  <option value="L">Litres (L)</option>
+                  <option value="ml">Millilitres (ml)</option>
+                  <option value="boxes">Boxes</option>
+                  <option value="packs">Packs</option>
+                  <option value="rolls">Rolls</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Min Stock Level</label>
+                <input
+                  type="number"
+                  name="minStock"
+                  min="0"
+                  placeholder="Alert when below this"
+                  value={formData.minStock}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Price per Unit</label>
+                <input
+                  type="number"
+                  name="price"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g., 2500.00"
+                  value={formData.price}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
+          {/* Category-specific fields */}
           {formData.category === "Medication" && (
-            <div className="mt-8 border-t pt-6">
-              <h4 className="text-lg font-bold text-gray-900 mb-4">Medication Details</h4>
+            <div className="mb-6 border-t pt-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-sm">2</span>
+                Medication Details
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Details</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Size/Details</label>
                   <input
                     type="text"
                     name="details"
-                    placeholder="e.g., 100ml"
+                    placeholder="e.g., 100ml, 500mg, 5L"
                     value={formData.details}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiration</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiration Date</label>
                   <input
                     type="date"
                     name="expiration"
                     value={formData.expiration}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -533,13 +556,13 @@ export default function ManageInventory() {
                   <select
                     value={formData.classCategory}
                     onChange={(e) => handleLookupSelectChange("classCategory", e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   >
-                    <option value="">Select</option>
+                    <option value="">Select Class</option>
                     {lookupOptions.classCategory.map((opt) => (
                       <option key={opt._id} value={opt.value}>{opt.value}</option>
                     ))}
-                    <option value="__add_new__">Add new...</option>
+                    <option value="__add_new__">+ Add new...</option>
                   </select>
                   {showLookupInput.classCategory && (
                     <div className="mt-2 flex items-center gap-2">
@@ -547,16 +570,36 @@ export default function ManageInventory() {
                         type="text"
                         value={newLookupValue.classCategory}
                         onChange={(e) => setNewLookupValue((prev) => ({ ...prev, classCategory: e.target.value }))}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg"
-                        placeholder="Enter new class/category"
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
+                        placeholder="Enter new class"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveLookup("classCategory")}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-                      >
-                        Save
-                      </button>
+                      <button type="button" onClick={() => handleSaveLookup("classCategory")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Administration Route</label>
+                  <select
+                    value={formData.route}
+                    onChange={(e) => handleLookupSelectChange("route", e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Route</option>
+                    {lookupOptions.route.map((opt) => (
+                      <option key={opt._id} value={opt.value}>{opt.value}</option>
+                    ))}
+                    <option value="__add_new__">+ Add new...</option>
+                  </select>
+                  {showLookupInput.route && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newLookupValue.route}
+                        onChange={(e) => setNewLookupValue((prev) => ({ ...prev, route: e.target.value }))}
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
+                        placeholder="Enter route"
+                      />
+                      <button type="button" onClick={() => handleSaveLookup("route")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
                     </div>
                   )}
                 </div>
@@ -565,13 +608,13 @@ export default function ManageInventory() {
                   <select
                     value={formData.purpose}
                     onChange={(e) => handleLookupSelectChange("purpose", e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   >
-                    <option value="">Select</option>
+                    <option value="">Select Purpose</option>
                     {lookupOptions.purpose.map((opt) => (
                       <option key={opt._id} value={opt.value}>{opt.value}</option>
                     ))}
-                    <option value="__add_new__">Add new...</option>
+                    <option value="__add_new__">+ Add new...</option>
                   </select>
                   {showLookupInput.purpose && (
                     <div className="mt-2 flex items-center gap-2">
@@ -579,16 +622,10 @@ export default function ManageInventory() {
                         type="text"
                         value={newLookupValue.purpose}
                         onChange={(e) => setNewLookupValue((prev) => ({ ...prev, purpose: e.target.value }))}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg"
-                        placeholder="Enter new purpose"
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
+                        placeholder="Enter purpose"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveLookup("purpose")}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-                      >
-                        Save
-                      </button>
+                      <button type="button" onClick={() => handleSaveLookup("purpose")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
                     </div>
                   )}
                 </div>
@@ -597,13 +634,13 @@ export default function ManageInventory() {
                   <select
                     value={formData.recommendedDosage}
                     onChange={(e) => handleLookupSelectChange("recommendedDosage", e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   >
-                    <option value="">Select</option>
+                    <option value="">Select Dosage</option>
                     {lookupOptions.recommendedDosage.map((opt) => (
                       <option key={opt._id} value={opt.value}>{opt.value}</option>
                     ))}
-                    <option value="__add_new__">Add new...</option>
+                    <option value="__add_new__">+ Add new...</option>
                   </select>
                   {showLookupInput.recommendedDosage && (
                     <div className="mt-2 flex items-center gap-2">
@@ -611,63 +648,25 @@ export default function ManageInventory() {
                         type="text"
                         value={newLookupValue.recommendedDosage}
                         onChange={(e) => setNewLookupValue((prev) => ({ ...prev, recommendedDosage: e.target.value }))}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg"
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
                         placeholder="Enter dosage"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveLookup("recommendedDosage")}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-                      >
-                        Save
-                      </button>
+                      <button type="button" onClick={() => handleSaveLookup("recommendedDosage")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
                     </div>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Route</label>
-                  <select
-                    value={formData.route}
-                    onChange={(e) => handleLookupSelectChange("route", e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-                  >
-                    <option value="">Select</option>
-                    {lookupOptions.route.map((opt) => (
-                      <option key={opt._id} value={opt.value}>{opt.value}</option>
-                    ))}
-                    <option value="__add_new__">Add new...</option>
-                  </select>
-                  {showLookupInput.route && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newLookupValue.route}
-                        onChange={(e) => setNewLookupValue((prev) => ({ ...prev, route: e.target.value }))}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg"
-                        placeholder="Enter route"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveLookup("route")}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div>
+                <div className="md:col-span-2 lg:col-span-3">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier / Manufacturer</label>
                   <select
                     value={formData.supplier}
                     onChange={(e) => handleLookupSelectChange("supplier", e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                   >
-                    <option value="">Select</option>
+                    <option value="">Select Supplier</option>
                     {lookupOptions.supplier.map((opt) => (
                       <option key={opt._id} value={opt.value}>{opt.value}</option>
                     ))}
-                    <option value="__add_new__">Add new...</option>
+                    <option value="__add_new__">+ Add new...</option>
                   </select>
                   {showLookupInput.supplier && (
                     <div className="mt-2 flex items-center gap-2">
@@ -675,16 +674,10 @@ export default function ManageInventory() {
                         type="text"
                         value={newLookupValue.supplier}
                         onChange={(e) => setNewLookupValue((prev) => ({ ...prev, supplier: e.target.value }))}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg"
-                        placeholder="Enter supplier"
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
+                        placeholder="Enter supplier/manufacturer"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveLookup("supplier")}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-                      >
-                        Save
-                      </button>
+                      <button type="button" onClick={() => handleSaveLookup("supplier")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
                     </div>
                   )}
                 </div>
@@ -692,11 +685,184 @@ export default function ManageInventory() {
             </div>
           )}
 
-          <div className="mt-8">
+          {formData.category === "Feed" && (
+            <div className="mb-6 border-t pt-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-sm">2</span>
+                Feed Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiration Date</label>
+                  <input
+                    type="date"
+                    name="expiration"
+                    value={formData.expiration}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Feed Type</label>
+                  <select
+                    name="details"
+                    value={formData.details}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Hay">Hay</option>
+                    <option value="Pellets">Pellets</option>
+                    <option value="Concentrate">Concentrate</option>
+                    <option value="Grain">Grain</option>
+                    <option value="Silage">Silage</option>
+                    <option value="Supplement">Supplement</option>
+                    <option value="Mineral Block">Mineral Block</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Supplier</label>
+                  <select
+                    value={formData.supplier}
+                    onChange={(e) => handleLookupSelectChange("supplier", e.target.value)}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Supplier</option>
+                    {lookupOptions.supplier.map((opt) => (
+                      <option key={opt._id} value={opt.value}>{opt.value}</option>
+                    ))}
+                    <option value="__add_new__">+ Add new...</option>
+                  </select>
+                  {showLookupInput.supplier && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newLookupValue.supplier}
+                        onChange={(e) => setNewLookupValue((prev) => ({ ...prev, supplier: e.target.value }))}
+                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm"
+                        placeholder="Enter supplier"
+                      />
+                      <button type="button" onClick={() => handleSaveLookup("supplier")} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formData.category === "Equipment" && (
+            <div className="mb-6 border-t pt-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm">2</span>
+                Equipment Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Condition</label>
+                  <select
+                    name="details"
+                    value={formData.details}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Condition</option>
+                    <option value="New">New</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Needs Repair">Needs Repair</option>
+                    <option value="Damaged">Damaged</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Equipment Type</label>
+                  <select
+                    name="classCategory"
+                    value={formData.classCategory}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Grooming">Grooming</option>
+                    <option value="Feeding">Feeding</option>
+                    <option value="Housing">Housing</option>
+                    <option value="Handling">Handling</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Purchase Date</label>
+                  <input
+                    type="date"
+                    name="expiration"
+                    value={formData.expiration}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {formData.category === "Medical Supplies" && (
+            <div className="mb-6 border-t pt-6">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm">2</span>
+                Medical Supply Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiration Date</label>
+                  <input
+                    type="date"
+                    name="expiration"
+                    value={formData.expiration}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Supply Type</label>
+                  <select
+                    name="classCategory"
+                    value={formData.classCategory}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Syringe">Syringe</option>
+                    <option value="Needle">Needle</option>
+                    <option value="Gloves">Gloves</option>
+                    <option value="Bandage">Bandage</option>
+                    <option value="Cotton">Cotton</option>
+                    <option value="Disinfectant">Disinfectant</option>
+                    <option value="Surgical">Surgical</option>
+                    <option value="Diagnostic">Diagnostic</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Size/Details</label>
+                  <input
+                    type="text"
+                    name="details"
+                    placeholder="e.g., 5ml, Large, 500g"
+                    value={formData.details}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 flex gap-4">
             <button
               type="submit"
               disabled={formLoading}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold disabled:opacity-60"
+              className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold disabled:opacity-60"
             >
               {formLoading ? (
                 <>
@@ -704,8 +870,18 @@ export default function ManageInventory() {
                   Adding...
                 </>
               ) : (
-                "Add Item"
+                <>
+                  <FaPlus />
+                  Add Item
+                </>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold"
+            >
+              Cancel
             </button>
           </div>
         </form>
