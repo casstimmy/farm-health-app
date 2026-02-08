@@ -92,6 +92,14 @@ const medicationsData = [
   { name: "Trace Minerals 11.33kg", expiration: "", classCategory: "Mineral Supplement", route: "", quantity: 1 },
 ];
 
+// Non-medication inventory items (Feed, Equipment, Medical Supplies)
+const otherInventoryData = [
+  { name: "Feed", quantity: 10, category: "Feed", unit: "bags" },
+  { name: "Goat brush", quantity: 20, category: "Equipment", unit: "pieces" },
+  { name: "Gloves", quantity: 200, category: "Medical Supplies", unit: "pieces" },
+  { name: "Groundnut Hay", quantity: 3, category: "Feed", unit: "bales" },
+];
+
 const categoriesData = [
   { name: "Medication", description: "Medications, drugs, vaccines, and pharmaceutical products" },
   { name: "Feed", description: "Animal feed, hay, supplements, and nutritional products" },
@@ -234,6 +242,25 @@ export default async function handler(req, res) {
         inventoryItem: inventoryItem._id,
       });
       results.medicationsCreated++;
+    }
+
+    // 6. Create non-medication inventory items (Feed, Equipment, Medical Supplies)
+    for (const item of otherInventoryData) {
+      // Skip if it's medication (already handled above)
+      if (item.category === "Medication") continue;
+      
+      const category = await InventoryCategory.findOne({ name: item.category });
+      
+      await Inventory.create({
+        item: item.name,
+        quantity: item.quantity,
+        category: item.category,
+        categoryId: category?._id,
+        categoryName: item.category,
+        unit: item.unit || "unit",
+        dateAdded: new Date(),
+      });
+      results.inventoryCreated++;
     }
 
     return res.status(200).json({
