@@ -167,7 +167,7 @@ export default function Login({ staffList = [], locations = [] }) {
         <div className="w-full max-w-sm px-4">
           {/* Mobile Header */}
           <div className="lg:hidden text-center mb-3">
-            <span className="text-3xl">🐑</span>
+            <span className="text-3xl">�</span>
             <h1 className="text-xl font-bold text-gray-800">Farm Health</h1>
           </div>
           
