@@ -158,9 +158,9 @@ export default function Register() {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="w-full lg:w-1/2 h-full flex items-center justify-center bg-white"
       >
-        <div className="w-full max-w-sm px-6 py-4">
+        <div className="w-full max-w-sm px-4">
           {/* Mobile Header */}
-          <div className="lg:hidden text-center mb-4">
+          <div className="lg:hidden text-center mb-3">
             <span className="text-3xl">🐑</span>
             <h1 className="text-xl font-bold text-gray-800">Farm Health</h1>
           </div>
