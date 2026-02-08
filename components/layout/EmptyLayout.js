@@ -12,7 +12,7 @@
  */
 export default function EmptyLayout({ children, className = "" }) {
   return (
-    <div className={`min-h-screen p-12 bg-gray-50 ${className}`}>
+    <div className={`min-h-screen ${className}`}>
       {children}
     </div>
   );
