@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Inventory from "@/models/Inventory";
+import Medication from "@/models/Medication";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
@@ -26,10 +27,31 @@ async function handler(req, res) {
         item: inventoryData.item,
         quantity: inventoryData.quantity,
         category: inventoryData.category,
-        dateAdded: inventoryData.dateAdded || new Date()
+        categoryId: inventoryData.categoryId || undefined,
+        categoryName: inventoryData.categoryName || inventoryData.category || undefined,
+        minStock: inventoryData.minStock,
+        price: inventoryData.price,
+        unit: inventoryData.unit,
+        medication: inventoryData.medication || undefined,
+        dateAdded: inventoryData.dateAdded || new Date(),
       });
 
       await newItem.save();
+
+      if ((inventoryData.categoryName || inventoryData.category) === "Medication") {
+        await Medication.create({
+          name: inventoryData.item,
+          details: inventoryData.medication?.details,
+          expiration: inventoryData.medication?.expiration,
+          classCategory: inventoryData.medication?.classCategory,
+          purpose: inventoryData.medication?.purpose,
+          recommendedDosage: inventoryData.medication?.recommendedDosage,
+          route: inventoryData.medication?.route,
+          supplier: inventoryData.medication?.supplier,
+          inventoryItem: newItem._id,
+        });
+      }
+
       res.status(201).json(newItem);
     } catch (error) {
       res.status(500).json({ error: error.message });
