@@ -21,7 +21,8 @@ async function handler(req, res) {
       const weight = {
         date: weightData.date || new Date(),
         weightKg: weightData.weightKg,
-        recordedBy: weightData.recordedBy || req.user.name
+        recordedBy: weightData.recordedBy || req.user.name,
+        notes: weightData.notes || ""
       };
 
       animal.weightHistory.push(weight);

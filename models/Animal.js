@@ -29,7 +29,8 @@ const FeedingSchema = new mongoose.Schema({
 const WeightSchema = new mongoose.Schema({
   date: Date,
   weightKg: Number,
-  recordedBy: String
+  recordedBy: String,
+  notes: String
 });
 
 const VaccinationSchema = new mongoose.Schema({

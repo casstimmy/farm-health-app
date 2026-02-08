@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaDatabase } from "react-icons/fa";
+import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaTrash } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
@@ -23,6 +23,7 @@ export default function ManageInventory() {
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -52,7 +53,6 @@ export default function ManageInventory() {
     supplier: "",
   });
   const canEdit = user && ["SuperAdmin", "Manager"].includes(user.role);
-  const [seeding, setSeeding] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     quantity: "",
@@ -294,6 +294,37 @@ export default function ManageInventory() {
     setEditValue("");
   };
 
+  const handleDeleteItem = async (itemId) => {
+    if (!confirm("Are you sure you want to delete this item? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeleting(itemId);
+    setError("");
+    setSuccess("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/inventory/${itemId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        setSuccess("✓ Item deleted successfully!");
+        setTimeout(() => setSuccess(""), 2000);
+        fetchInventory();
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to delete item");
+      }
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      setError("Error deleting item");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const parseImportText = (text) => {
     const lines = text
       .split(/\r?\n/)
@@ -353,31 +384,7 @@ export default function ManageInventory() {
     }
   };
 
-  const handleSeedInventory = async () => {
-    if (!confirm("This will clear ALL existing inventory and medications, then seed with default medication data. Are you sure?")) {
-      return;
-    }
-    setSeeding(true);
-    setError("");
-    setSuccess("");
-    try {
-      const res = await fetch("/api/seed-inventory", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setSuccess(`✓ Seeded successfully! Created ${data.results?.inventoryCreated || 0} items, ${data.results?.categoriesCreated || 0} categories, ${data.results?.lookupsCreated || 0} lookups.`);
-        fetchInventory();
-        fetchCategories();
-        fetchLookupOptions();
-      } else {
-        setError(data.error || "Failed to seed inventory");
-      }
-    } catch (err) {
-      console.error("Seed error:", err);
-      setError("Error seeding inventory: " + err.message);
-    } finally {
-      setSeeding(false);
-    }
-  };
+
 
   const categoryColors = {
     "Medication": "bg-red-100 text-red-800",
@@ -902,17 +909,6 @@ export default function ManageInventory() {
         >
           Manage Categories
         </a>
-        {user?.role === "SuperAdmin" && (
-          <button
-            type="button"
-            onClick={handleSeedInventory}
-            disabled={seeding}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold disabled:opacity-50"
-          >
-            {seeding ? <FaSpinner className="animate-spin" /> : <FaDatabase />}
-            {seeding ? "Seeding..." : "Seed Medications"}
-          </button>
-        )}
       </div>
       <FilterBar
         searchPlaceholder="Search by item name..."
@@ -949,6 +945,7 @@ export default function ManageInventory() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Min Stock</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Price</th>
+                  {canEdit && <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -967,7 +964,7 @@ export default function ManageInventory() {
                             type="text"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            className="w-full px-3 py-1 border-2 border-blue-500 rounded-lg focus:outline-none"
+                            className="flex-1 px-3 py-1 border-2 border-blue-500 rounded-lg focus:outline-none"
                             autoFocus
                           />
                           <button
@@ -987,18 +984,7 @@ export default function ManageInventory() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between group">
-                          <span>{item.item}</span>
-                          {canEdit && (
-                            <button
-                              onClick={() => handleEditItem(item)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-blue-600 hover:bg-blue-100 rounded-lg"
-                              title="Edit item name"
-                            >
-                              <FaEdit size={14} />
-                            </button>
-                          )}
-                        </div>
+                        <span>{item.item}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -1017,6 +1003,33 @@ export default function ManageInventory() {
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                       {formatCurrency(parseFloat(item.price || 0), businessSettings.currency)}
                     </td>
+                    {canEdit && (
+                      <td className="px-6 py-4 text-sm">
+                        {editingId === item._id ? (
+                          <div></div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditItem(item)}
+                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                              title="Edit item name"
+                            >
+                              <FaEdit size={14} />
+                            </button>
+                            {user?.role === "SuperAdmin" && (
+                              <button
+                                onClick={() => handleDeleteItem(item._id)}
+                                disabled={deleting === item._id}
+                                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete item (SuperAdmin only)"
+                              >
+                                {deleting === item._id ? <FaSpinner className="animate-spin" size={14} /> : <FaTrash size={14} />}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </motion.tr>
                 ))}
               </tbody>
