@@ -94,28 +94,37 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row">
-      {/* Left Side - Hero/Branding */}
+    <div className="h-screen w-full flex flex-col lg:flex-row overflow-hidden">
+      {/* Left Side - Hero with Image */}
       <motion.div
-        initial={{ x: -50, opacity: 0 }}
+        initial={{ x: -30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 flex items-center justify-center p-8 lg:p-12"
+        transition={{ duration: 0.5 }}
+        className="hidden lg:flex lg:w-1/2 relative"
       >
-        <div className="text-center lg:text-left max-w-md">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?q=80&w=2074&auto=format&fit=crop')" }}
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-emerald-900/50" />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
-            className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl mb-6 shadow-xl"
+            transition={{ delay: 0.3 }}
+            className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6"
           >
-            <span className="text-5xl">🐑</span>
+            <span className="text-4xl">🐑</span>
           </motion.div>
           <motion.h1 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-4xl lg:text-5xl font-bold text-white mb-4"
+            className="text-4xl font-bold mb-3"
           >
             Farm Health
           </motion.h1>
@@ -123,18 +132,18 @@ export default function Register() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-emerald-100 text-lg mb-6"
+            className="text-white/80 text-lg mb-8 max-w-sm"
           >
-            Join our livestock management platform
+            Join our livestock management platform today
           </motion.p>
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="hidden lg:flex flex-wrap gap-3"
+            className="flex flex-wrap gap-2"
           >
-            {["Easy Setup", "Secure Access", "Team Collaboration", "Real-time Sync"].map((item, i) => (
-              <span key={i} className="px-3 py-1.5 bg-white/10 rounded-full text-sm text-emerald-100">
+            {["Easy Setup", "Secure", "Team Access", "Real-time"].map((item, i) => (
+              <span key={i} className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm">
                 {item}
               </span>
             ))}
@@ -144,30 +153,33 @@ export default function Register() {
 
       {/* Right Side - Form */}
       <motion.div
-        initial={{ x: 50, opacity: 0 }}
+        initial={{ x: 30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="lg:w-1/2 bg-gray-50 flex items-center justify-center p-6 lg:p-12 overflow-y-auto"
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="w-full lg:w-1/2 h-full flex items-center justify-center bg-white"
       >
-        <div className="w-full max-w-md">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-1">Create Account</h2>
-            <p className="text-gray-500">Get started with Farm Health</p>
+        <div className="w-full max-w-sm px-6 py-4">
+          {/* Mobile Header */}
+          <div className="lg:hidden text-center mb-4">
+            <span className="text-3xl">🐑</span>
+            <h1 className="text-xl font-bold text-gray-800">Farm Health</h1>
+          </div>
+          
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Create Account</h2>
+            <p className="text-gray-500 text-sm">Get started today</p>
           </div>
 
-          {/* Main Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-5 py-6">
             <AnimatePresence mode="wait">
               {success ? (
                 <motion.div
                   key="success"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-6"
+                  className="text-center py-8"
                 >
-                  <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FaCheckCircle className="w-7 h-7 text-emerald-500" />
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FaCheckCircle className="w-6 h-6 text-emerald-500" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-800 mb-2">Account Created! 🎉</h3>
                   <p className="text-gray-600 text-sm mb-4">Redirecting to login...</p>
@@ -177,12 +189,12 @@ export default function Register() {
                 <motion.form
                   key="form"
                   onSubmit={handleSubmit}
-                  className="space-y-4"
+                  className="space-y-3"
                 >
                   {/* Name */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <FaUser size={14} className="text-emerald-600" /> Full Name
+                    <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                      <FaUser size={11} className="text-emerald-600" /> Full Name
                     </label>
                     <input
                       type="text"
@@ -190,14 +202,14 @@ export default function Register() {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="John Doe"
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <FaEnvelope size={14} className="text-emerald-600" /> Email
+                    <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                      <FaEnvelope size={11} className="text-emerald-600" /> Email
                     </label>
                     <input
                       type="email"
@@ -205,14 +217,14 @@ export default function Register() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="john@example.com"
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
                   {/* Phone */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <FaPhone size={14} className="text-emerald-600" /> Phone <span className="text-gray-400 text-xs font-normal">(Optional)</span>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                      <FaPhone size={11} className="text-emerald-600" /> Phone <span className="text-gray-400 text-[10px] font-normal">(Optional)</span>
                     </label>
                     <input
                       type="tel"
@@ -220,15 +232,15 @@ export default function Register() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+234 XXX XXX XXXX"
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
                   {/* PIN Inputs */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <FaLock size={14} className="text-emerald-600" /> PIN
+                      <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                        <FaLock size={11} className="text-emerald-600" /> PIN
                       </label>
                       <input
                         type="password"
@@ -237,12 +249,12 @@ export default function Register() {
                         onChange={handleChange}
                         placeholder="••••"
                         maxLength="4"
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center tracking-widest font-bold"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <FaLock size={14} className="text-emerald-600" /> Confirm
+                      <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
+                        <FaLock size={11} className="text-emerald-600" /> Confirm
                       </label>
                       <input
                         type="password"
@@ -251,21 +263,21 @@ export default function Register() {
                         onChange={handleChange}
                         placeholder="••••"
                         maxLength="4"
-                        className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center tracking-widest font-bold"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest font-bold"
                       />
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-500">💡 PIN must be 4 digits</p>
+                  <p className="text-[10px] text-gray-400">💡 PIN must be 4 digits</p>
 
                   {/* Error */}
                   <AnimatePresence>
                     {error && (
                       <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-red-600 text-sm font-medium flex items-center gap-2"
+                        className="bg-red-50 border border-red-200 rounded-md px-3 py-1.5 text-red-600 text-xs font-medium flex items-center gap-1.5"
                       >
                         <span>⚠️</span> {error}
                       </motion.div>
@@ -277,33 +289,31 @@ export default function Register() {
                     type="submit"
                     disabled={loading}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full py-2.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600 shadow-md"
+                    className="w-full py-2 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600"
                   >
                     {loading ? (
                       <>
-                        <FaSpinner className="animate-spin" size={16} />
+                        <FaSpinner className="animate-spin" size={14} />
                         Creating...
                       </>
                     ) : (
                       <>
                         <span>Create Account</span>
-                        <FaArrowRight size={14} />
+                        <FaArrowRight size={12} />
                       </>
                     )}
                   </motion.button>
 
                   {/* Footer */}
-                  <p className="text-center text-sm text-gray-600 pt-2">
+                  <p className="text-center text-xs text-gray-500 pt-1">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
+                    <Link href="/login" className="text-emerald-600 font-semibold hover:text-emerald-700">
                       Sign in
                     </Link>
                   </p>
                 </motion.form>
               )}
             </AnimatePresence>
-          </div>
-        </div>
         </div>
       </motion.div>
     </div>

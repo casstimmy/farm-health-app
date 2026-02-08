@@ -87,28 +87,37 @@ export default function Login({ staffList = [], locations = [] }) {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row">
-      {/* Left Side - Hero/Branding */}
+    <div className="h-screen w-full flex flex-col lg:flex-row overflow-hidden">
+      {/* Left Side - Hero with Image */}
       <motion.div
-        initial={{ x: -50, opacity: 0 }}
+        initial={{ x: -30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 flex items-center justify-center p-8 lg:p-12"
+        transition={{ duration: 0.5 }}
+        className="hidden lg:flex lg:w-1/2 relative"
       >
-        <div className="text-center lg:text-left max-w-md">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516467508483-a7212febe31a?q=80&w=2073&auto=format&fit=crop')" }}
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-emerald-900/50" />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
-            className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl mb-6 shadow-xl"
+            transition={{ delay: 0.3 }}
+            className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6"
           >
-            <span className="text-5xl">🐑</span>
+            <span className="text-4xl">🐑</span>
           </motion.div>
           <motion.h1 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="text-4xl lg:text-5xl font-bold text-white mb-4"
+            className="text-4xl font-bold mb-3"
           >
             Farm Health
           </motion.h1>
@@ -116,18 +125,18 @@ export default function Login({ staffList = [], locations = [] }) {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-emerald-100 text-lg mb-6"
+            className="text-white/80 text-lg mb-8 max-w-sm"
           >
-            Animal Welfare & Operations Management
+            Complete livestock management and health tracking system
           </motion.p>
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="hidden lg:flex flex-wrap gap-3"
+            className="flex flex-wrap gap-2"
           >
-            {["Health Records", "Treatment Tracking", "Inventory", "Reports"].map((item, i) => (
-              <span key={i} className="px-3 py-1.5 bg-white/10 rounded-full text-sm text-emerald-100">
+            {["Health Records", "Treatments", "Inventory", "Reports"].map((item, i) => (
+              <span key={i} className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm">
                 {item}
               </span>
             ))}
@@ -137,31 +146,35 @@ export default function Login({ staffList = [], locations = [] }) {
 
       {/* Right Side - Form */}
       <motion.div
-        initial={{ x: 50, opacity: 0 }}
+        initial={{ x: 30, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        className="lg:w-1/2 bg-gray-50 flex items-center justify-center p-6 lg:p-12 overflow-y-auto"
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="w-full lg:w-1/2 h-full flex items-center justify-center bg-white"
       >
-        <div className="w-full max-w-md">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-1">Welcome Back</h2>
-            <p className="text-gray-500">Sign in to continue</p>
+        <div className="w-full max-w-sm px-6 py-4">
+          {/* Mobile Header */}
+          <div className="lg:hidden text-center mb-4">
+            <span className="text-3xl">🐑</span>
+            <h1 className="text-xl font-bold text-gray-800">Farm Health</h1>
+          </div>
+          
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-800">Welcome Back</h2>
+            <p className="text-gray-500 text-sm">Sign in to continue</p>
           </div>
 
-          {/* Main Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
-            <div className="px-5 py-6">
-            <form onSubmit={handleLogin} className="space-y-4">
+          {/* Form - No Card wrapper needed */}
+            <form onSubmit={handleLogin} className="space-y-3">
               {/* Staff Selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <FaUser size={14} className="text-emerald-600" /> Select Staff
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                  <FaUser size={12} className="text-emerald-600" /> Select Staff
                 </label>
-                <div className="space-y-1.5 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50">
+                <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-1.5 bg-gray-50">
                   {Object.entries(staffByRole).map(([role, users]) => (
                     users.length > 0 && (
                       <div key={role}>
-                        <p className="text-xs text-gray-500 font-semibold px-2 py-1">{role}</p>
+                        <p className="text-[10px] text-gray-400 font-semibold px-2 py-0.5">{role}</p>
                         {users.map((user) => (
                           <motion.button
                             key={user.email}
@@ -171,16 +184,15 @@ export default function Login({ staffList = [], locations = [] }) {
                               setPin("");
                               setError("");
                             }}
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                            whileTap={{ scale: 0.98 }}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-md transition-all ${
                               selectedUser?.email === user.email
-                                ? "bg-emerald-500 text-white shadow-md"
+                                ? "bg-emerald-500 text-white"
                                 : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
                             }`}
                           >
                             <p className="font-medium text-sm">{user.name}</p>
-                            <p className={`text-xs ${selectedUser?.email === user.email ? "text-emerald-100" : "text-gray-500"}`}>{user.email}</p>
+                            <p className={`text-[11px] ${selectedUser?.email === user.email ? "text-emerald-100" : "text-gray-400"}`}>{user.email}</p>
                           </motion.button>
                         ))}
                       </div>
@@ -192,16 +204,17 @@ export default function Login({ staffList = [], locations = [] }) {
               {/* Location Selection */}
               {selectedUser && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <FaMapMarkerAlt size={14} className="text-emerald-600" /> Location
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                    <FaMapMarkerAlt size={12} className="text-emerald-600" /> Location
                   </label>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:border-emerald-400 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {locations.map((loc) => (
                       <option key={loc} value={loc}>
@@ -216,38 +229,38 @@ export default function Login({ staffList = [], locations = [] }) {
               <AnimatePresence>
                 {selectedUser && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <FaLock size={14} className="text-emerald-600" /> 4-Digit PIN
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                      <FaLock size={12} className="text-emerald-600" /> 4-Digit PIN
                     </label>
 
                     {/* PIN Display Dots */}
-                    <div className="flex justify-center gap-3 mb-4">
+                    <div className="flex justify-center gap-2 mb-2">
                       {[0, 1, 2, 3].map((i) => (
-                        <motion.div
+                        <div
                           key={i}
-                          animate={{ scale: pin.length > i ? 1.1 : 1 }}
-                          className={`w-3 h-3 rounded-full border-2 transition-all ${
+                          className={`w-2.5 h-2.5 rounded-full transition-all ${
                             pin.length > i
-                              ? "bg-emerald-500 border-emerald-500"
-                              : "bg-gray-200 border-gray-300"
+                              ? "bg-emerald-500"
+                              : "bg-gray-200"
                           }`}
                         />
                       ))}
                     </div>
 
                     {/* Keypad */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
                         <motion.button
                           key={num}
                           type="button"
                           onClick={() => handleKeypad(num)}
                           whileTap={{ scale: 0.95 }}
-                          className="py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold border border-gray-200 transition-all"
+                          className="py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium text-sm border border-gray-200"
                         >
                           {num}
                         </motion.button>
@@ -256,7 +269,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("0")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold border border-gray-200 transition-all"
+                        className="py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-800 font-medium text-sm border border-gray-200"
                       >
                         0
                       </motion.button>
@@ -264,7 +277,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("back")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold border border-red-200 transition-all text-sm"
+                        className="py-2 rounded-md bg-red-50 hover:bg-red-100 text-red-500 font-medium text-xs border border-red-200"
                       >
                         ← Back
                       </motion.button>
@@ -272,7 +285,7 @@ export default function Login({ staffList = [], locations = [] }) {
                         type="button"
                         onClick={() => handleKeypad("clear")}
                         whileTap={{ scale: 0.95 }}
-                        className="col-span-1 py-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 font-semibold border border-amber-200 transition-all text-sm"
+                        className="py-2 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-500 font-medium text-xs border border-amber-200"
                       >
                         Clear
                       </motion.button>
@@ -285,10 +298,10 @@ export default function Login({ staffList = [], locations = [] }) {
               <AnimatePresence>
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-red-600 text-sm font-medium flex items-center gap-2"
+                    className="bg-red-50 border border-red-200 rounded-md px-3 py-1.5 text-red-600 text-xs font-medium flex items-center gap-1.5"
                   >
                     <span>⚠️</span> {error}
                   </motion.div>
@@ -301,32 +314,30 @@ export default function Login({ staffList = [], locations = [] }) {
                   type="submit"
                   disabled={loading || pin.length !== 4}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-2.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600 shadow-md"
+                  className="w-full py-2 rounded-lg font-semibold text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-600"
                 >
                   {loading ? (
                     <>
-                      <FaSpinner className="animate-spin" size={16} />
-                      Logging in...
+                      <FaSpinner className="animate-spin" size={14} />
+                      Signing in...
                     </>
                   ) : (
                     <>
                       <span>Sign In</span>
-                      <FaArrowRight size={14} />
+                      <FaArrowRight size={12} />
                     </>
                   )}
                 </motion.button>
               )}
 
               {/* Footer */}
-              <p className="text-center text-sm text-gray-600 pt-2">
+              <p className="text-center text-xs text-gray-500 pt-1">
                 New user?{" "}
-                <Link href="/register" className="text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
+                <Link href="/register" className="text-emerald-600 font-semibold hover:text-emerald-700">
                   Create account
                 </Link>
               </p>
             </form>
-          </div>
-        </div>
         </div>
       </motion.div>
     </div>
