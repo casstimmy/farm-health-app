@@ -7,10 +7,11 @@ import Loader from "@/components/Loader";
 import ImageViewer from "./ImageViewer";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
-import { getCachedData, invalidateCache } from "@/utils/cache";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterStatus: parentFilterStatus = "all" }) {
     const { businessSettings } = useContext(BusinessContext);
+    const { animals: globalAnimals, loading: globalLoading, fetchAnimals, updateAnimalInCache, removeAnimalFromCache } = useAnimalData();
     // Modal state for image viewer
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImages, setModalImages] = useState([]);
@@ -36,6 +37,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     setFilterStatus(parentFilterStatus);
   }, [parentFilterStatus]);
 
+  // Load animals from global context
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -47,6 +49,14 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     }
     fetchAnimals();
   }, []);
+
+  // Sync local animals state with global context
+  useEffect(() => {
+    setAnimals(globalAnimals);
+    if (globalAnimals.length > 0 || !globalLoading) {
+      setLoading(false);
+    }
+  }, [globalAnimals, globalLoading]);
 
   useEffect(() => {
     // Filter animals based on search and status
@@ -62,23 +72,6 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     setFilteredAnimals(filtered);
     setVisibleCount(20);
   }, [animals, searchTerm, filterStatus]);
-
-  const fetchAnimals = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const data = await getCachedData("api/animals", () => 
-        fetch("/api/animals", {
-          headers: { "Authorization": `Bearer ${token}` }
-        }).then(r => r.json()),
-        5 * 60 * 1000
-      );
-      setAnimals(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error fetching animals:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEditClick = (index, animal) => {
     setEditIndex(index);
@@ -117,10 +110,8 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
         throw new Error(data.error || "Failed to update animal");
       }
 
-      // Update local state
-      setAnimals((prev) =>
-        prev.map((a) => (a._id === _id ? { ...a, ...editableAnimal } : a))
-      );
+      // Update global cache — targeted update, no re-fetch
+      updateAnimalInCache(_id, editableAnimal);
 
       setEditIndex(null);
       setEditableAnimal({});
@@ -147,9 +138,8 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
         throw new Error(data.error || "Failed to delete animal");
       }
 
-      // Invalidate animals cache after deletion
-      invalidateCache("api/animals");
-      setAnimals((prev) => prev.filter((a) => a._id !== _id));
+      // Remove from global cache — no need to re-fetch everything
+      removeAnimalFromCache(_id);
     } catch (err) {
       setError(err.message || "Failed to delete animal");
     } finally {

@@ -158,31 +158,37 @@ export default function InventoryCategories() {
           <h3 className="text-xl font-bold text-gray-900 mb-4">Add Category</h3>
           {error && <div className="error-message mb-4">{error}</div>}
           {success && <div className="success-message mb-4">{success}</div>}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Category name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-            />
-            <input
-              type="text"
-              name="description"
-              placeholder="Description (optional)"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none md:col-span-2"
-            />
+          <div className="flex flex-col md:flex-row items-end gap-3">
+            <div className="flex-1 w-full">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Category Name *</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="e.g. Feed, Medication"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+              />
+            </div>
+            <div className="flex-[2] w-full">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+              <input
+                type="text"
+                name="description"
+                placeholder="Optional description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={formLoading}
+              className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-60 whitespace-nowrap"
+            >
+              {formLoading ? "Saving..." : "Add Category"}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={formLoading}
-            className="mt-4 px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-60"
-          >
-            {formLoading ? "Saving..." : "Add Category"}
-          </button>
         </form>
       )}
 

@@ -11,6 +11,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
 
@@ -31,6 +32,7 @@ export default function Feeding() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const { animals: globalAnimals, fetchAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [records, setRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -64,15 +66,15 @@ export default function Feeding() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const [animalsRes, recordsRes, invRes, locRes] = await Promise.all([
-        fetch("/api/animals", { headers: { Authorization: `Bearer ${token}` } }),
+      // Animals come from global context, fetch the rest in parallel
+      const [animalsData, recordsRes, invRes, locRes] = await Promise.all([
+        fetchAnimals(),
         fetch("/api/feeding", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (animalsRes.ok) {
-        const data = await animalsRes.json();
-        const list = Array.isArray(data) ? data : [];
+      {
+        const list = Array.isArray(animalsData) ? animalsData : [];
         setAnimals(list);
         if (list.length > 0 && !selectedAnimalId) setSelectedAnimalId(list[0]._id);
       }

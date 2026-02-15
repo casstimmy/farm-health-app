@@ -190,9 +190,10 @@ export default function Sidebar() {
     {
       section: "Finance",
       icon: <FaMoneyBill className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'Manager'],
+      roles: ['SuperAdmin', 'Manager', 'Attendant'],
       submenu: [
-        { href: "/manage/transactions", label: "Expenses", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
+        { href: "/manage/expenses", label: "💸 Record Expense", icon: null, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
+        { href: "/manage/transactions", label: "All Finance", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/reports", label: "Reports", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
       ],
     },

@@ -9,6 +9,7 @@ import { Pie, Bar, Doughnut } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
 import { getCachedData, invalidateCachePattern } from "@/utils/cache";
+import { useAnimalData } from "@/context/AnimalDataContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,6 +34,7 @@ const fmtMoney = (v = 0, c = "NGN") => {
 export default function Home() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const { animals: cachedAnimals, fetchAnimals, forceRefresh: forceRefreshAnimals } = useAnimalData();
   const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -53,9 +55,9 @@ export default function Home() {
         const headers = { Authorization: `Bearer ${token}` };
         const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.json());
         
-        // Use cache with 5-minute TTL for dashboard data
-        const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          getCachedData("api/animals", () => fetchApi("/api/animals"), 5 * 60 * 1000),
+        // Animals come from global context (shared cache); other data uses TTL cache
+        const [animalsData, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
+          fetchAnimals(),
           getCachedData("api/inventory", () => fetchApi("/api/inventory"), 5 * 60 * 1000),
           getCachedData("api/treatment", () => fetchApi("/api/treatment"), 5 * 60 * 1000),
           getCachedData("api/finance", () => fetchApi("/api/finance"), 5 * 60 * 1000),
@@ -66,7 +68,7 @@ export default function Home() {
         ]);
         
         setData({
-          animals: Array.isArray(animals) ? animals : [],
+          animals: Array.isArray(animalsData) ? animalsData : [],
           inventory: Array.isArray(inventory) ? inventory : [],
           treatments: Array.isArray(treatments) ? treatments : [],
           finance: Array.isArray(finance) ? finance : [],
@@ -103,7 +105,8 @@ export default function Home() {
       if (!res.ok) { setSeedResult({ success: false, message: d.error || "Failed" }); }
       else {
         // Clear all cache after seeding
-        invalidateCachePattern(/^api\//);
+        invalidateCachePattern("api/");
+        forceRefreshAnimals();
         setSeedResult({ success: true, message: "Database seeded! ✓", results: d.results }); 
         setTimeout(() => window.location.reload(), 2000); 
       }
@@ -155,10 +158,12 @@ export default function Home() {
     const activeTreatments = healthRecords.filter(h => h.recoveryStatus === "Under Treatment" || h.recoveryStatus === "Improving").length;
     const recovered = healthRecords.filter(h => h.recoveryStatus === "Recovered").length;
 
-    // Recent records (last 7 days)
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-    const recentTreatments = healthRecords.filter(h => new Date(h.date) >= weekAgo);
-    const recentFeedings = feeding.filter(f => new Date(f.date) >= weekAgo);
+    // Recent records — show latest regardless of date (sorted newest first)
+    const recentTreatments = [...healthRecords].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const recentFeedings = [...feeding].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    
+    // Recent breeding — sorted by mating date, newest first
+    const recentBreeding = [...breeding].sort((a, b) => new Date(b.matingDate || b.createdAt || 0) - new Date(a.matingDate || a.createdAt || 0));
 
     // Expense by category
     const expByCat = {};
@@ -173,7 +178,7 @@ export default function Home() {
       totalItems, lowStock, inventoryValue,
       totalDeaths, mortalityLoss,
       totalBreeding, delivered: delivered.length, totalKids, confirmed,
-      activeTreatments, recovered, recentTreatments, recentFeedings,
+      activeTreatments, recovered, recentTreatments, recentFeedings, recentBreeding,
       expByCat,
     };
   }, [data]);
@@ -309,7 +314,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Recent Health Records */}
             <ListCard title="Recent Health Records" icon="🏥" items={
-              stats.recentTreatments.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 5).map(h => ({
+              stats.recentTreatments.slice(0, 5).map(h => ({
                 label: h.animalTagId || h.animal?.tagId || "Unknown",
                 meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
                 emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : "💊",
@@ -327,9 +332,9 @@ export default function Home() {
 
             {/* Recent Breeding */}
             <ListCard title="Breeding Updates" icon="💕" items={
-              data.breeding.slice(0, 5).map(b => ({
-                label: `${b.doe?.tagId || "?"} × ${b.buck?.tagId || "?"}`,
-                meta: `${b.pregnancyStatus} ${b.kidsAlive > 0 ? `• ${b.kidsAlive} kids` : ""}`,
+              stats.recentBreeding.slice(0, 5).map(b => ({
+                label: `${b.doe?.tagId || b.doeTagId || "?"} × ${b.buck?.tagId || b.buckTagId || "?"}`,
+                meta: `${b.pregnancyStatus || "—"} ${b.kidsAlive > 0 ? `• ${b.kidsAlive} kids` : ""}`,
                 emoji: b.pregnancyStatus === "Delivered" ? "🐣" : b.pregnancyStatus === "Confirmed" ? "🤰" : "⏳",
               }))
             } emptyText="No breeding records" link="/manage/breeding" />

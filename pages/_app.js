@@ -3,6 +3,7 @@ import Layout from '@/components/layout/Layout';
 import AuthLayout from '@/components/layout/AuthLayout';
 import EmptyLayout from '@/components/layout/EmptyLayout';
 import { BusinessProvider } from '@/context/BusinessContext';
+import { AnimalDataProvider } from '@/context/AnimalDataContext';
 
 /**
  * App Wrapper with Layout Support
@@ -46,9 +47,11 @@ function MyApp({ Component, pageProps }) {
   // Default: Use main Layout with navigation
   return (
     <BusinessProvider>
-      <Layout {...layoutProps}>
-        <Component {...pageProps} />
-      </Layout>
+      <AnimalDataProvider>
+        <Layout {...layoutProps}>
+          <Component {...pageProps} />
+        </Layout>
+      </AnimalDataProvider>
     </BusinessProvider>
   );
 }

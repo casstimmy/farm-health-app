@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import AddAnimalForm from "@/components/animals/AddAnimalForm";
@@ -6,17 +6,19 @@ import AnimalsList from "@/components/animals/AnimalsList";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Modal from "@/components/shared/Modal";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function ManageAnimals() {
   const router = useRouter();
+  const { forceRefresh } = useAnimalData();
   const [showModal, setShowModal] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
   const handleSuccess = () => {
     setShowModal(false);
-    setRefreshTrigger(prev => prev + 1);
+    // Force refresh the global animal cache after adding a new animal
+    forceRefresh();
   };
 
   return (
@@ -65,7 +67,7 @@ export default function ManageAnimals() {
       {/* Animals List */}
       <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">All Animals</h2>
-        <AnimalsList key={refreshTrigger} searchTerm={searchTerm} filterStatus={filterStatus} />
+        <AnimalsList searchTerm={searchTerm} filterStatus={filterStatus} />
       </div>
     </motion.div>
   );

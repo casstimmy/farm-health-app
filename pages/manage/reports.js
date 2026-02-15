@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { FaDownload } from "react-icons/fa";
 import { BusinessContext } from "@/context/BusinessContext";
+import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatCurrency } from "@/utils/formatting";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
@@ -13,6 +14,7 @@ import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filter
 
 export default function Reports() {
   const { businessSettings } = useContext(BusinessContext);
+  const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState([]);
@@ -41,9 +43,9 @@ export default function Reports() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [financeRes, animalsRes, treatmentRes, mortalityRes, breedingRes, inventoryRes, lossRes, feedingRes, locRes] = await Promise.all([
+      const [financeRes, animalsData, treatmentRes, mortalityRes, breedingRes, inventoryRes, lossRes, feedingRes, locRes] = await Promise.all([
         fetch("/api/finance", { headers }),
-        fetch("/api/animals", { headers }),
+        fetchGlobalAnimals(),
         fetch("/api/treatment", { headers }),
         fetch("/api/mortality", { headers }),
         fetch("/api/breeding", { headers }),
@@ -54,7 +56,7 @@ export default function Reports() {
       ]);
 
       setRawFinance(financeRes.ok ? await financeRes.json() : []);
-      setRawAnimals(animalsRes.ok ? await animalsRes.json() : []);
+      setRawAnimals(Array.isArray(animalsData) ? animalsData : []);
       setRawTreatments(treatmentRes.ok ? await treatmentRes.json() : []);
       setRawMortalities(mortalityRes.ok ? await mortalityRes.json() : []);
       setRawBreedings(breedingRes.ok ? await breedingRes.json() : []);

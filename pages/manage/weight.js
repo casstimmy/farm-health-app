@@ -10,11 +10,13 @@ import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function WeightTracking() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -47,12 +49,13 @@ export default function WeightTracking() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const [animalsRes, recordsRes, locRes] = await Promise.all([
-        fetch("/api/animals", { headers: { Authorization: `Bearer ${token}` } }),
+      // Animals come from global context, fetch only weight records and locations
+      const [animalsData, recordsRes, locRes] = await Promise.all([
+        fetchGlobalAnimals(),
         fetch("/api/weight", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (animalsRes.ok) setAnimals(await animalsRes.json() || []);
+      setAnimals(Array.isArray(animalsData) ? animalsData : []);
       if (recordsRes.ok) setAllRecords(await recordsRes.json() || []);
       if (locRes.ok) setLocations(await locRes.json() || []);
     } catch (err) {

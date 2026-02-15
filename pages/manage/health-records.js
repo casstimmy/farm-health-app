@@ -11,6 +11,7 @@ import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Injection", "Oral", "Topical", "IV Drip", "Surgical", "Vaccination", "Deworming", "Other"];
@@ -45,6 +46,7 @@ export default function HealthRecords() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [records, setRecords] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [medications, setMedications] = useState([]);
@@ -73,15 +75,16 @@ export default function HealthRecords() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-      const [rRes, aRes, mRes, lRes] = await Promise.all([
+      // Animals from global context; fetch rest in parallel
+      const [animalsData, rRes, mRes, lRes] = await Promise.all([
+        fetchGlobalAnimals(),
         fetch("/api/health-records", { headers }),
-        fetch("/api/animals", { headers }),
         fetch("/api/inventory", { headers }),
         fetch("/api/locations", { headers }),
       ]);
-      const [rData, aData, mData, lData] = await Promise.all([rRes.json(), aRes.json(), mRes.json(), lRes.json()]);
+      const [rData, mData, lData] = await Promise.all([rRes.json(), mRes.json(), lRes.json()]);
       setRecords(Array.isArray(rData) ? rData : []);
-      setAnimals(Array.isArray(aData) ? aData : []);
+      setAnimals(Array.isArray(animalsData) ? animalsData : []);
       const meds = (Array.isArray(mData) ? mData : []).filter(i =>
         ["medication", "medications", "medical supplies"].includes((i.categoryName || i.category || "").toLowerCase())
       );

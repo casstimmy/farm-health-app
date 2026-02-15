@@ -6,10 +6,12 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
+import { useAnimalData } from "@/context/AnimalDataContext";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 export default function BreedingManagement() {
   const router = useRouter();
+  const { fetchAnimals: fetchGlobalAnimals, forceRefresh } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [breedingRecords, setBreedingRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -52,13 +54,12 @@ export default function BreedingManagement() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [animalsRes, breedingRes, locRes] = await Promise.all([
-        fetch("/api/animals", { headers }),
+      const [animalsData, breedingRes, locRes] = await Promise.all([
+        fetchGlobalAnimals(),
         fetch("/api/breeding", { headers }),
         fetch("/api/locations", { headers }),
       ]);
 
-      const animalsData = await animalsRes.json();
       setAnimals(Array.isArray(animalsData) ? animalsData : []);
 
       const breedingData = await breedingRes.json();
@@ -262,6 +263,7 @@ export default function BreedingManagement() {
       setSuccess(`Kid ${kidForm.tagId} registered successfully! Linked to ${doeAnimal?.tagId || "Dam"} × ${buckAnimal?.tagId || "Sire"}`);
       setShowRegisterKids(null);
       setKidForm({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
+      forceRefresh();
       fetchData();
     } catch (err) {
       setError(err.message);

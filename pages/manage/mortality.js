@@ -7,12 +7,14 @@ import StatsSummary from "@/components/shared/StatsSummary";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
+import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatCurrency } from "@/utils/formatting";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 export default function MortalityTracking() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [mortalityRecords, setMortalityRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -68,13 +70,12 @@ export default function MortalityTracking() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [animalsRes, mortalityRes, locRes] = await Promise.all([
-        fetch("/api/animals", { headers }),
+      const [animalsData, mortalityRes, locRes] = await Promise.all([
+        fetchGlobalAnimals(),
         fetch("/api/mortality", { headers }),
         fetch("/api/locations", { headers }),
       ]);
 
-      const animalsData = await animalsRes.json();
       setAnimals(Array.isArray(animalsData) ? animalsData : []);
 
       const mortalityData = await mortalityRes.json();
