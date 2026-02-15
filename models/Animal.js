@@ -1,82 +1,55 @@
 import mongoose from "mongoose";
 
-const TreatmentSchema = new mongoose.Schema({
-  date: Date,
-  symptoms: String,
-  possibleCause: String,
-  diagnosis: String,
-  treatmentType: String,
-  medication: {
+const AnimalSchema = new mongoose.Schema(
+  {
+    tagId: { type: String, required: true, unique: true, index: true },
     name: String,
-    dosage: String,
-    route: String
+    species: { type: String, index: true },
+    breed: String,
+    class: String,
+    gender: {
+      type: String,
+      enum: ["Male", "Female"],
+    },
+    dob: Date,
+    color: String,
+    origin: String,
+    acquisitionType: {
+      type: String,
+      enum: ["Bred on farm", "Purchased", "Donated", "Other"],
+    },
+    acquisitionDate: Date,
+    sire: { type: mongoose.Schema.Types.ObjectId, ref: "Animal", default: null },
+    dam: { type: mongoose.Schema.Types.ObjectId, ref: "Animal", default: null },
+    status: {
+      type: String,
+      enum: ["Alive", "Dead", "Sold", "Quarantined"],
+      default: "Alive",
+      index: true,
+    },
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
+      default: null,
+    },
+    paddock: String,
+    currentWeight: { type: Number, default: 0 },
+    weightDate: Date,
+    recordedBy: String,
+    images: [
+      {
+        full: { type: String, required: true },
+        thumb: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+    notes: String,
   },
-  treatedBy: String,
-  postTreatmentObservation: String,
-  treatmentCompletionDate: Date,
-  recoveryStatus: String
-});
+  { timestamps: true }
+);
 
-const FeedingSchema = new mongoose.Schema({
-  date: Date,
-  feedCategory: String,
-  quantityOffered: Number,
-  quantityConsumed: Number,
-  feedingMethod: String,
-  notes: String
-});
-
-const WeightSchema = new mongoose.Schema({
-  date: Date,
-  weightKg: Number,
-  recordedBy: String,
-  notes: String
-});
-
-const VaccinationSchema = new mongoose.Schema({
-  vaccineName: String,
-  method: String,
-  dosage: String,
-  vaccinationDate: Date
-});
-
-const AnimalSchema = new mongoose.Schema({
-  tagId: { type: String, required: true, unique: true },
-  myNotes: String,
-  name: String,
-  species: String,
-  breed: String,
-  origin: String,
-  class: String,
-  gender: String,
-  dob: Date,
-  color: String,
-  acquisitionType: String,
-  acquisitionDate: Date,
-  sireId: String,
-  damId: String,
-  status: { type: String, default: "Alive" },
-  location: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Location",
-    required: false,
-  },
-  paddock: String,
-  weight: { type: Number, default: 0 },
-  weightDate: Date,
-  recordedBy: String,
-  images: [
-    {
-      full: { type: String, required: true },
-      thumb: { type: String, required: true },
-      uploadedAt: { type: Date, default: Date.now }
-    }
-  ],
-  treatmentHistory: [TreatmentSchema],
-  feedingHistory: [FeedingSchema],
-  weightHistory: [WeightSchema],
-  vaccinationRecords: [VaccinationSchema],
-  notes: String
-}, { timestamps: true });
+// Compound indexes for common queries
+AnimalSchema.index({ species: 1, status: 1 });
+AnimalSchema.index({ location: 1 });
 
 export default mongoose.models.Animal || mongoose.model("Animal", AnimalSchema);

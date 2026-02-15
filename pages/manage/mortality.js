@@ -16,11 +16,14 @@ export default function MortalityTracking() {
   const [filterCause, setFilterCause] = useState("all");
   const [formData, setFormData] = useState({
     animalId: "",
-    deathDate: "",
+    dateOfDeath: "",
     cause: "",
     symptoms: "",
+    daysSick: "",
+    weight: "",
+    estimatedValue: "",
+    disposalMethod: "",
     notes: "",
-    preventable: false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -33,10 +36,13 @@ export default function MortalityTracking() {
     "Birth Complications",
     "Old Age",
     "Malnutrition",
+    "Severe pneumonia",
     "Weather/Environmental",
     "Unknown",
     "Other"
   ];
+
+  const disposalMethods = ["Burial", "Incineration", "Rendering", "Other"];
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -53,15 +59,16 @@ export default function MortalityTracking() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const animalsRes = await fetch("/api/animals", { headers });
+      const [animalsRes, mortalityRes] = await Promise.all([
+        fetch("/api/animals", { headers }),
+        fetch("/api/mortality", { headers }),
+      ]);
+
       const animalsData = await animalsRes.json();
       setAnimals(Array.isArray(animalsData) ? animalsData : []);
 
-      // Store mortality records in localStorage (can be moved to API later)
-      const storedRecords = localStorage.getItem("mortalityRecords");
-      if (storedRecords) {
-        setMortalityRecords(JSON.parse(storedRecords));
-      }
+      const mortalityData = await mortalityRes.json();
+      setMortalityRecords(Array.isArray(mortalityData) ? mortalityData : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
@@ -76,7 +83,7 @@ export default function MortalityTracking() {
     setError("");
     setSuccess("");
 
-    if (!formData.animalId || !formData.deathDate || !formData.cause) {
+    if (!formData.animalId || !formData.dateOfDeath || !formData.cause) {
       setError("Please fill in all required fields");
       return;
     }
@@ -84,55 +91,47 @@ export default function MortalityTracking() {
     setSaving(true);
 
     try {
-      const animal = animals.find(a => a._id === formData.animalId);
-
-      const newRecord = {
-        id: Date.now().toString(),
-        animal: { 
-          id: animal._id, 
-          name: animal.name, 
-          tagId: animal.tagId,
-          species: animal.species,
-          breed: animal.breed,
-          gender: animal.gender,
-          dob: animal.dob
-        },
-        deathDate: formData.deathDate,
-        cause: formData.cause,
-        symptoms: formData.symptoms,
-        notes: formData.notes,
-        preventable: formData.preventable,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Update animal status to "Deceased" via API
       const token = localStorage.getItem("token");
-      await fetch(`/api/animals/${animal._id}`, {
-        method: "PUT",
+      const res = await fetch("/api/mortality", {
+        method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: "Deceased" })
+        body: JSON.stringify({
+          animal: formData.animalId,
+          dateOfDeath: formData.dateOfDeath,
+          cause: formData.cause,
+          symptoms: formData.symptoms,
+          daysSick: formData.daysSick ? Number(formData.daysSick) : 0,
+          weight: formData.weight ? Number(formData.weight) : null,
+          estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0,
+          disposalMethod: formData.disposalMethod,
+          reportedBy: JSON.parse(localStorage.getItem("user") || "{}").name || "Unknown",
+          notes: formData.notes,
+        }),
       });
 
-      const updatedRecords = [...mortalityRecords, newRecord];
-      setMortalityRecords(updatedRecords);
-      localStorage.setItem("mortalityRecords", JSON.stringify(updatedRecords));
-
-      // Refresh animals list
-      fetchData();
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to save");
+        return;
+      }
 
       setSuccess("Mortality record added successfully!");
       setFormData({
         animalId: "",
-        deathDate: "",
+        dateOfDeath: "",
         cause: "",
         symptoms: "",
+        daysSick: "",
+        weight: "",
+        estimatedValue: "",
+        disposalMethod: "",
         notes: "",
-        preventable: false,
       });
       setShowForm(false);
+      fetchData();
     } catch (err) {
       setError("Failed to save mortality record");
     } finally {
@@ -140,17 +139,26 @@ export default function MortalityTracking() {
     }
   };
 
-  const deleteRecord = (recordId) => {
+  const deleteRecord = async (recordId) => {
     if (!confirm("Are you sure you want to delete this mortality record?")) return;
-    const updatedRecords = mortalityRecords.filter(r => r.id !== recordId);
-    setMortalityRecords(updatedRecords);
-    localStorage.setItem("mortalityRecords", JSON.stringify(updatedRecords));
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`/api/mortality/${recordId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete:", err);
+    }
   };
 
   const filteredRecords = mortalityRecords.filter(record => {
-    const matchesSearch = 
-      record.animal?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.animal?.tagId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const animalName = record.animal?.name || "";
+    const animalTag = record.animal?.tagId || "";
+    const matchesSearch =
+      animalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      animalTag.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterCause === "all" || record.cause === filterCause;
     return matchesSearch && matchesFilter;
   });
@@ -159,18 +167,17 @@ export default function MortalityTracking() {
   const thisMonth = new Date().getMonth();
   const thisYear = new Date().getFullYear();
   const monthlyDeaths = mortalityRecords.filter(r => {
-    const d = new Date(r.deathDate);
+    const d = new Date(r.dateOfDeath);
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
   }).length;
-
-  const preventableDeaths = mortalityRecords.filter(r => r.preventable).length;
 
   const causeBreakdown = mortalityRecords.reduce((acc, r) => {
     acc[r.cause] = (acc[r.cause] || 0) + 1;
     return acc;
   }, {});
-
   const topCause = Object.entries(causeBreakdown).sort((a, b) => b[1] - a[1])[0];
+
+  const totalEstimatedLoss = mortalityRecords.reduce((sum, r) => sum + (r.estimatedValue || 0), 0);
 
   const getCauseColor = (cause) => {
     const colors = {
@@ -180,7 +187,8 @@ export default function MortalityTracking() {
       "Birth Complications": "bg-pink-100 text-pink-800 border-pink-300",
       "Old Age": "bg-gray-100 text-gray-800 border-gray-300",
       "Malnutrition": "bg-yellow-100 text-yellow-800 border-yellow-300",
-      "Weather/Environmental": "bg-blue-100 text-blue-800 border-blue-300",
+      "Severe pneumonia": "bg-blue-100 text-blue-800 border-blue-300",
+      "Weather/Environmental": "bg-teal-100 text-teal-800 border-teal-300",
       "Unknown": "bg-gray-100 text-gray-600 border-gray-300",
     };
     return colors[cause] || "bg-gray-100 text-gray-800 border-gray-300";
@@ -205,7 +213,7 @@ export default function MortalityTracking() {
         stats={[
           { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
           { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅" },
-          { label: "Preventable", value: preventableDeaths, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⚠️" },
+          { label: "Est. Loss", value: `₦${totalEstimatedLoss.toLocaleString()}`, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
           { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true },
         ]}
       />
@@ -289,8 +297,8 @@ export default function MortalityTracking() {
                   </label>
                   <input
                     type="date"
-                    value={formData.deathDate}
-                    onChange={(e) => setFormData({ ...formData, deathDate: e.target.value })}
+                    value={formData.dateOfDeath}
+                    onChange={(e) => setFormData({ ...formData, dateOfDeath: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
                     required
                   />
@@ -328,6 +336,57 @@ export default function MortalityTracking() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Days Sick</label>
+                  <input
+                    type="number"
+                    value={formData.daysSick}
+                    onChange={(e) => setFormData({ ...formData, daysSick: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Weight (kg)</label>
+                  <input
+                    type="number"
+                    value={formData.weight}
+                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
+                    placeholder="0"
+                    min="0"
+                    step="0.1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-2 block">Estimated Value (₦)</label>
+                  <input
+                    type="number"
+                    value={formData.estimatedValue}
+                    onChange={(e) => setFormData({ ...formData, estimatedValue: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Disposal Method</label>
+                <select
+                  value={formData.disposalMethod}
+                  onChange={(e) => setFormData({ ...formData, disposalMethod: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
+                >
+                  <option value="">Select method...</option>
+                  {disposalMethods.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Notes</label>
                 <textarea
@@ -337,20 +396,6 @@ export default function MortalityTracking() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
                   placeholder="Additional details about the death..."
                 />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="preventable"
-                  checked={formData.preventable}
-                  onChange={(e) => setFormData({ ...formData, preventable: e.target.checked })}
-                  className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="preventable" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <FaExclamationTriangle className="text-yellow-500" />
-                  This death was preventable
-                </label>
               </div>
 
               {error && (
@@ -408,14 +453,14 @@ export default function MortalityTracking() {
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Date</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Cause</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Symptoms</th>
-                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Preventable</th>
+                  <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Days Sick</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((record, idx) => (
                   <motion.tr
-                    key={record.id}
+                    key={record._id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: idx * 0.05 }}
@@ -428,7 +473,7 @@ export default function MortalityTracking() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-700">
-                      {new Date(record.deathDate).toLocaleDateString()}
+                      {new Date(record.dateOfDeath).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getCauseColor(record.cause)}`}>
@@ -438,18 +483,12 @@ export default function MortalityTracking() {
                     <td className="px-6 py-4 text-gray-600 max-w-xs truncate">
                       {record.symptoms || "-"}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      {record.preventable ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
-                          <FaExclamationTriangle /> Yes
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">No</span>
-                      )}
+                    <td className="px-6 py-4 text-center text-gray-700">
+                      {record.daysSick || "-"}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
-                        onClick={() => deleteRecord(record.id)}
+                        onClick={() => deleteRecord(record._id)}
                         className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"
                       >
                         Delete

@@ -15,12 +15,12 @@ export default function BreedingManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [formData, setFormData] = useState({
-    femaleId: "",
-    maleId: "",
-    breedingDate: "",
+    doe: "",
+    buck: "",
+    matingDate: "",
+    breedingType: "Natural",
     expectedDueDate: "",
     notes: "",
-    status: "pending",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -41,15 +41,16 @@ export default function BreedingManagement() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const animalsRes = await fetch("/api/animals", { headers });
+      const [animalsRes, breedingRes] = await Promise.all([
+        fetch("/api/animals", { headers }),
+        fetch("/api/breeding", { headers }),
+      ]);
+
       const animalsData = await animalsRes.json();
       setAnimals(Array.isArray(animalsData) ? animalsData : []);
 
-      // For now, store breeding records in localStorage (can be moved to API later)
-      const storedRecords = localStorage.getItem("breedingRecords");
-      if (storedRecords) {
-        setBreedingRecords(JSON.parse(storedRecords));
-      }
+      const breedingData = await breedingRes.json();
+      setBreedingRecords(Array.isArray(breedingData) ? breedingData : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
@@ -65,7 +66,7 @@ export default function BreedingManagement() {
     setError("");
     setSuccess("");
 
-    if (!formData.femaleId || !formData.maleId || !formData.breedingDate) {
+    if (!formData.doe || !formData.buck || !formData.matingDate) {
       setError("Please fill in all required fields");
       return;
     }
@@ -73,84 +74,123 @@ export default function BreedingManagement() {
     setSaving(true);
 
     try {
-      const female = animals.find(a => a._id === formData.femaleId);
-      const male = animals.find(a => a._id === formData.maleId);
-
-      const newRecord = {
-        id: Date.now().toString(),
-        female: { id: female._id, name: female.name, tagId: female.tagId },
-        male: { id: male._id, name: male.name, tagId: male.tagId },
-        breedingDate: formData.breedingDate,
-        expectedDueDate: formData.expectedDueDate || calculateDueDate(formData.breedingDate),
+      const token = localStorage.getItem("token");
+      const doeAnimal = animals.find(a => a._id === formData.doe);
+      const payload = {
+        breedingId: `BR-${Date.now()}`,
+        doe: formData.doe,
+        buck: formData.buck,
+        species: doeAnimal?.species || "",
+        matingDate: formData.matingDate,
+        breedingType: formData.breedingType,
+        expectedDueDate: formData.expectedDueDate || calculateDueDate(formData.matingDate),
+        pregnancyStatus: "Pending",
         notes: formData.notes,
-        status: "pending",
-        createdAt: new Date().toISOString(),
       };
 
-      const updatedRecords = [...breedingRecords, newRecord];
-      setBreedingRecords(updatedRecords);
-      localStorage.setItem("breedingRecords", JSON.stringify(updatedRecords));
+      const res = await fetch("/api/breeding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save breeding record");
+      }
 
       setSuccess("Breeding record added successfully!");
       setFormData({
-        femaleId: "",
-        maleId: "",
-        breedingDate: "",
+        doe: "",
+        buck: "",
+        matingDate: "",
+        breedingType: "Natural",
         expectedDueDate: "",
         notes: "",
-        status: "pending",
       });
       setShowForm(false);
+      fetchData();
     } catch (err) {
-      setError("Failed to save breeding record");
+      setError(err.message || "Failed to save breeding record");
     } finally {
       setSaving(false);
     }
   };
 
-  const calculateDueDate = (breedingDate) => {
+  const calculateDueDate = (matingDate) => {
     // Average goat gestation: 150 days
-    const date = new Date(breedingDate);
+    const date = new Date(matingDate);
     date.setDate(date.getDate() + 150);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
-  const updateRecordStatus = (recordId, newStatus) => {
-    const updatedRecords = breedingRecords.map(r =>
-      r.id === recordId ? { ...r, status: newStatus, updatedAt: new Date().toISOString() } : r
-    );
-    setBreedingRecords(updatedRecords);
-    localStorage.setItem("breedingRecords", JSON.stringify(updatedRecords));
+  const updateRecordStatus = async (recordId, newStatus) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/breeding/${recordId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pregnancyStatus: newStatus }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update record");
+      }
+
+      fetchData();
+    } catch (err) {
+      setError(err.message || "Failed to update record status");
+    }
   };
 
-  const deleteRecord = (recordId) => {
+  const deleteRecord = async (recordId) => {
     if (!confirm("Are you sure you want to delete this breeding record?")) return;
-    const updatedRecords = breedingRecords.filter(r => r.id !== recordId);
-    setBreedingRecords(updatedRecords);
-    localStorage.setItem("breedingRecords", JSON.stringify(updatedRecords));
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/breeding/${recordId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete record");
+      }
+
+      fetchData();
+    } catch (err) {
+      setError(err.message || "Failed to delete breeding record");
+    }
   };
 
   const filteredRecords = breedingRecords.filter(record => {
-    const matchesSearch = 
-      record.female?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.male?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === "all" || record.status === filterStatus;
+    const matchesSearch =
+      record.doe?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.buck?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === "all" || record.pregnancyStatus === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   const stats = {
     total: breedingRecords.length,
-    pending: breedingRecords.filter(r => r.status === "pending").length,
-    confirmed: breedingRecords.filter(r => r.status === "confirmed").length,
-    delivered: breedingRecords.filter(r => r.status === "delivered").length,
+    pending: breedingRecords.filter(r => r.pregnancyStatus === "Pending").length,
+    confirmed: breedingRecords.filter(r => r.pregnancyStatus === "Confirmed").length,
+    delivered: breedingRecords.filter(r => r.pregnancyStatus === "Delivered").length,
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "confirmed": return "bg-blue-100 text-blue-800 border-blue-300";
-      case "delivered": return "bg-green-100 text-green-800 border-green-300";
-      case "failed": return "bg-red-100 text-red-800 border-red-300";
+      case "Pending": return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "Confirmed": return "bg-blue-100 text-blue-800 border-blue-300";
+      case "Delivered": return "bg-green-100 text-green-800 border-green-300";
+      case "Not Pregnant": return "bg-red-100 text-red-800 border-red-300";
       default: return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
@@ -204,10 +244,10 @@ export default function BreedingManagement() {
               className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
             >
               <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="delivered">Delivered</option>
-              <option value="failed">Failed</option>
+              <option value="Pending">Pending</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Not Pregnant">Not Pregnant</option>
             </select>
           </div>
           <motion.button
@@ -245,11 +285,11 @@ export default function BreedingManagement() {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                     <FaVenus className="text-pink-500" />
-                    Female Animal *
+                    Female (Doe) *
                   </label>
                   <select
-                    value={formData.femaleId}
-                    onChange={(e) => setFormData({ ...formData, femaleId: e.target.value })}
+                    value={formData.doe}
+                    onChange={(e) => setFormData({ ...formData, doe: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
                     required
                   >
@@ -264,11 +304,11 @@ export default function BreedingManagement() {
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                     <FaMars className="text-blue-500" />
-                    Male Animal *
+                    Male (Buck) *
                   </label>
                   <select
-                    value={formData.maleId}
-                    onChange={(e) => setFormData({ ...formData, maleId: e.target.value })}
+                    value={formData.buck}
+                    onChange={(e) => setFormData({ ...formData, buck: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
                     required
                   >
@@ -282,19 +322,33 @@ export default function BreedingManagement() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                     <FaCalendar className="text-pink-500" />
-                    Breeding Date *
+                    Mating Date *
                   </label>
                   <input
                     type="date"
-                    value={formData.breedingDate}
-                    onChange={(e) => setFormData({ ...formData, breedingDate: e.target.value })}
+                    value={formData.matingDate}
+                    onChange={(e) => setFormData({ ...formData, matingDate: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
                     required
                   />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <FaHeart className="text-pink-500" />
+                    Breeding Type
+                  </label>
+                  <select
+                    value={formData.breedingType}
+                    onChange={(e) => setFormData({ ...formData, breedingType: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
+                  >
+                    <option value="Natural">Natural</option>
+                    <option value="AI">Artificial Insemination</option>
+                  </select>
                 </div>
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
@@ -371,11 +425,11 @@ export default function BreedingManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRecords.map((record, idx) => {
             const daysUntil = getDaysUntilDue(record.expectedDueDate);
-            const isOverdue = daysUntil < 0 && record.status !== "delivered";
+            const isOverdue = daysUntil < 0 && record.pregnancyStatus !== "Delivered";
             
             return (
               <motion.div
-                key={record.id}
+                key={record._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
@@ -383,8 +437,8 @@ export default function BreedingManagement() {
               >
                 <div className="bg-gradient-to-r from-pink-50 to-rose-50 px-6 py-4 border-b border-pink-100">
                   <div className="flex items-center justify-between">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(record.status)}`}>
-                      {record.status.toUpperCase()}
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(record.pregnancyStatus)}`}>
+                      {record.pregnancyStatus?.toUpperCase()}
                     </span>
                     {isOverdue && (
                       <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">
@@ -399,34 +453,40 @@ export default function BreedingManagement() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <FaVenus className="text-pink-500" />
-                        <span className="font-bold text-gray-900">{record.female?.name}</span>
+                        <span className="font-bold text-gray-900">{record.doe?.name}</span>
                       </div>
-                      <p className="text-xs text-gray-500">{record.female?.tagId}</p>
+                      <p className="text-xs text-gray-500">{record.doe?.tagId}</p>
                     </div>
                     <FaHeart className="text-pink-400" />
                     <div className="flex-1 text-right">
                       <div className="flex items-center justify-end gap-2 mb-1">
-                        <span className="font-bold text-gray-900">{record.male?.name}</span>
+                        <span className="font-bold text-gray-900">{record.buck?.name}</span>
                         <FaMars className="text-blue-500" />
                       </div>
-                      <p className="text-xs text-gray-500">{record.male?.tagId}</p>
+                      <p className="text-xs text-gray-500">{record.buck?.tagId}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Breeding Date</p>
-                      <p className="font-semibold">{new Date(record.breedingDate).toLocaleDateString()}</p>
+                      <p className="text-gray-500">Mating Date</p>
+                      <p className="font-semibold">{new Date(record.matingDate).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Due Date</p>
                       <p className={`font-semibold ${isOverdue ? "text-red-600" : ""}`}>
-                        {new Date(record.expectedDueDate).toLocaleDateString()}
+                        {record.expectedDueDate ? new Date(record.expectedDueDate).toLocaleDateString() : "—"}
                       </p>
                     </div>
                   </div>
 
-                  {record.status !== "delivered" && (
+                  {record.breedingType && (
+                    <div className="text-xs text-gray-500">
+                      Type: <span className="font-semibold text-gray-700">{record.breedingType}</span>
+                    </div>
+                  )}
+
+                  {record.pregnancyStatus !== "Delivered" && record.expectedDueDate && (
                     <div className={`text-center py-2 rounded-lg ${isOverdue ? "bg-red-50 text-red-700" : "bg-pink-50 text-pink-700"}`}>
                       {isOverdue
                         ? `${Math.abs(daysUntil)} days overdue`
@@ -435,28 +495,28 @@ export default function BreedingManagement() {
                   )}
 
                   {record.notes && (
-                    <p className="text-sm text-gray-600 italic">"{record.notes}"</p>
+                    <p className="text-sm text-gray-600 italic">&quot;{record.notes}&quot;</p>
                   )}
 
                   <div className="flex gap-2 pt-2">
-                    {record.status === "pending" && (
+                    {record.pregnancyStatus === "Pending" && (
                       <button
-                        onClick={() => updateRecordStatus(record.id, "confirmed")}
+                        onClick={() => updateRecordStatus(record._id, "Confirmed")}
                         className="flex-1 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200"
                       >
                         Confirm Pregnancy
                       </button>
                     )}
-                    {record.status === "confirmed" && (
+                    {record.pregnancyStatus === "Confirmed" && (
                       <button
-                        onClick={() => updateRecordStatus(record.id, "delivered")}
+                        onClick={() => updateRecordStatus(record._id, "Delivered")}
                         className="flex-1 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-semibold hover:bg-green-200"
                       >
                         Mark Delivered
                       </button>
                     )}
                     <button
-                      onClick={() => deleteRecord(record.id)}
+                      onClick={() => deleteRecord(record._id)}
                       className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"
                     >
                       Delete

@@ -198,6 +198,7 @@ export default function Sidebar() {
       submenu: [
         { href: "/manage/locations", label: "📍 Locations", icon: null, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/business-setup", label: "🏢 Business Setup", icon: null, roles: ['SuperAdmin', 'Manager'] },
+        { href: "/manage/seed", label: "🌱 Seed Database", icon: null, roles: ['SuperAdmin'] },
       ],
     },
   ];

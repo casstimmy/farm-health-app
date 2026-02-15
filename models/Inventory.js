@@ -15,18 +15,29 @@ const MedicationDetailsSchema = new mongoose.Schema(
 
 const InventorySchema = new mongoose.Schema(
   {
-    item: String,
-    quantity: Number,
+    item: { type: String, required: true },
+    quantity: { type: Number, required: true, default: 0 },
+    unit: { type: String, default: "Unit" },
     category: String,
-    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "InventoryCategory" },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InventoryCategory",
+      default: null,
+    },
     categoryName: String,
-    minStock: Number,
-    price: Number,
-    unit: String,
+    price: { type: Number, default: 0 },
+    minStock: { type: Number, default: 0 },
+    expiration: Date,
+    supplier: String,
     medication: MedicationDetailsSchema,
-    dateAdded: Date,
+    dateAdded: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-export default mongoose.models.Inventory || mongoose.model("Inventory", InventorySchema);
+// Indexes
+InventorySchema.index({ categoryId: 1 });
+InventorySchema.index({ item: 1 });
+
+export default mongoose.models.Inventory ||
+  mongoose.model("Inventory", InventorySchema);

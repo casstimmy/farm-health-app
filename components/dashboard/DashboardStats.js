@@ -36,14 +36,18 @@ export default function DashboardStats() {
       });
       const finance = await financeRes.json();
 
-      let treatments = 0;
-      let feedings = 0;
-      if (Array.isArray(animals)) {
-        animals.forEach(animal => {
-          treatments += animal.treatmentHistory?.length || 0;
-          feedings += animal.feedingHistory?.length || 0;
-        });
-      }
+      const treatmentRes = await fetch("/api/treatment", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const treatmentData = await treatmentRes.json();
+
+      const feedingRes = await fetch("/api/feeding", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const feedingData = await feedingRes.json();
+
+      const treatments = Array.isArray(treatmentData) ? treatmentData.length : 0;
+      const feedings = Array.isArray(feedingData) ? feedingData.length : 0;
 
       setStats({
         animals: Array.isArray(animals) ? animals.length : 0,

@@ -19,9 +19,36 @@ async function handler(req, res) {
     }
   } else if (req.method === "PUT") {
     try {
+      const updateData = { ...req.body };
+
+      // Convert sire/dam tagId strings to ObjectId refs
+      if (updateData.sire && typeof updateData.sire === "string" && !updateData.sire.match(/^[0-9a-fA-F]{24}$/)) {
+        const sireAnimal = await Animal.findOne({ tagId: updateData.sire });
+        updateData.sire = sireAnimal ? sireAnimal._id : null;
+      }
+      if (updateData.dam && typeof updateData.dam === "string" && !updateData.dam.match(/^[0-9a-fA-F]{24}$/)) {
+        const damAnimal = await Animal.findOne({ tagId: updateData.dam });
+        updateData.dam = damAnimal ? damAnimal._id : null;
+      }
+
+      // Map legacy field names
+      if (updateData.sireId !== undefined) {
+        if (!updateData.sire) updateData.sire = updateData.sireId;
+        delete updateData.sireId;
+      }
+      if (updateData.damId !== undefined) {
+        if (!updateData.dam) updateData.dam = updateData.damId;
+        delete updateData.damId;
+      }
+      if (updateData.weight !== undefined && updateData.currentWeight === undefined) {
+        updateData.currentWeight = updateData.weight;
+        delete updateData.weight;
+      }
+      delete updateData.myNotes;
+
       const updatedAnimal = await Animal.findByIdAndUpdate(
         id,
-        req.body,
+        updateData,
         { new: true, runValidators: true }
       );
 

@@ -49,12 +49,12 @@ export default function AddAnimalForm({ onSuccess, animal }) {
     dob: "",
     acquisitionType: "Bred on farm",
     acquisitionDate: "",
-    sireId: "",
-    damId: "",
+    sire: "",
+    dam: "",
     status: "Alive",
     location: "",
     paddock: "",
-    weight: "",
+    currentWeight: "",
     weightDate: "",
     recordedBy: "",
     notes: "",
@@ -206,7 +206,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       const token = localStorage.getItem("token");
       const submitData = {
         ...formData,
-        weight: formData.weight ? parseFloat(formData.weight) : 0,
+        currentWeight: formData.currentWeight ? parseFloat(formData.currentWeight) : 0,
         weightDate: formData.weightDate || new Date(),
         dob: formData.dob || null,
         acquisitionDate: formData.acquisitionDate || null
@@ -253,12 +253,12 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           dob: "",
           acquisitionType: "Bred on farm",
           acquisitionDate: "",
-          sireId: "",
-          damId: "",
+          sire: "",
+          dam: "",
           status: "Alive",
           location: "",
           paddock: "",
-          weight: "",
+          currentWeight: "",
           weightDate: "",
           recordedBy: "",
           notes: "",
@@ -455,8 +455,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             <label className="label">Sire ID (Father)</label>
             <input
               type="text"
-              name="sireId"
-              value={formData.sireId}
+              name="sire"
+              value={formData.sire}
               onChange={handleChange}
               className="input-field"
               placeholder="e.g., BGM001"
@@ -468,8 +468,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             <label className="label">Dam ID (Mother)</label>
             <input
               type="text"
-              name="damId"
-              value={formData.damId}
+              name="dam"
+              value={formData.dam}
               onChange={handleChange}
               className="input-field"
               placeholder="e.g., BGF001"
@@ -550,8 +550,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             <label className="label">Weight (kg)</label>
             <input
               type="number"
-              name="weight"
-              value={formData.weight}
+              name="currentWeight"
+              value={formData.currentWeight}
               onChange={handleChange}
               className="input-field"
               placeholder="e.g., 25.5"

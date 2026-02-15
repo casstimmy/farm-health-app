@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/mongodb";
+import WeightRecord from "@/models/WeightRecord";
 import Animal from "@/models/Animal";
 import { withAuth } from "@/utils/middleware";
 
@@ -18,17 +19,16 @@ async function handler(req, res) {
         return res.status(404).json({ error: "Animal not found" });
       }
 
-      const weight = {
-        date: weightData.date || new Date(),
+      // Create weight record (post-save hook auto-updates Animal.currentWeight)
+      const record = await WeightRecord.create({
+        animal: animalId,
         weightKg: weightData.weightKg,
-        recordedBy: weightData.recordedBy || req.user.name,
-        notes: weightData.notes || ""
-      };
+        recordedBy: weightData.recordedBy || req.user?.name || "",
+        date: weightData.date || new Date(),
+        notes: weightData.notes || "",
+      });
 
-      animal.weightHistory.push(weight);
-      await animal.save();
-
-      res.status(201).json({ message: "Weight record added", weight });
+      res.status(201).json({ message: "Weight record added", weight: record });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -36,16 +36,18 @@ async function handler(req, res) {
     try {
       const { animalId } = req.query;
 
-      if (!animalId) {
-        return res.status(400).json({ error: "animalId required" });
+      if (animalId) {
+        const records = await WeightRecord.find({ animal: animalId }).sort({
+          date: -1,
+        });
+        return res.status(200).json(records);
       }
 
-      const animal = await Animal.findById(animalId);
-      if (!animal) {
-        return res.status(404).json({ error: "Animal not found" });
-      }
-
-      res.status(200).json(animal.weightHistory);
+      // Return all weight records if no animalId
+      const records = await WeightRecord.find()
+        .sort({ date: -1 })
+        .populate("animal");
+      res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

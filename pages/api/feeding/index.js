@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/mongodb";
+import FeedingRecord from "@/models/FeedingRecord";
 import Animal from "@/models/Animal";
 import { withAuth } from "@/utils/middleware";
 
@@ -18,19 +19,18 @@ async function handler(req, res) {
         return res.status(404).json({ error: "Animal not found" });
       }
 
-      const feeding = {
+      const record = await FeedingRecord.create({
+        animal: animalId,
+        feedType: feedingData.feedType || undefined,
+        feedTypeName: feedingData.feedCategory || feedingData.feedTypeName || "",
+        quantityOffered: feedingData.quantityOffered || 0,
+        quantityConsumed: feedingData.quantityConsumed || 0,
         date: feedingData.date || new Date(),
-        feedCategory: feedingData.feedCategory,
-        quantityOffered: feedingData.quantityOffered,
-        quantityConsumed: feedingData.quantityConsumed,
-        feedingMethod: feedingData.feedingMethod,
-        notes: feedingData.notes
-      };
+        feedingMethod: feedingData.feedingMethod || "",
+        notes: feedingData.notes || "",
+      });
 
-      animal.feedingHistory.push(feeding);
-      await animal.save();
-
-      res.status(201).json({ message: "Feeding record added", feeding });
+      res.status(201).json({ message: "Feeding record added", feeding: record });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -38,16 +38,19 @@ async function handler(req, res) {
     try {
       const { animalId } = req.query;
 
-      if (!animalId) {
-        return res.status(400).json({ error: "animalId required" });
+      if (animalId) {
+        const records = await FeedingRecord.find({ animal: animalId })
+          .sort({ date: -1 })
+          .populate("feedType");
+        return res.status(200).json(records);
       }
 
-      const animal = await Animal.findById(animalId);
-      if (!animal) {
-        return res.status(404).json({ error: "Animal not found" });
-      }
-
-      res.status(200).json(animal.feedingHistory);
+      // Return all feeding records if no animalId
+      const records = await FeedingRecord.find()
+        .sort({ date: -1 })
+        .populate("animal")
+        .populate("feedType");
+      res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

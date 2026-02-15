@@ -25,6 +25,12 @@ async function handler(req, res) {
   } else if (req.method === "PUT") {
     try {
       const financeData = req.body;
+
+      // Normalize type casing
+      if (financeData.type) {
+        financeData.type = financeData.type.charAt(0).toUpperCase() + financeData.type.slice(1).toLowerCase();
+      }
+
       const updatedRecord = await Finance.findByIdAndUpdate(
         id,
         {
@@ -38,7 +44,9 @@ async function handler(req, res) {
           invoiceNumber: financeData.invoiceNumber || undefined,
           status: financeData.status || undefined,
           notes: financeData.notes || undefined,
-          date: financeData.date || undefined
+          date: financeData.date || undefined,
+          relatedAnimal: financeData.relatedAnimal || undefined,
+          relatedInventory: financeData.relatedInventory || undefined,
         },
         { new: true, runValidators: true }
       );

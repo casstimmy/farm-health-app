@@ -306,7 +306,7 @@ export default function AnimalsList() {
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800 hidden md:table-cell">Species</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800 hidden lg:table-cell">Breed</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">Status</th>
-                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden sm:table-cell">Records</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden sm:table-cell">Weight</th>
                 {canDelete && <th className="px-2 py-4 text-center text-xs font-bold text-gray-800 w-12">Del</th>}
               </tr>
             </thead>
@@ -481,11 +481,8 @@ export default function AnimalsList() {
                     {/* Records */}
                     <td className="px-4 py-4 text-center text-xs hidden sm:table-cell">
                       <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-semibold">
-                          🍽️ {animal.feedingHistory?.length || 0}
-                        </span>
-                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-semibold">
-                          💊 {animal.treatmentHistory?.length || 0}
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+                          ⚖️ {animal.currentWeight ? `${animal.currentWeight} kg` : "—"}
                         </span>
                       </div>
                     </td>
