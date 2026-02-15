@@ -21,6 +21,7 @@ const BreedingRecordSchema = new mongoose.Schema(
       enum: ["Natural", "AI"],
       default: "Natural",
     },
+    breedingCoordinator: String,
     pregnancyCheckDate: Date,
     pregnancyStatus: {
       type: String,

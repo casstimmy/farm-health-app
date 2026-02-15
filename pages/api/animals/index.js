@@ -8,7 +8,15 @@ async function handler(req, res) {
   if (req.method === "GET") {
     try {
       // All authenticated users can view animals
-      const animals = await Animal.find().sort({ createdAt: -1 });
+      const { archived } = req.query;
+      const filter = archived === "true" 
+        ? { isArchived: true } 
+        : { isArchived: { $ne: true } };
+      const animals = await Animal.find(filter)
+        .populate("sire", "tagId name")
+        .populate("dam", "tagId name")
+        .populate("location", "name")
+        .sort({ createdAt: -1 });
       res.status(200).json(animals);
     } catch (error) {
       res.status(500).json({ error: error.message });

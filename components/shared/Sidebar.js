@@ -53,6 +53,7 @@ export default function Sidebar() {
         section: "Animals",
         submenu: [
           "/manage/animals",
+          "/manage/archive",
           "/manage/health-records",
           "/manage/treatments",
         ],
@@ -61,6 +62,7 @@ export default function Sidebar() {
         section: "Operations",
         submenu: [
           "/manage/inventory",
+          "/manage/services",
           "/manage/feeding",
           "/manage/weight",
         ],
@@ -156,6 +158,7 @@ export default function Sidebar() {
       roles: ['SuperAdmin', 'Manager', 'Attendant'],
       submenu: [
         { href: "/manage/animals", label: "Animal List", icon: <FaLeaf className="w-4 h-4" /> },
+        { href: "/manage/archive", label: "📦 Archive", icon: null, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/health-records", label: "Health Records", icon: <FaStethoscope className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/treatments", label: "Treatments", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/breeding", label: "💕 Breeding", icon: null, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
@@ -170,6 +173,7 @@ export default function Sidebar() {
         { href: "/manage/inventory", label: "Inventory", icon: <FaBoxes className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/inventory-categories", label: "Categories", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/inventory-loss", label: "Losses/Wastage", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
+        { href: "/manage/services", label: "🛠️ Services", icon: null, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/feeding", label: "Feeding", icon: <FaLeaf className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/weight", label: "Weight Tracking", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
       ],

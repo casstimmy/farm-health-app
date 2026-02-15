@@ -21,6 +21,18 @@ async function handler(req, res) {
     try {
       const updateData = { ...req.body };
 
+      // Handle restore from archive
+      if (updateData.restoreFromArchive) {
+        delete updateData.restoreFromArchive;
+        const restored = await Animal.findByIdAndUpdate(
+          id,
+          { isArchived: false, archivedAt: null, archivedReason: null },
+          { new: true }
+        );
+        if (!restored) return res.status(404).json({ error: "Animal not found" });
+        return res.status(200).json(restored);
+      }
+
       // Convert sire/dam tagId strings to ObjectId refs
       if (updateData.sire && typeof updateData.sire === "string" && !updateData.sire.match(/^[0-9a-fA-F]{24}$/)) {
         const sireAnimal = await Animal.findOne({ tagId: updateData.sire });
@@ -62,13 +74,23 @@ async function handler(req, res) {
     }
   } else if (req.method === "DELETE") {
     try {
-      const deletedAnimal = await Animal.findByIdAndDelete(id);
+      // Archive instead of permanently deleting to preserve data integrity
+      const reason = req.body?.reason || "Archived by user";
+      const archivedAnimal = await Animal.findByIdAndUpdate(
+        id,
+        { 
+          isArchived: true, 
+          archivedAt: new Date(), 
+          archivedReason: reason 
+        },
+        { new: true }
+      );
 
-      if (!deletedAnimal) {
+      if (!archivedAnimal) {
         return res.status(404).json({ error: "Animal not found" });
       }
 
-      res.status(200).json({ message: "Animal deleted successfully" });
+      res.status(200).json({ message: "Animal archived successfully", animal: archivedAnimal });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

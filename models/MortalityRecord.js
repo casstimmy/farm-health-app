@@ -14,7 +14,11 @@ const MortalityRecordSchema = new mongoose.Schema(
     daysSick: { type: Number, default: 0 },
     weight: { type: Number, default: null },
     estimatedValue: { type: Number, default: 0 },
-    disposalMethod: String,
+    disposalMethod: {
+      type: String,
+      enum: ["Burial", "Incinerated", "Autopsy/Dispose", "Composting", "Other", ""],
+    },
+    valueLost: { type: Number, default: 0 },
     reportedBy: String,
     notes: String,
   },
@@ -25,20 +29,44 @@ const MortalityRecordSchema = new mongoose.Schema(
 MortalityRecordSchema.post("save", async function (doc) {
   try {
     const Animal = mongoose.model("Animal");
-    await Animal.findByIdAndUpdate(doc.animal, { status: "Dead" });
+    const animal = await Animal.findById(doc.animal);
+    
+    // Set animal status to Dead
+    if (animal) {
+      await Animal.findByIdAndUpdate(doc.animal, { status: "Dead" });
+    }
+
+    // Calculate valueLost from animal data if estimatedValue not set
+    let lossAmount = doc.estimatedValue || 0;
+    if (!lossAmount && animal) {
+      // Use projectedSalesPrice or purchaseCost + feed + med costs
+      lossAmount = animal.projectedSalesPrice || 
+        (animal.purchaseCost + animal.totalFeedCost + animal.totalMedicationCost) || 0;
+      // Update the record with calculated value
+      if (lossAmount > 0) {
+        await mongoose.model("MortalityRecord").findByIdAndUpdate(doc._id, { 
+          estimatedValue: lossAmount,
+          valueLost: lossAmount 
+        });
+      }
+    } else {
+      await mongoose.model("MortalityRecord").findByIdAndUpdate(doc._id, { 
+        valueLost: lossAmount 
+      });
+    }
 
     // Create a financial loss record for the mortality
-    if (doc.estimatedValue > 0) {
+    if (lossAmount > 0) {
       const Finance = mongoose.model("Finance");
       await Finance.create({
         date: doc.dateOfDeath || new Date(),
         type: "Expense",
         category: "Mortality Loss",
-        title: `Mortality Loss - Animal Death`,
+        title: `Mortality Loss - ${animal?.tagId || 'Animal'} Death`,
         description: doc.cause
           ? `Cause: ${doc.cause}. ${doc.notes || ""}`
           : doc.notes || "Animal mortality loss",
-        amount: doc.estimatedValue,
+        amount: lossAmount,
         relatedAnimal: doc.animal,
         recordedBy: doc.reportedBy || "System",
         status: "Completed",

@@ -19,12 +19,17 @@ export default function BreedingManagement() {
     buck: "",
     matingDate: "",
     breedingType: "Natural",
+    breedingCoordinator: "",
     expectedDueDate: "",
     notes: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  // Register Kids modal
+  const [showRegisterKids, setShowRegisterKids] = useState(null);
+  const [kidForm, setKidForm] = useState({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
+  const [kidSaving, setKidSaving] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -83,6 +88,7 @@ export default function BreedingManagement() {
         species: doeAnimal?.species || "",
         matingDate: formData.matingDate,
         breedingType: formData.breedingType,
+        breedingCoordinator: formData.breedingCoordinator,
         expectedDueDate: formData.expectedDueDate || calculateDueDate(formData.matingDate),
         pregnancyStatus: "Pending",
         notes: formData.notes,
@@ -108,6 +114,7 @@ export default function BreedingManagement() {
         buck: "",
         matingDate: "",
         breedingType: "Natural",
+        breedingCoordinator: "",
         expectedDueDate: "",
         notes: "",
       });
@@ -201,6 +208,54 @@ export default function BreedingManagement() {
     const diffTime = due - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  };
+
+  const handleRegisterKid = async (e) => {
+    e.preventDefault();
+    if (!kidForm.tagId || !kidForm.gender) {
+      setError("Tag ID and Gender are required for the new animal.");
+      return;
+    }
+    setKidSaving(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const record = showRegisterKids;
+      const doeAnimal = animals.find(a => a._id === (record.doe?._id || record.doe));
+      const buckAnimal = animals.find(a => a._id === (record.buck?._id || record.buck));
+      const payload = {
+        tagId: kidForm.tagId,
+        name: kidForm.name || kidForm.tagId,
+        species: doeAnimal?.species || record.species || "Goat",
+        breed: doeAnimal?.breed || "",
+        gender: kidForm.gender,
+        dob: kidForm.dob || new Date().toISOString().split("T")[0],
+        origin: "Born on Farm",
+        acquisitionType: "Born",
+        acquisitionDate: kidForm.dob || new Date().toISOString().split("T")[0],
+        sire: buckAnimal?._id || record.buck?._id || record.buck,
+        dam: doeAnimal?._id || record.doe?._id || record.doe,
+        currentWeight: kidForm.weight ? Number(kidForm.weight) : 0,
+        status: "Alive",
+      };
+      const res = await fetch("/api/animals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to register kid");
+      }
+      setSuccess(`Kid ${kidForm.tagId} registered successfully! Linked to ${doeAnimal?.tagId || "Dam"} × ${buckAnimal?.tagId || "Sire"}`);
+      setShowRegisterKids(null);
+      setKidForm({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
+      fetchData();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setKidSaving(false);
+    }
   };
 
   return (
@@ -366,6 +421,17 @@ export default function BreedingManagement() {
               </div>
 
               <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Breeding Coordinator</label>
+                <input
+                  type="text"
+                  value={formData.breedingCoordinator}
+                  onChange={(e) => setFormData({ ...formData, breedingCoordinator: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
+                  placeholder="Name of coordinator..."
+                />
+              </div>
+
+              <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Notes</label>
                 <textarea
                   value={formData.notes}
@@ -498,7 +564,7 @@ export default function BreedingManagement() {
                     <p className="text-sm text-gray-600 italic">&quot;{record.notes}&quot;</p>
                   )}
 
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-2 flex-wrap">
                     {record.pregnancyStatus === "Pending" && (
                       <button
                         onClick={() => updateRecordStatus(record._id, "Confirmed")}
@@ -515,6 +581,14 @@ export default function BreedingManagement() {
                         Mark Delivered
                       </button>
                     )}
+                    {record.pregnancyStatus === "Delivered" && (
+                      <button
+                        onClick={() => setShowRegisterKids(record)}
+                        className="flex-1 py-2 bg-pink-100 text-pink-700 rounded-lg text-sm font-semibold hover:bg-pink-200 flex items-center justify-center gap-1"
+                      >
+                        <FaBaby /> Register Kid
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteRecord(record._id)}
                       className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"
@@ -528,6 +602,67 @@ export default function BreedingManagement() {
           })}
         </div>
       )}
+
+      {/* Register Kids Modal */}
+      <AnimatePresence>
+        {showRegisterKids && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowRegisterKids(null)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full" onClick={e => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-pink-600 to-rose-600 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><FaBaby /> Register New Kid</h3>
+                <button onClick={() => setShowRegisterKids(null)} className="text-white hover:text-pink-200"><FaTimes /></button>
+              </div>
+              <div className="p-6">
+                <div className="bg-pink-50 p-3 rounded-lg mb-4 text-sm">
+                  <p><b>Dam:</b> {showRegisterKids.doe?.name || showRegisterKids.doe?.tagId || "—"}</p>
+                  <p><b>Sire:</b> {showRegisterKids.buck?.name || showRegisterKids.buck?.tagId || "—"}</p>
+                  <p className="text-gray-500 mt-1">This kid will be automatically linked to both parents.</p>
+                </div>
+                <form onSubmit={handleRegisterKid} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Tag ID *</label>
+                      <input type="text" value={kidForm.tagId} onChange={e => setKidForm({ ...kidForm, tagId: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500" required placeholder="e.g., BGF007" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Name</label>
+                      <input type="text" value={kidForm.name} onChange={e => setKidForm({ ...kidForm, name: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500" placeholder="Optional name" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Gender *</label>
+                      <select value={kidForm.gender} onChange={e => setKidForm({ ...kidForm, gender: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500">
+                        <option value="Female">Female</option>
+                        <option value="Male">Male</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Date of Birth</label>
+                      <input type="date" value={kidForm.dob} onChange={e => setKidForm({ ...kidForm, dob: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Birth Weight (kg)</label>
+                      <input type="number" value={kidForm.weight} onChange={e => setKidForm({ ...kidForm, weight: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500" min="0" step="0.1" placeholder="0" />
+                    </div>
+                  </div>
+                  <motion.button type="submit" disabled={kidSaving} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                    {kidSaving ? <><FaSpinner className="animate-spin" /> Registering...</> : <><FaCheck /> Register Kid</>}
+                  </motion.button>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

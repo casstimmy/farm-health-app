@@ -21,6 +21,9 @@ const AnimalSchema = new mongoose.Schema(
     acquisitionDate: Date,
     sire: { type: mongoose.Schema.Types.ObjectId, ref: "Animal", default: null },
     dam: { type: mongoose.Schema.Types.ObjectId, ref: "Animal", default: null },
+    isArchived: { type: Boolean, default: false, index: true },
+    archivedAt: { type: Date, default: null },
+    archivedReason: { type: String, default: null },
     status: {
       type: String,
       enum: ["Alive", "Dead", "Sold", "Quarantined"],

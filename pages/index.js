@@ -4,8 +4,8 @@ import { useEffect, useState, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine } from "react-icons/fa";
-import { Bar } from "react-chartjs-2";
+import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, FaLeaf, FaDollarSign, FaExclamationTriangle } from "react-icons/fa";
+import { Pie, Bar, Doughnut } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
 import {
@@ -13,6 +13,7 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  ArcElement,
   PointElement,
   LineElement,
   Title,
@@ -20,245 +21,171 @@ import {
   Legend,
 } from "chart.js";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend);
 
-const formatNumber = (value = 0) => Number(value).toLocaleString("en-US");
-const formatMoney = (value = 0, currency = "NGN") => {
-  const symbol = currency === "NGN" ? "₦" : currency === "USD" ? "$" : currency === "EUR" ? "€" : "£";
-  return `${symbol}${Number(value).toLocaleString("en-US")}`;
+const fmt = (v = 0) => Number(v).toLocaleString("en-US");
+const fmtMoney = (v = 0, c = "NGN") => {
+  const s = c === "NGN" ? "₦" : c === "USD" ? "$" : c === "EUR" ? "€" : "£";
+  return `${s}${Number(v).toLocaleString("en-US")}`;
 };
 
 export default function Home() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [allAnimals, setAllAnimals] = useState([]);
-  const [allInventory, setAllInventory] = useState([]);
-  const [allTreatments, setAllTreatments] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState("today");
+  const [data, setData] = useState({ animals: [], inventory: [], treatments: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
   const [seedLoading, setSeedLoading] = useState(false);
   const [seedResult, setSeedResult] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
 
-  /* =======================
-     FETCH DATA
-  ======================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
-
-    if (!token || !userData) {
-      router.push("/login");
-      return;
-    }
-
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
+    if (!token || !userData) { router.push("/login"); return; }
+    setUser(JSON.parse(userData));
 
     async function fetchData() {
       try {
         setLoading(true);
         const headers = { Authorization: `Bearer ${token}` };
-
-        const [animalsRes, inventoryRes, treatmentRes] = await Promise.all([
+        const [animalsRes, inventoryRes, treatmentRes, financeRes, mortalityRes, breedingRes, healthRes, feedingRes] = await Promise.all([
           fetch("/api/animals", { headers }),
           fetch("/api/inventory", { headers }),
           fetch("/api/treatment", { headers }),
+          fetch("/api/finance", { headers }),
+          fetch("/api/mortality", { headers }),
+          fetch("/api/breeding", { headers }),
+          fetch("/api/health-records", { headers }),
+          fetch("/api/feeding", { headers }),
         ]);
-
-        const animals = await animalsRes.json();
-        const inventory = await inventoryRes.json();
-        const treatments = await treatmentRes.json();
-
-        setAllAnimals(Array.isArray(animals) ? animals : []);
-        setAllInventory(Array.isArray(inventory) ? inventory : []);
-        setAllTreatments(Array.isArray(treatments) ? treatments : []);
+        const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
+          animalsRes.json(), inventoryRes.json(), treatmentRes.json(), financeRes.json(),
+          mortalityRes.json(), breedingRes.json(), healthRes.json(), feedingRes.json(),
+        ]);
+        setData({
+          animals: Array.isArray(animals) ? animals : [],
+          inventory: Array.isArray(inventory) ? inventory : [],
+          treatments: Array.isArray(treatments) ? treatments : [],
+          finance: Array.isArray(finance) ? finance : [],
+          mortality: Array.isArray(mortality) ? mortality : [],
+          breeding: Array.isArray(breeding) ? breeding : [],
+          healthRecords: Array.isArray(healthRecords) ? healthRecords : [],
+          feeding: Array.isArray(feeding) ? feeding : [],
+        });
       } catch (err) {
         console.error("Dashboard load failed:", err);
       } finally {
         setLoading(false);
       }
     }
-
     fetchData();
   }, [router]);
 
-  /* =======================
-     CONNECTIVITY CHECK
-  ======================= */
   useEffect(() => {
-    // Set initial online status
     setIsOnline(navigator.onLine);
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
 
-  /* =======================
-     DATE FILTER
-  ======================= */
-  const isWithinPeriod = (date) => {
-    const now = new Date();
-    const d = new Date(date);
-
-    if (selectedPeriod === "today") return d.toDateString() === now.toDateString();
-    if (selectedPeriod === "week") {
-      const weekAgo = new Date();
-      weekAgo.setDate(now.getDate() - 7);
-      return d >= weekAgo && d <= now;
-    }
-    if (selectedPeriod === "month") {
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }
-    return true;
-  };
-
-  /* =======================
-     SEED DATABASE
-  ======================= */
   const handleSeedDatabase = async () => {
-    if (!confirm("Are you sure you want to seed the database with sample data? This will add test records.")) {
-      return;
-    }
-
-    setSeedLoading(true);
-    setSeedResult(null);
-
+    if (!confirm("Seed the database with sample data? This will add test records.")) return;
+    setSeedLoading(true); setSeedResult(null);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/seed", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setSeedResult({
-          success: false,
-          message: data.error || "Failed to seed database",
-        });
-      } else {
-        setSeedResult({
-          success: true,
-          message: "Database seeded successfully! ✓",
-          results: data.results,
-        });
-        // Refresh dashboard data
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
-    } catch (err) {
-      setSeedResult({
-        success: false,
-        message: err.message || "Error seeding database",
-      });
-    } finally {
-      setSeedLoading(false);
-    }
+      const res = await fetch("/api/seed", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (!res.ok) { setSeedResult({ success: false, message: d.error || "Failed" }); }
+      else { setSeedResult({ success: true, message: "Database seeded! ✓", results: d.results }); setTimeout(() => window.location.reload(), 2000); }
+    } catch (err) { setSeedResult({ success: false, message: err.message }); }
+    finally { setSeedLoading(false); }
   };
 
-  /* =======================
-     FILTERED DATA
-  ======================= */
-  const filteredTreatments = useMemo(
-    () => allTreatments.filter((t) => isWithinPeriod(t.createdAt)),
-    [allTreatments, selectedPeriod]
-  );
+  // ─── Computed Stats ───
+  const stats = useMemo(() => {
+    const { animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding } = data;
+    const alive = animals.filter(a => a.status === "Alive");
+    const totalAnimals = animals.length;
+    const aliveCount = alive.length;
+    const deadCount = animals.filter(a => a.status === "Dead").length;
+    const maleCount = alive.filter(a => a.gender === "Male").length;
+    const femaleCount = alive.filter(a => a.gender === "Female").length;
 
-  const filteredInventory = useMemo(
-    () => allInventory.filter((i) => isWithinPeriod(i.dateAdded)),
-    [allInventory, selectedPeriod]
-  );
+    // Breed distribution
+    const breedMap = {};
+    alive.forEach(a => { breedMap[a.breed || "Unknown"] = (breedMap[a.breed || "Unknown"] || 0) + 1; });
 
-  /* =======================
-     KPIs
-  ======================= */
-  const kpis = useMemo(() => {
-    const totalAnimals = allAnimals.length;
-    const healthyAnimals = allAnimals.filter((a) => a.healthStatus === "healthy").length;
-    const treatmentCount = filteredTreatments.length;
-    const inventoryValue = filteredInventory.reduce((sum, i) => sum + (i.quantity * (i.price || 0)), 0);
-    const lowStockCount = filteredInventory.filter((i) => i.quantity < (i.minStock || 10)).length;
+    // Financial
+    const totalIncome = finance.filter(f => f.type === "Income").reduce((s, f) => s + (f.amount || 0), 0);
+    const totalExpense = finance.filter(f => f.type === "Expense").reduce((s, f) => s + (f.amount || 0), 0);
+    const netPL = totalIncome - totalExpense;
+
+    // Animal value
+    const totalPurchaseCost = animals.reduce((s, a) => s + (a.purchaseCost || 0), 0);
+    const totalFeedCost = animals.reduce((s, a) => s + (a.totalFeedCost || 0), 0);
+    const totalMedCost = animals.reduce((s, a) => s + (a.totalMedicationCost || 0), 0);
+    const totalProjectedSales = alive.reduce((s, a) => s + (a.projectedSalesPrice || 0), 0);
+
+    // Inventory
+    const totalItems = inventory.length;
+    const lowStock = inventory.filter(i => i.quantity < (i.minStock || 10));
+    const inventoryValue = inventory.reduce((s, i) => s + ((i.quantity || 0) * (i.costPrice || i.price || 0)), 0);
+
+    // Mortality
+    const totalDeaths = mortality.length;
+    const mortalityLoss = mortality.reduce((s, m) => s + (m.estimatedValue || 0), 0);
+
+    // Breeding
+    const totalBreeding = breeding.length;
+    const delivered = breeding.filter(b => b.pregnancyStatus === "Delivered");
+    const totalKids = delivered.reduce((s, b) => s + (b.kidsAlive || 0), 0);
+    const confirmed = breeding.filter(b => b.pregnancyStatus === "Confirmed").length;
+
+    // Treatments & health
+    const activeTreatments = healthRecords.filter(h => h.recoveryStatus === "Under Treatment" || h.recoveryStatus === "Improving").length;
+    const recovered = healthRecords.filter(h => h.recoveryStatus === "Recovered").length;
+
+    // Recent records (last 7 days)
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    const recentTreatments = healthRecords.filter(h => new Date(h.date) >= weekAgo);
+    const recentFeedings = feeding.filter(f => new Date(f.date) >= weekAgo);
+
+    // Expense by category
+    const expByCat = {};
+    finance.filter(f => f.type === "Expense").forEach(f => {
+      expByCat[f.category || "Other"] = (expByCat[f.category || "Other"] || 0) + (f.amount || 0);
+    });
 
     return {
-      totalAnimals,
-      healthyAnimals,
-      treatmentCount,
-      inventoryValue,
-      lowStockCount,
+      totalAnimals, aliveCount, deadCount, maleCount, femaleCount, breedMap,
+      totalIncome, totalExpense, netPL,
+      totalPurchaseCost, totalFeedCost, totalMedCost, totalProjectedSales,
+      totalItems, lowStock, inventoryValue,
+      totalDeaths, mortalityLoss,
+      totalBreeding, delivered: delivered.length, totalKids, confirmed,
+      activeTreatments, recovered, recentTreatments, recentFeedings,
+      expByCat,
     };
-  }, [allAnimals, filteredTreatments, filteredInventory]);
+  }, [data]);
 
-  /* =======================
-     INVENTORY BY CATEGORY
-  ======================= */
-  const inventoryByCategory = useMemo(() => {
-    const map = {};
-    filteredInventory.forEach((item) => {
-      const cat = item.category || "Other";
-      map[cat] = (map[cat] || 0) + item.quantity;
-    });
-    return map;
-  }, [filteredInventory]);
-
-  /* =======================
-     TREATMENTS BY TYPE
-  ======================= */
-  const treatmentsByType = useMemo(() => {
-    const map = {};
-    filteredTreatments.forEach((t) => {
-      const type = t.type || "General";
-      map[type] = (map[type] || 0) + 1;
-    });
-    return map;
-  }, [filteredTreatments]);
-
-  /* =======================
-     CHART DATA
-  ======================= */
-  const inventoryChart = {
-    labels: Object.keys(inventoryByCategory),
-    datasets: [
-      {
-        label: "Stock Quantity",
-        data: Object.values(inventoryByCategory),
-        backgroundColor: "#10b981",
-      },
-    ],
+  // ─── Chart Data ───
+  const breedChart = {
+    labels: Object.keys(stats.breedMap),
+    datasets: [{ data: Object.values(stats.breedMap), backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"] }],
   };
 
-  const treatmentChart = {
-    labels: Object.keys(treatmentsByType),
-    datasets: [
-      {
-        label: "Treatment Count",
-        data: Object.values(treatmentsByType),
-        backgroundColor: "#3b82f6",
-      },
-    ],
+  const expenseChart = {
+    labels: Object.keys(stats.expByCat).slice(0, 8),
+    datasets: [{ label: "Amount (₦)", data: Object.values(stats.expByCat).slice(0, 8), backgroundColor: ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"] }],
+  };
+
+  const genderChart = {
+    labels: ["Male", "Female"],
+    datasets: [{ data: [stats.maleCount, stats.femaleCount], backgroundColor: ["#3b82f6", "#ec4899"] }],
   };
 
   if (!user) return null;
@@ -266,78 +193,37 @@ export default function Home() {
   return (
     <>
       {/* Header */}
-      <header className="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-10 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-10 rounded-b-3xl shadow-lg">
+      <header className="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-8 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-8 rounded-b-3xl shadow-lg">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{businessSettings.businessName}</h1>
-            <p className="text-green-50 text-xl font-light">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">{businessSettings?.businessName || "Farm Dashboard"}</h1>
+            <p className="text-green-50 text-lg">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
             {user?.role === "SuperAdmin" && (
-              <motion.button
-                onClick={handleSeedDatabase}
-                disabled={seedLoading || !isOnline}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title={!isOnline ? "App is offline - seed data cannot be pushed" : "Seed database with sample data"}
-                className="bg-white text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-50 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {seedLoading ? (
-                  <>
-                    <FaSpinner className="animate-spin w-4 h-4" />
-                    <span className="text-sm">Seeding...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{!isOnline ? "📡" : "🌱"}</span>
-                    <span className="text-sm hidden sm:inline">{!isOnline ? "Offline" : "Seed DB"}</span>
-                  </>
-                )}
+              <motion.button onClick={handleSeedDatabase} disabled={seedLoading || !isOnline} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="bg-white text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-50 shadow-lg disabled:opacity-50 flex items-center gap-2">
+                {seedLoading ? <><FaSpinner className="animate-spin w-4 h-4" /><span className="text-sm">Seeding...</span></> : <><span>🌱</span><span className="text-sm hidden sm:inline">Seed DB</span></>}
               </motion.button>
             )}
-            <select
-              className="bg-white text-gray-900 border-2 border-green-200 px-6 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 font-semibold shadow-lg"
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-            >
-              <option value="today">📅 Today</option>
-              <option value="week">📊 This Week</option>
-              <option value="month">📈 This Month</option>
-            </select>
           </div>
         </div>
       </header>
 
-      {/* Offline Notification */}
       {!isOnline && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2"
-        >
-          <span>📡</span>
-          <span>You are currently offline. Seeding data is disabled until connection is restored.</span>
-        </motion.div>
+        <div className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2">
+          📡 You are currently offline.
+        </div>
       )}
 
-      {/* Seed Result Notification */}
       {seedResult && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 p-4 rounded-lg border-l-4 font-semibold ${
-            seedResult.success
-              ? "bg-green-50 border-green-500 text-green-700"
-              : "bg-red-50 border-red-500 text-red-700"
-          }`}
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 p-4 rounded-lg border-l-4 font-semibold ${seedResult.success ? "bg-green-50 border-green-500 text-green-700" : "bg-red-50 border-red-500 text-red-700"}`}>
           <div>{seedResult.message}</div>
           {seedResult.results && (
             <div className="mt-2 text-sm space-y-1">
-              {Object.entries(seedResult.results).map(([key, value]) => (
-                <div key={key}>
-                  • {key.replace(/([A-Z])/g, " $1").trim()}: {value}
-                </div>
+              {Object.entries(seedResult.results).filter(([k]) => k !== "errors").map(([key, value]) => (
+                <div key={key}>• {key.replace(/([A-Z])/g, " $1").trim()}: {typeof value === "number" ? value : JSON.stringify(value)}</div>
               ))}
             </div>
           )}
@@ -345,126 +231,102 @@ export default function Home() {
       )}
 
       {loading ? (
-        <Loader message="Loading your dashboard..." color="green-600" />
+        <Loader message="Loading dashboard..." color="green-600" />
       ) : (
         <>
           {/* Quick Actions */}
           <div className="mb-8">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <QuickActionCard href="/manage/animals" icon={<FaPlus />} label="Add Animal" color="from-blue-500 to-blue-600" />
-              <QuickActionCard href="/manage/breeding" icon={<FaHeart />} label="Breeding" color="from-pink-500 to-rose-600" />
-              <QuickActionCard href="/manage/weight" icon={<FaWeight />} label="Record Weight" color="from-purple-500 to-purple-600" />
-              <QuickActionCard href="/manage/treatments" icon={<FaPills />} label="Treatment" color="from-teal-500 to-teal-600" />
-              <QuickActionCard href="/manage/inventory" icon={<FaBoxOpen />} label="Inventory" color="from-orange-500 to-orange-600" />
-              <QuickActionCard href="/manage/reports" icon={<FaChartLine />} label="Reports" color="from-green-500 to-green-600" />
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Quick Actions</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <QA href="/manage/animals" icon={<FaPlus />} label="Animals" color="from-blue-500 to-blue-600" />
+              <QA href="/manage/health-records" icon={<FaPills />} label="Health Records" color="from-teal-500 to-teal-600" />
+              <QA href="/manage/breeding" icon={<FaHeart />} label="Breeding" color="from-pink-500 to-rose-600" />
+              <QA href="/manage/weight" icon={<FaWeight />} label="Weight" color="from-purple-500 to-purple-600" />
+              <QA href="/manage/inventory" icon={<FaBoxOpen />} label="Inventory" color="from-orange-500 to-orange-600" />
+              <QA href="/manage/reports" icon={<FaChartLine />} label="Reports" color="from-green-500 to-green-600" />
             </div>
           </div>
 
-          {/* Period Selector */}
-          <div className="mb-8 flex gap-4">
-            {['today', 'week', 'month'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setSelectedPeriod(p)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedPeriod === p
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </button>
-            ))}
+          {/* KPI Row 1 - Herd Overview */}
+          <h2 className="text-lg font-bold text-gray-900 mb-3">🐐 Herd Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <KPI label="Total Animals" value={fmt(stats.totalAnimals)} color="bg-blue-50 border-blue-200" icon="🐐" />
+            <KPI label="Alive" value={fmt(stats.aliveCount)} color="bg-green-50 border-green-200" icon="✅" />
+            <KPI label="Dead" value={fmt(stats.deadCount)} color="bg-red-50 border-red-200" icon="💀" />
+            <KPI label="Males" value={fmt(stats.maleCount)} color="bg-indigo-50 border-indigo-200" icon="♂️" />
+            <KPI label="Females" value={fmt(stats.femaleCount)} color="bg-pink-50 border-pink-200" icon="♀️" />
+            <KPI label="Active Treatments" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="💊" />
           </div>
 
-          {/* KPIs Grid - 3 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <KpiCard label="Total Animals" value={formatNumber(kpis.totalAnimals)} color="bg-blue-50" />
-            <KpiCard label="Healthy Animals" value={formatNumber(kpis.healthyAnimals)} color="bg-green-50" />
-            <KpiCard label="Low Stock Items" value={formatNumber(kpis.lowStockCount)} color="bg-red-50" />
+          {/* KPI Row 2 - Financial Overview */}
+          <h2 className="text-lg font-bold text-gray-900 mb-3">💰 Financial Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="📈" />
+            <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="📉" />
+            <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "📊" : "⚠️"} />
+            <KPI label="Projected Sales" value={fmtMoney(stats.totalProjectedSales, currency)} color="bg-blue-50 border-blue-200" icon="🎯" />
+            <KPI label="Feed Costs" value={fmtMoney(stats.totalFeedCost, currency)} color="bg-orange-50 border-orange-200" icon="🌾" />
+            <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="💀" />
           </div>
 
-          {/* Charts - 2 Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-            <ChartCard title="Inventory by Category">
-              {inventoryByCategory && Object.keys(inventoryByCategory).length > 0 ? (
-                <Bar
-                  data={{
-                    labels: Object.keys(inventoryByCategory),
-                    datasets: [
-                      {
-                        label: 'Count',
-                        data: Object.values(inventoryByCategory),
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                        borderColor: 'rgba(34, 197, 94, 1)',
-                        borderWidth: 2,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } },
-                  }}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">No data</div>
-              )}
+          {/* KPI Row 3 - Operations */}
+          <h2 className="text-lg font-bold text-gray-900 mb-3">📋 Operations</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <KPI label="Inventory Items" value={fmt(stats.totalItems)} color="bg-indigo-50 border-indigo-200" icon="📦" />
+            <KPI label="Low Stock" value={fmt(stats.lowStock.length)} color={stats.lowStock.length > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"} icon="⚠️" />
+            <KPI label="Inventory Value" value={fmtMoney(stats.inventoryValue, currency)} color="bg-purple-50 border-purple-200" icon="🏷️" />
+            <KPI label="Breeding Records" value={fmt(stats.totalBreeding)} color="bg-pink-50 border-pink-200" icon="💕" />
+            <KPI label="Kids Born" value={fmt(stats.totalKids)} color="bg-green-50 border-green-200" icon="🐣" />
+            <KPI label="Confirmed Pregnant" value={fmt(stats.confirmed)} color="bg-blue-50 border-blue-200" icon="🤰" />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <ChartCard title="Breed Distribution">
+              {Object.keys(stats.breedMap).length > 0 ? (
+                <Doughnut data={breedChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } } }} />
+              ) : <NoData />}
             </ChartCard>
-
-            <ChartCard title="Treatments by Type">
-              {treatmentsByType && Object.keys(treatmentsByType).length > 0 ? (
-                <Bar
-                  data={{
-                    labels: Object.keys(treatmentsByType),
-                    datasets: [
-                      {
-                        label: 'Count',
-                        data: Object.values(treatmentsByType),
-                        backgroundColor: 'rgba(139, 92, 246, 0.8)',
-                        borderColor: 'rgba(139, 92, 246, 1)',
-                        borderWidth: 2,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } },
-                  }}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">No data</div>
-              )}
+            <ChartCard title="Gender Split">
+              {(stats.maleCount + stats.femaleCount) > 0 ? (
+                <Pie data={genderChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } } }} />
+              ) : <NoData />}
+            </ChartCard>
+            <ChartCard title="Expenses by Category">
+              {Object.keys(stats.expByCat).length > 0 ? (
+                <Bar data={expenseChart} options={{ responsive: true, maintainAspectRatio: false, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }} />
+              ) : <NoData />}
             </ChartCard>
           </div>
 
-          {/* Lists - 3 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <ListCard
-              title="Recent Animals"
-              items={[...allAnimals]
-                .reverse()
-                .slice(0, 5)
-                .map((a) => ({ label: a.name || 'Unknown', meta: a.breed || 'N/A', emoji: '🐑' }))}
-            />
-            <ListCard
-              title="Recent Treatments"
-              items={[...filteredTreatments]
-                .reverse()
-                .slice(0, 5)
-                .map((t) => ({ label: t.type || 'Unknown', meta: `${new Date(t.createdAt).toLocaleDateString()}`, emoji: '💉' }))}
-            />
-            <ListCard
-              title="Low Stock Items"
-              items={filteredInventory
-                .filter((inv) => inv.quantity < inv.minStock)
-                .slice(0, 5)
-                .map((inv) => ({ label: inv.name || 'Unknown', meta: `${inv.quantity}/${inv.minStock}`, emoji: '⚠️' }))}
-            />
+          {/* Lists Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {/* Recent Health Records */}
+            <ListCard title="Recent Health Records" icon="🏥" items={
+              stats.recentTreatments.slice(0, 5).map(h => ({
+                label: h.animalTagId || h.animal?.tagId || "Unknown",
+                meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
+                emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : "💊",
+              }))
+            } emptyText="No recent health records" link="/manage/health-records" />
+
+            {/* Low Stock Alerts */}
+            <ListCard title="Low Stock Alerts" icon="⚠️" items={
+              stats.lowStock.slice(0, 5).map(i => ({
+                label: i.item,
+                meta: `${i.quantity} ${i.unit || "units"} remaining (min: ${i.minStock})`,
+                emoji: "📦",
+              }))
+            } emptyText="All stock levels are healthy" link="/manage/inventory" />
+
+            {/* Recent Breeding */}
+            <ListCard title="Breeding Updates" icon="💕" items={
+              data.breeding.slice(0, 5).map(b => ({
+                label: `${b.doe?.tagId || "?"} × ${b.buck?.tagId || "?"}`,
+                meta: `${b.pregnancyStatus} ${b.kidsAlive > 0 ? `• ${b.kidsAlive} kids` : ""}`,
+                emoji: b.pregnancyStatus === "Delivered" ? "🐣" : b.pregnancyStatus === "Confirmed" ? "🤰" : "⏳",
+              }))
+            } emptyText="No breeding records" link="/manage/breeding" />
           </div>
         </>
       )}
@@ -472,96 +334,67 @@ export default function Home() {
   );
 }
 
-/* =======================
-   UI COMPONENTS
-======================= */
-function KpiCard({ label, value, color }) {
+function KPI({ label, value, color, icon }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100 }}
-      className={`${color} border-2 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all cursor-default hover:scale-105 hover:-translate-y-1`}
-    >
-      <div className="space-y-3">
-        <div className="text-4xl font-black text-gray-900 tracking-tight">{value}</div>
-        <div className="text-gray-700 font-bold text-base">{label}</div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className={`${color} border-2 p-4 rounded-xl shadow-sm hover:shadow-md transition-all`}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-lg">{icon}</span>
+        <span className="text-xs font-semibold text-gray-600 truncate">{label}</span>
       </div>
+      <div className="text-xl font-black text-gray-900 truncate">{value}</div>
     </motion.div>
   );
 }
 
 function ChartCard({ title, children }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100 }}
-      className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 hover:shadow-2xl transition-all hover:border-green-200 overflow-hidden"
-    >
-      <div className="p-8 border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-      </div>
-      <div className="p-8 h-96">
-        {children}
-      </div>
-    </motion.div>
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-100 bg-gray-50"><h3 className="font-bold text-gray-800">{title}</h3></div>
+      <div className="p-5 h-64">{children}</div>
+    </div>
   );
 }
 
-function ListCard({ title, items }) {
+function NoData() {
+  return <div className="flex items-center justify-center h-full text-gray-400 text-sm">No data available</div>;
+}
+
+function ListCard({ title, icon, items, emptyText, link }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100 }}
-      className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8 hover:shadow-2xl transition-all hover:border-green-200"
-    >
-      <h2 className="text-xl font-bold text-gray-900 mb-6">{title}</h2>
-      <ul className="space-y-3">
-        {items.length ? (
-          items.map((i, idx) => (
-            <motion.li
-              key={idx}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className="bg-gradient-to-r from-gray-50 to-transparent p-4 rounded-xl border-2 border-gray-200 hover:border-green-300 hover:bg-green-50/30 transition-all"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{i.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-gray-900 truncate">{i.label}</div>
-                  <div className="text-sm text-gray-600 truncate">{i.meta}</div>
-                </div>
-              </div>
-            </motion.li>
-          ))
-        ) : (
-          <li className="text-gray-400 italic text-center py-4">No data</li>
-        )}
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-gray-800 flex items-center gap-2"><span>{icon}</span>{title}</h3>
+        {link && <Link href={link} className="text-xs text-green-600 font-semibold hover:underline">View All →</Link>}
+      </div>
+      <ul className="space-y-2">
+        {items.length > 0 ? items.map((i, idx) => (
+          <li key={idx} className="flex items-start gap-3 p-2 rounded-lg bg-gray-50 hover:bg-green-50 transition-all">
+            <span className="text-lg flex-shrink-0">{i.emoji}</span>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 text-sm truncate">{i.label}</div>
+              <div className="text-xs text-gray-500 truncate">{i.meta}</div>
+            </div>
+          </li>
+        )) : <li className="text-gray-400 text-sm text-center py-4">{emptyText}</li>}
       </ul>
-    </motion.div>
+    </div>
   );
 }
 
-function QuickActionCard({ href, icon, label, color }) {
+function QA({ href, icon, label, color }) {
   return (
     <Link href={href}>
-      <motion.div
-        whileHover={{ scale: 1.05, y: -2 }}
-        whileTap={{ scale: 0.95 }}
-        className={`bg-gradient-to-r ${color} text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all cursor-pointer`}
-      >
-        <div className="flex flex-col items-center text-center gap-2">
-          <span className="text-2xl">{icon}</span>
-          <span className="text-sm font-bold">{label}</span>
+      <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+        className={`bg-gradient-to-r ${color} text-white rounded-xl p-3 shadow-md hover:shadow-lg transition-all cursor-pointer`}>
+        <div className="flex flex-col items-center text-center gap-1">
+          <span className="text-xl">{icon}</span>
+          <span className="text-xs font-bold">{label}</span>
         </div>
       </motion.div>
     </Link>
   );
 }
 
-// Specify layout for this page
 Home.layoutType = "default";
 Home.layoutProps = { title: "Dashboard" };

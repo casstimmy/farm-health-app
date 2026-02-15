@@ -1,465 +1,513 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { FaPlus, FaTimes } from "react-icons/fa";
+import { FaPlus, FaTimes, FaSpinner, FaCheck, FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
-
-const initialFormState = {
-  date: "",
-  weightKg: "",
-  notes: "",
-};
+import { BusinessContext } from "@/context/BusinessContext";
+import { useRole } from "@/hooks/useRole";
 
 export default function WeightTracking() {
   const router = useRouter();
+  const { businessSettings } = useContext(BusinessContext);
+  const { user } = useRole();
   const [animals, setAnimals] = useState([]);
-  const [selectedAnimalId, setSelectedAnimalId] = useState("");
-  const [records, setRecords] = useState([]);
-  const [feedingRecords, setFeedingRecords] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [allRecords, setAllRecords] = useState([]); // all weight records
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState(initialFormState);
-  const [feedsPer10Kg, setFeedsPer10Kg] = useState(1);
+
+  // Form state
+  const [formAnimalId, setFormAnimalId] = useState("");
+  const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
+  const [formWeight, setFormWeight] = useState("");
+  const [formNotes, setFormNotes] = useState("");
+
+  // View mode
+  const [viewMode, setViewMode] = useState("overview"); // "overview" | "history"
+  const [historyAnimalId, setHistoryAnimalId] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    fetchAnimals();
+    if (!token) { router.push("/login"); return; }
+    fetchAll();
   }, [router]);
 
-  useEffect(() => {
-    if (!selectedAnimalId) return;
-    fetchRecords(selectedAnimalId);
-    fetchFeedingRecords(selectedAnimalId);
-  }, [selectedAnimalId]);
-
-  const fetchAnimals = async () => {
+  const fetchAll = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/animals", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : [];
-        setAnimals(list);
-        if (list.length > 0) {
-          setSelectedAnimalId(list[0]._id);
-        }
+      const [animalsRes, recordsRes] = await Promise.all([
+        fetch("/api/animals", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/weight", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (animalsRes.ok) {
+        const data = await animalsRes.json();
+        setAnimals(Array.isArray(data) ? data : []);
+      }
+      if (recordsRes.ok) {
+        const data = await recordsRes.json();
+        setAllRecords(Array.isArray(data) ? data : []);
       }
     } catch (err) {
-      console.error("Failed to fetch animals:", err);
+      setError("Failed to load data");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRecords = async (animalId) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/weight?animalId=${animalId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRecords(Array.isArray(data) ? data : []);
+  // Alive, non-archived animals
+  const aliveAnimals = animals.filter((a) => a.status === "Alive" && !a.isArchived);
+
+  // Build per-animal weight summary
+  const animalWeightSummary = useMemo(() => {
+    return aliveAnimals.map((animal) => {
+      const animalRecords = allRecords
+        .filter((r) => {
+          const rid = r.animal?._id || r.animal;
+          return rid === animal._id;
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const currentWeight = animal.currentWeight || (animalRecords[0]?.weightKg ?? null);
+      const previousWeight = animalRecords[1]?.weightKg ?? null;
+      const birthWeight = animal.birthWeight || null;
+      const projectedMax = animal.projectedMaxWeight || null;
+      const projectedSalesWeight = animal.projectedSalesWeight || null;
+
+      let change = null;
+      let changePercent = null;
+      if (currentWeight && previousWeight) {
+        change = +(currentWeight - previousWeight).toFixed(2);
+        changePercent = +((change / previousWeight) * 100).toFixed(1);
       }
-    } catch (err) {
-      console.error("Failed to fetch records:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchFeedingRecords = async (animalId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/feeding?animalId=${animalId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFeedingRecords(Array.isArray(data) ? data : []);
+      let projectedPct = null;
+      if (currentWeight && projectedMax) {
+        projectedPct = +((currentWeight / projectedMax) * 100).toFixed(0);
       }
-    } catch (err) {
-      console.error("Failed to fetch feeding records:", err);
-    }
-  };
 
-  const selectedAnimal = useMemo(
-    () => animals.find((a) => a._id === selectedAnimalId),
-    [animals, selectedAnimalId]
-  );
+      return {
+        ...animal,
+        currentWeight,
+        previousWeight,
+        birthWeight,
+        projectedMax,
+        projectedSalesWeight,
+        change,
+        changePercent,
+        projectedPct,
+        recordCount: animalRecords.length,
+        lastRecordDate: animalRecords[0]?.date || null,
+      };
+    });
+  }, [aliveAnimals, allRecords]);
 
-  const filteredRecords = records.filter((record) => {
+  // Filtered
+  const filtered = animalWeightSummary.filter((a) => {
     if (!searchTerm) return true;
-    const name = selectedAnimal?.name || "";
-    const tag = selectedAnimal?.tagId || "";
     return (
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tag.toLowerCase().includes(searchTerm.toLowerCase())
+      a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.breed?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
-  const latestWeight = useMemo(() => {
-    if (!records.length) return null;
-    const sorted = [...records].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    return sorted[0];
-  }, [records]);
+  // History records for selected animal
+  const historyRecords = useMemo(() => {
+    if (!historyAnimalId) return [];
+    return allRecords
+      .filter((r) => {
+        const rid = r.animal?._id || r.animal;
+        return rid === historyAnimalId;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [historyAnimalId, allRecords]);
 
-  const feedingsLast24h = useMemo(() => {
-    const since = Date.now() - 24 * 60 * 60 * 1000;
-    return feedingRecords.filter((r) => {
-      const date = r?.date ? new Date(r.date).getTime() : 0;
-      return date >= since;
-    }).length;
-  }, [feedingRecords]);
+  const historyAnimal = animals.find((a) => a._id === historyAnimalId);
 
-  const lastFeedRecord = useMemo(() => {
-    if (!feedingRecords.length) return null;
-    const sorted = [...feedingRecords].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-    return sorted[0];
-  }, [feedingRecords]);
-
-  const projectedMaxWeight = useMemo(() => {
-    return selectedAnimal?.projectedMaxWeight || null;
-  }, [selectedAnimal]);
-
-  const recommendedFeeds = useMemo(() => {
-    const weightKg = Number(latestWeight?.weightKg);
-    if (!weightKg || Number.isNaN(weightKg)) return null;
-    const per10kg = Number(feedsPer10Kg) || 0;
-    if (per10kg <= 0) return null;
-    return Math.max(1, Math.round(weightKg / 10) * per10kg);
-  }, [latestWeight, feedsPer10Kg]);
-
-  const feedCheckStatus =
-    recommendedFeeds === null
-      ? "unknown"
-      : feedingsLast24h > recommendedFeeds
-      ? "high"
-      : "ok";
-
-  const weightVsProjected = useMemo(() => {
-    const current = Number(latestWeight?.weightKg);
-    if (!current || !projectedMaxWeight) return null;
-    if (current >= projectedMaxWeight) return "reached";
-    const pct = ((current / projectedMaxWeight) * 100).toFixed(0);
-    return `${pct}%`;
-  }, [latestWeight, projectedMaxWeight]);
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // Stats
+  const avgWeight = aliveAnimals.length > 0
+    ? (aliveAnimals.reduce((sum, a) => sum + (a.currentWeight || 0), 0) / aliveAnimals.length).toFixed(1)
+    : 0;
+  const totalRecords = allRecords.length;
+  const gainers = animalWeightSummary.filter((a) => a.change > 0).length;
+  const losers = animalWeightSummary.filter((a) => a.change < 0).length;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError("");
+    setError("");
+    if (!formAnimalId) { setError("Please select an animal."); return; }
+    if (!formWeight) { setError("Weight is required."); return; }
 
-    if (!selectedAnimalId) {
-      setFormError("Please select an animal first.");
-      return;
-    }
-
-    if (!formData.weightKg) {
-      setFormError("Weight is required.");
-      return;
-    }
-
+    setFormLoading(true);
     try {
-      setFormLoading(true);
       const token = localStorage.getItem("token");
-      const payload = {
-        animalId: selectedAnimalId,
-        weightData: {
-          date: formData.date ? new Date(formData.date) : new Date(),
-          weightKg: Number(formData.weightKg),
-          notes: formData.notes?.trim() || undefined,
-        },
-      };
-
       const res = await fetch("/api/weight", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          animalId: formAnimalId,
+          weightData: {
+            date: formDate ? new Date(formDate) : new Date(),
+            weightKg: Number(formWeight),
+            notes: formNotes.trim() || undefined,
+          },
+        }),
       });
-
       if (!res.ok) {
         const data = await res.json();
-        setFormError(data?.error || "Failed to save weight record.");
-        return;
+        throw new Error(data?.error || "Failed to save");
       }
-
-      setFormData(initialFormState);
+      setSuccess("Weight record saved!");
+      setFormWeight("");
+      setFormNotes("");
       setShowForm(false);
-      fetchRecords(selectedAnimalId);
-      fetchFeedingRecords(selectedAnimalId);
+      fetchAll();
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      console.error("Failed to save weight record:", err);
-      setFormError("Failed to save weight record.");
+      setError(err.message);
     } finally {
       setFormLoading(false);
     }
   };
 
+  if (loading) return <Loader />;
+
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
+    <div className="space-y-6">
       <PageHeader
         title="Weight Tracking"
-        subtitle="Monitor and track animal weight progression"
-        gradient="from-purple-600 to-purple-700"
+        subtitle="Monitor and compare animal weight progression"
         icon="⚖️"
-      />
-
-      {/* Controls */}
-      <FilterBar
-        searchPlaceholder="Search by animal name..."
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        showAddButton={true}
-        onAddClick={() => setShowForm(!showForm)}
-        isAddActive={showForm}
-      />
-
-      {/* Animal Selector */}
-      <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-gray-700">Selected Animal</p>
-          <p className="text-xs text-gray-500">Choose an animal to view weight history</p>
-        </div>
-        <select
-          value={selectedAnimalId}
-          onChange={(e) => setSelectedAnimalId(e.target.value)}
-          className="w-full md:w-80 px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-        >
-          {animals.length === 0 && <option value="">No animals found</option>}
-          {animals.map((animal) => (
-            <option key={animal._id} value={animal._id}>
-              {animal.name ? `${animal.name} (${animal.tagId})` : animal.tagId}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Feed Check */}
-      <div className="bg-white rounded-2xl shadow-lg border-2 border-purple-100 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-bold text-gray-800">Feed Check vs Current Weight</h3>
-            <p className="text-xs text-gray-500">
-              Compares feedings in the last 24 hours with a weight-based target.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-gray-600">Feeds per 10kg</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={feedsPer10Kg}
-              onChange={(e) => setFeedsPer10Kg(e.target.value)}
-              className="w-20 px-2 py-1 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-gray-500">Current Weight</p>
-            <p className="text-lg font-semibold text-gray-800">
-              {latestWeight?.weightKg ? `${latestWeight.weightKg} kg` : "No weight record"}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-gray-500">Last Feed Record</p>
-            {lastFeedRecord ? (
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {lastFeedRecord.feedCategory || lastFeedRecord.feedTypeName || "Feed"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Qty: {lastFeedRecord.quantityConsumed ?? "N/A"} | {lastFeedRecord.date ? new Date(lastFeedRecord.date).toLocaleDateString() : ""}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">No feeding records</p>
-            )}
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-gray-500">Feeds (Last 24h)</p>
-            <p className="text-lg font-semibold text-gray-800">{feedingsLast24h}</p>
-            {recommendedFeeds && (
-              <p className="text-xs text-gray-500">Target: {recommendedFeeds}</p>
-            )}
-          </div>
-          <div
-            className={`rounded-xl p-4 border ${
-              weightVsProjected === "reached"
-                ? "bg-green-50 border-green-200"
-                : "bg-purple-50 border-purple-200"
-            }`}
+        actions={
+          <button
+            onClick={() => { setShowForm(!showForm); setError(""); }}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
           >
-            <p className="text-gray-500">Projected Max Weight</p>
-            <p
-              className={`text-lg font-semibold ${
-                weightVsProjected === "reached" ? "text-green-700" : "text-purple-700"
-              }`}
-            >
-              {projectedMaxWeight ? `${projectedMaxWeight} kg` : "Not set"}
-            </p>
-            {weightVsProjected && weightVsProjected !== "reached" && (
-              <p className="text-xs text-gray-500">{weightVsProjected} of projected max</p>
-            )}
-            {weightVsProjected === "reached" && (
-              <p className="text-xs text-green-600 font-semibold">Target reached!</p>
-            )}
-          </div>
-        </div>
+            {showForm ? <FaTimes /> : <FaPlus />}
+            {showForm ? "Cancel" : "Record Weight"}
+          </button>
+        }
+      />
 
-        {feedCheckStatus === "high" && (
-          <div className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            Feedings exceed the target for the current weight. Consider reviewing the feeding plan.
-          </div>
-        )}
+      {/* Messages */}
+      {error && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          {error}
+          <button onClick={() => setError("")} className="ml-4 text-red-500 hover:text-red-700"><FaTimes /></button>
+        </motion.div>
+      )}
+      {success && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700">
+          {success}
+        </motion.div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Avg Weight</p>
+          <p className="text-2xl font-bold text-gray-900">{avgWeight} kg</p>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Total Records</p>
+          <p className="text-2xl font-bold text-gray-900">{totalRecords}</p>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Gaining Weight</p>
+          <p className="text-2xl font-bold text-green-700">{gainers}</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Losing Weight</p>
+          <p className="text-2xl font-bold text-red-700">{losers}</p>
+        </div>
       </div>
 
-      {/* Form */}
+      {/* Add Weight Form */}
       {showForm && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg border-2 border-purple-100 p-6"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
         >
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Record Weight</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">Add Weight Record</h3>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label="Close form"
-              >
-                <FaTimes />
-              </button>
-            </div>
-
-            {formError && (
-              <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-red-600 text-sm">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Animal *</label>
+                <select
+                  value={formAnimalId}
+                  onChange={(e) => setFormAnimalId(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  required
+                >
+                  <option value="">-- Select Animal --</option>
+                  {aliveAnimals.map((a) => (
+                    <option key={a._id} value={a._id}>
+                      {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
                 <input
                   type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleFormChange}
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Weight (kg)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Weight (kg) *</label>
                 <input
                   type="number"
-                  name="weightKg"
-                  value={formData.weightKg}
-                  onChange={handleFormChange}
                   step="0.1"
                   min="0"
+                  value={formWeight}
+                  onChange={(e) => setFormWeight(e.target.value)}
                   placeholder="e.g., 42.5"
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  required
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleFormChange}
-                  rows="3"
-                  placeholder="Optional notes..."
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Notes</label>
+                <input
+                  type="text"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  placeholder="Optional notes"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                 />
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={formLoading}
-              className="w-full md:w-auto inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-60"
-            >
-              <FaPlus />
-              {formLoading ? "Saving..." : "Save Weight Record"}
-            </button>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" disabled={formLoading} className="flex items-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-60">
+                {formLoading ? <FaSpinner className="animate-spin" /> : <FaCheck />}
+                Save Weight
+              </button>
+            </div>
           </form>
         </motion.div>
       )}
 
-      {/* Records Table */}
-      {loading ? (
-        <Loader message="Loading weight records..." color="purple-600" />
-      ) : filteredRecords.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-gray-200">
-          <p className="text-gray-500 text-lg">No weight records found</p>
+      {/* View Toggle */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => { setViewMode("overview"); setHistoryAnimalId(""); }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "overview" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+        >
+          All Animals Overview
+        </button>
+        <button
+          onClick={() => setViewMode("history")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "history" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+        >
+          Weight History
+        </button>
+      </div>
+
+      {/* Filter */}
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search by name, tag, or breed..."
+      />
+
+      {viewMode === "overview" ? (
+        /* ALL ANIMALS WEIGHT TABLE */
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16">
+              <span className="text-5xl mb-4 block">⚖️</span>
+              <p className="text-gray-500 text-lg">No animals found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Animal</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Tag</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Breed</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Birth Wt</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Current Wt</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Previous</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Change</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Projected Max</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">% of Max</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Records</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Last Weighed</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">History</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((animal, idx) => (
+                    <motion.tr
+                      key={animal._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">{animal.name || "—"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{animal.tagId}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{animal.breed || "—"}</td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-700">
+                        {animal.birthWeight ? `${animal.birthWeight} kg` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
+                        {animal.currentWeight ? `${animal.currentWeight} kg` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-600">
+                        {animal.previousWeight ? `${animal.previousWeight} kg` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center">
+                        {animal.change !== null ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                            animal.change > 0 ? "bg-green-100 text-green-800" :
+                            animal.change < 0 ? "bg-red-100 text-red-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>
+                            {animal.change > 0 ? <FaArrowUp size={10} /> : animal.change < 0 ? <FaArrowDown size={10} /> : <FaMinus size={10} />}
+                            {Math.abs(animal.change)} kg ({Math.abs(animal.changePercent)}%)
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-700">
+                        {animal.projectedMax ? `${animal.projectedMax} kg` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center">
+                        {animal.projectedPct !== null ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[80px]">
+                              <div
+                                className={`h-2 rounded-full ${animal.projectedPct >= 100 ? 'bg-green-500' : animal.projectedPct >= 75 ? 'bg-blue-500' : 'bg-purple-500'}`}
+                                style={{ width: `${Math.min(animal.projectedPct, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold">{animal.projectedPct}%</span>
+                          </div>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center text-gray-700">{animal.recordCount}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {animal.lastRecordDate ? new Date(animal.lastRecordDate).toLocaleDateString() : "Never"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center">
+                        <button
+                          onClick={() => { setHistoryAnimalId(animal._id); setViewMode("history"); }}
+                          className="text-purple-600 hover:text-purple-800 font-medium text-xs underline"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-purple-50 to-purple-100">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Animal</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Weight (kg)</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
-                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Notes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredRecords.map((record, idx) => (
-                <motion.tr
-                  key={record._id || idx}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="hover:bg-purple-50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {selectedAnimal?.name || selectedAnimal?.tagId || "Unknown"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {record.weightKg ?? "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {record.date ? new Date(record.date).toLocaleDateString() : "N/A"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{record.notes || "N/A"}</td>
-                </motion.tr>
+        /* WEIGHT HISTORY VIEW */
+        <div className="space-y-4">
+          {/* Animal selector for history */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 p-4 flex flex-col md:flex-row md:items-center gap-4">
+            <label className="text-sm font-semibold text-gray-700">Select Animal:</label>
+            <select
+              value={historyAnimalId}
+              onChange={(e) => setHistoryAnimalId(e.target.value)}
+              className="w-full md:w-80 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+            >
+              <option value="">-- Choose Animal --</option>
+              {aliveAnimals.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+            {historyAnimal && (
+              <div className="flex gap-4 text-sm text-gray-600">
+                <span>Birth: <strong>{historyAnimal.birthWeight || "?"} kg</strong></span>
+                <span>Current: <strong>{historyAnimal.currentWeight || "?"} kg</strong></span>
+                <span>Projected Max: <strong>{historyAnimal.projectedMaxWeight || "?"} kg</strong></span>
+              </div>
+            )}
+          </div>
+
+          {/* History Table */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            {historyRecords.length === 0 ? (
+              <div className="text-center py-16">
+                <span className="text-5xl mb-4 block">📊</span>
+                <p className="text-gray-500 text-lg">{historyAnimalId ? "No weight records for this animal" : "Select an animal to view history"}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b-2 border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase">#</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-900 uppercase">Weight (kg)</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-900 uppercase">Change</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase">Recorded By</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {historyRecords.map((record, idx) => {
+                      const prev = historyRecords[idx + 1];
+                      const diff = prev ? +(record.weightKg - prev.weightKg).toFixed(2) : null;
+                      return (
+                        <motion.tr
+                          key={record._id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: idx * 0.03 }}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-6 py-4 text-sm text-gray-500">{historyRecords.length - idx}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {record.date ? new Date(record.date).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-right font-bold text-gray-900">{record.weightKg} kg</td>
+                          <td className="px-6 py-4 text-sm text-center">
+                            {diff !== null ? (
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                                diff > 0 ? "bg-green-100 text-green-800" :
+                                diff < 0 ? "bg-red-100 text-red-800" :
+                                "bg-gray-100 text-gray-800"
+                              }`}>
+                                {diff > 0 ? <FaArrowUp size={10} /> : diff < 0 ? <FaArrowDown size={10} /> : <FaMinus size={10} />}
+                                {diff > 0 ? "+" : ""}{diff} kg
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">First record</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700">{record.recordedBy || "—"}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{record.notes || "—"}</td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,444 +1,255 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { FaPlus, FaTimes, FaTrash } from "react-icons/fa";
+import { FaPlus, FaTimes, FaTrash, FaSpinner, FaCheck, FaChartPie, FaChartBar } from "react-icons/fa";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
-import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+
 const EXPENSE_CATEGORIES = [
-  "Feed",
-  "Medication",
-  "Transport",
-  "Utilities",
-  "Equipment",
-  "Labor",
-  "Admin",
-  "Maintenance",
-  "Petty Cash",
-  "Other",
+  "Feed", "Medication", "Transport", "Utilities", "Equipment",
+  "Labor", "Admin", "Maintenance", "Petty Cash", "Other",
+];
+
+const CATEGORY_COLORS = [
+  "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#10b981",
+  "#ec4899", "#6366f1", "#14b8a6", "#f97316", "#6b7280",
 ];
 
 export default function Finance() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user, isLoading: roleLoading } = useRole();
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [allFinance, setAllFinance] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [chartMode, setChartMode] = useState("pie");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    amount: "",
-    category: "Feed",
-    paymentMethod: "Cash",
-    vendor: "",
-    invoiceNumber: ""
+    title: "", description: "", amount: "", category: "Feed",
+    type: "expense", paymentMethod: "Cash", vendor: "", invoiceNumber: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    // Check if user has permission (SuperAdmin or Manager)
-    if (user && !["SuperAdmin", "Manager"].includes(user.role)) {
-      router.push("/");
-      return;
-    }
-
-    fetchExpenses();
+    if (!token) { router.push("/login"); return; }
+    if (user && !["SuperAdmin", "Manager"].includes(user.role)) { router.push("/"); return; }
+    fetchFinance();
   }, [router, user, roleLoading]);
 
-  const fetchExpenses = async () => {
+  const fetchFinance = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/finance?type=expense", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setExpenses(Array.isArray(data) ? data : []);
-      }
+      const res = await fetch("/api/finance", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setAllFinance(await res.json());
     } catch (err) {
-      console.error("Failed to fetch expenses:", err);
+      setError("Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.title || !formData.amount || !formData.category) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
+    if (!formData.title || !formData.amount) { setError("Title and Amount required."); return; }
+    setSubmitting(true); setError("");
     try {
-      setSubmitting(true);
       const token = localStorage.getItem("token");
       const res = await fetch("/api/finance", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-          type: "expense",
+          ...formData, amount: parseFloat(formData.amount),
           date: new Date().toISOString(),
-          month: new Date().toLocaleString('default', { month: 'long' }),
-          status: "Completed",
-          recordedBy: user?.name || "Unknown"
+          month: new Date().toLocaleString("default", { month: "long" }),
+          status: "Completed", recordedBy: user?.name || "Unknown",
         }),
       });
-
-      if (res.ok) {
-        setFormData({
-          title: "",
-          description: "",
-          amount: "",
-          category: "Feed",
-          paymentMethod: "Cash",
-          vendor: "",
-          invoiceNumber: ""
-        });
-        setShowForm(false);
-        fetchExpenses();
-      } else {
-        alert("Failed to add expense");
-      }
-    } catch (err) {
-      console.error("Failed to submit expense:", err);
-      alert("Error submitting expense");
-    } finally {
-      setSubmitting(false);
-    }
+      if (!res.ok) throw new Error("Failed to add");
+      setSuccess("Record added!"); setShowForm(false);
+      setFormData({ title: "", description: "", amount: "", category: "Feed", type: "expense", paymentMethod: "Cash", vendor: "", invoiceNumber: "" });
+      fetchFinance(); setTimeout(() => setSuccess(""), 3000);
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this expense?")) return;
-    
+    if (!confirm("Delete?")) return;
+    setDeleting(id);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/finance/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        fetchExpenses();
-      } else {
-        alert("Failed to delete expense");
-      }
-    } catch (err) {
-      console.error("Failed to delete expense:", err);
-    }
+      const res = await fetch(`/api/finance/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed"); fetchFinance();
+      setSuccess("Deleted!"); setTimeout(() => setSuccess(""), 3000);
+    } catch (err) { setError(err.message); }
+    finally { setDeleting(null); }
   };
 
-  const filteredExpenses = expenses.filter(
-    (exp) =>
-      (searchTerm === "" ||
-        exp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        exp.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterCategory === "all" || exp.category === filterCategory)
-  );
+  const expenses = allFinance.filter((f) => f.type === "expense");
+  const income = allFinance.filter((f) => f.type === "income");
+  const totalExpense = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const totalIncome = income.reduce((s, e) => s + (e.amount || 0), 0);
+  const netPL = totalIncome - totalExpense;
 
-  const totalExpense = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  const expensesByCategory = EXPENSE_CATEGORIES.map(cat => ({
-    category: cat,
-    amount: expenses
-      .filter(e => e.category === cat)
-      .reduce((sum, e) => sum + (e.amount || 0), 0)
-  }));
+  const expensesByCategory = useMemo(() =>
+    EXPENSE_CATEGORIES.map((cat) => ({
+      category: cat,
+      amount: expenses.filter((e) => e.category === cat).reduce((s, e) => s + (e.amount || 0), 0),
+    })).filter((c) => c.amount > 0),
+  [expenses]);
+
+  const pieData = {
+    labels: expensesByCategory.map((c) => c.category),
+    datasets: [{ data: expensesByCategory.map((c) => c.amount), backgroundColor: expensesByCategory.map((_, i) => CATEGORY_COLORS[i % CATEGORY_COLORS.length]), borderWidth: 2, borderColor: "#fff" }],
+  };
+  const barData = {
+    labels: expensesByCategory.map((c) => c.category),
+    datasets: [{ label: "Expense", data: expensesByCategory.map((c) => c.amount), backgroundColor: expensesByCategory.map((_, i) => CATEGORY_COLORS[i % CATEGORY_COLORS.length]), borderRadius: 6 }],
+  };
+  const barOpts = { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: (v) => formatCurrency(v, businessSettings.currency) } } } };
+  const pieOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "right", labels: { boxWidth: 14, padding: 12 } }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.raw, businessSettings.currency)}` } } } };
+
+  const filtered = allFinance.filter((f) => {
+    const ms = !searchTerm || f.title?.toLowerCase().includes(searchTerm.toLowerCase()) || f.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const mc = filterCategory === "all" || f.category === filterCategory;
+    const mt = filterType === "all" || f.type === filterType;
+    return ms && mc && mt;
+  });
+
+  if (loading) return <Loader />;
 
   return (
-    <div className="space-y-8">
-      {/* Page Header */}
-      <PageHeader
-        title="Expense Management"
-        subtitle="Track and manage farm expenses"
-        gradient="from-orange-600 to-orange-700"
-        icon="💸"
+    <div className="space-y-6">
+      <PageHeader title="Finance" subtitle="Track income, expenses, and financial analytics" icon="💰"
+        actions={<button onClick={() => { setShowForm(!showForm); setError(""); }} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium">
+          {showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Add Record"}
+        </button>}
       />
 
-      {/* Summary Cards */}
-      <StatsSummary
-        stats={[
-          {
-            label: "Total Expenses",
-            value: formatCurrency(totalExpense, businessSettings.currency),
-            bgColor: "bg-orange-50",
-            borderColor: "border-orange-200",
-            textColor: "text-orange-700",
-            icon: "📊",
-          },
-          {
-            label: "Expenses This Month",
-            value: formatCurrency(
-              expenses
-                .filter(e => new Date(e.date).getMonth() === new Date().getMonth())
-                .reduce((sum, e) => sum + (e.amount || 0), 0),
-              businessSettings.currency
-            ),
-            bgColor: "bg-blue-50",
-            borderColor: "border-blue-200",
-            textColor: "text-blue-700",
-            icon: "📅",
-          },
-          {
-            label: "Total Records",
-            value: expenses.length.toString(),
-            bgColor: "bg-purple-50",
-            borderColor: "border-purple-200",
-            textColor: "text-purple-700",
-            icon: "📝",
-          },
-        ]}
-      />
+      {error && <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">{error}<button onClick={() => setError("")} className="ml-4"><FaTimes /></button></div>}
+      {success && <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700">{success}</div>}
 
-      {/* Add Expense Form */}
-      {showForm && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-lg border-2 border-orange-200 p-8"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <FaPlus className="text-orange-600" /> Add New Expense
-            </h3>
-            <button
-              onClick={() => setShowForm(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <FaTimes size={24} />
-            </button>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p></div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p></div>
+        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p></div>
+      </div>
+
+      {/* Charts */}
+      {expensesByCategory.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Expenses by Category</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setChartMode("pie")} className={`p-2 rounded-lg ${chartMode === "pie" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartPie size={16} /></button>
+              <button onClick={() => setChartMode("bar")} className={`p-2 rounded-lg ${chartMode === "bar" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartBar size={16} /></button>
+            </div>
           </div>
+          <div className="h-72">{chartMode === "pie" ? <Pie data={pieData} options={pieOpts} /> : <Bar data={barData} options={barOpts} />}</div>
+        </div>
+      )}
 
+      {/* Form */}
+      {showForm && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Add Financial Record</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Title *</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Diesel Purchase"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              {/* Amount */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Amount ({businessSettings.currency}) *</label>
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 25000"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                  required
-                >
-                  {EXPENSE_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Payment Method */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
-                <select
-                  name="paymentMethod"
-                  value={formData.paymentMethod}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Check">Check</option>
-                  <option value="Mobile Money">Mobile Money</option>
-                </select>
-              </div>
-
-              {/* Vendor */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Vendor/Supplier</label>
-                <input
-                  type="text"
-                  name="vendor"
-                  value={formData.vendor}
-                  onChange={handleInputChange}
-                  placeholder="e.g., ABC Fuel Station"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Invoice Number */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Invoice Number</label>
-                <input
-                  type="text"
-                  name="invoiceNumber"
-                  value={formData.invoiceNumber}
-                  onChange={handleInputChange}
-                  placeholder="e.g., INV-001"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+                <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none">
+                  <option value="expense">Expense</option><option value="income">Income</option>
+                </select></div>
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Title *</label>
+                <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none" required /></div>
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Amount *</label>
+                <input type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none" required /></div>
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none">
+                  {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Payment</label>
+                <select value={formData.paymentMethod} onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none">
+                  <option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Check">Check</option><option value="Mobile Money">Mobile Money</option></select></div>
+              <div><label className="block text-sm font-semibold text-gray-700 mb-1">Vendor</label>
+                <input type="text" value={formData.vendor} onChange={(e) => setFormData({ ...formData, vendor: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none" /></div>
+              <div className="md:col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none" /></div>
             </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Description (Optional)</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Add any relevant notes..."
-                rows="3"
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <motion.button
-                type="submit"
-                disabled={submitting}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
-              >
-                {submitting ? "Adding..." : "Add Expense"}
-              </motion.button>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700">Cancel</button>
+              <button type="submit" disabled={submitting} className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium disabled:opacity-60">
+                {submitting ? <FaSpinner className="animate-spin" /> : <FaCheck />} Add Record</button>
             </div>
           </form>
         </motion.div>
       )}
 
-      {/* Controls */}
-      <FilterBar
-        searchPlaceholder="Search expenses..."
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filterOptions={[
-          { value: "all", label: "All Categories" },
-          ...EXPENSE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
+      {/* Filter */}
+      <FilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Search..."
+        filters={[
+          { value: filterCategory, onChange: setFilterCategory, options: [{ value: "all", label: "All Categories" }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))] },
+          { value: filterType, onChange: setFilterType, options: [{ value: "all", label: "All Types" }, { value: "income", label: "Income" }, { value: "expense", label: "Expense" }] },
         ]}
-        filterValue={filterCategory}
-        onFilterChange={setFilterCategory}
-        showAddButton={true}
-        onAddClick={() => setShowForm(!showForm)}
-        isAddActive={showForm}
       />
 
-      {/* Expenses Cards View */}
-      {loading ? (
-        <Loader message="Loading expenses..." color="orange-600" />
-      ) : filteredExpenses.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-gray-200">
-          <p className="text-gray-500 text-lg">No expenses found</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="mt-4 px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg"
-          >
-            Add First Expense
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredExpenses.map((expense, idx) => (
-            <motion.div
-              key={expense._id || idx}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.05 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 hover:shadow-xl transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-gray-900">{expense.title}</h3>
-                    <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">
-                      {expense.category}
-                    </span>
-                  </div>
-                  {expense.description && (
-                    <p className="text-gray-600 text-sm mb-3">{expense.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span>📅 {new Date(expense.date).toLocaleDateString()}</span>
-                    {expense.vendor && <span>🏪 {expense.vendor}</span>}
-                    {expense.paymentMethod && <span>💳 {expense.paymentMethod}</span>}
-                    {expense.invoiceNumber && <span>🧾 {expense.invoiceNumber}</span>}
-                  </div>
-                </div>
-                <div className="text-right ml-4">
-                  <p className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(expense.amount, businessSettings.currency)}
-                  </p>
-                  <button
-                    onClick={() => handleDelete(expense._id)}
-                    className="mt-2 p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                    title="Delete expense"
-                  >
-                    <FaTrash size={16} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="text-center py-16"><span className="text-5xl block mb-4">💰</span><p className="text-gray-500 text-lg">No records found</p></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
+                  <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase">Type</th>
+                  <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase">Title</th>
+                  <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase">Category</th>
+                  <th className="px-5 py-4 text-left text-xs font-bold text-gray-900 uppercase">Vendor</th>
+                  <th className="px-5 py-4 text-right text-xs font-bold text-gray-900 uppercase">Amount</th>
+                  <th className="px-5 py-4 text-center text-xs font-bold text-gray-900 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filtered.map((r, idx) => (
+                  <motion.tr key={r._id || idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50">
+                    <td className="px-5 py-4 text-sm">{r.date ? new Date(r.date).toLocaleDateString() : "—"}</td>
+                    <td className="px-5 py-4 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${r.type === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{r.type === "income" ? "Income" : "Expense"}</span></td>
+                    <td className="px-5 py-4 text-sm font-semibold text-gray-900">{r.title}</td>
+                    <td className="px-5 py-4 text-sm"><span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">{r.category || "—"}</span></td>
+                    <td className="px-5 py-4 text-sm text-gray-700">{r.vendor || "—"}</td>
+                    <td className={`px-5 py-4 text-sm text-right font-bold ${r.type === "income" ? "text-green-700" : "text-red-700"}`}>{r.type === "income" ? "+" : "-"}{formatCurrency(r.amount || 0, businessSettings.currency)}</td>
+                    <td className="px-5 py-4 text-sm text-center">
+                      {user?.role === "SuperAdmin" && (
+                        <button onClick={() => handleDelete(r._id)} disabled={deleting === r._id} className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg disabled:opacity-50">
+                          {deleting === r._id ? <FaSpinner className="animate-spin" size={14} /> : <FaTrash size={14} />}
+                        </button>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

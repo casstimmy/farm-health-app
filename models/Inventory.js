@@ -34,6 +34,7 @@ const InventorySchema = new mongoose.Schema(
     expiration: Date,
     supplier: String,
     medication: MedicationDetailsSchema,
+    showOnSite: { type: Boolean, default: false },
     dateAdded: { type: Date, default: Date.now },
   },
   { timestamps: true }

@@ -42,7 +42,7 @@ export default function MortalityTracking() {
     "Other"
   ];
 
-  const disposalMethods = ["Burial", "Incineration", "Rendering", "Other"];
+  const disposalMethods = ["Burial", "Incinerated", "Autopsy/Dispose", "Composting", "Other"];
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -76,7 +76,20 @@ export default function MortalityTracking() {
     }
   };
 
-  const aliveAnimals = animals.filter(a => a.status === "Alive");
+  const aliveAnimals = animals; // Show all animals - same animal's offspring can have multiple deaths
+
+  // Auto-calculate estimated value from selected animal
+  const handleAnimalChange = (animalId) => {
+    const animal = animals.find(a => a._id === animalId);
+    let estValue = "";
+    if (animal) {
+      estValue = animal.projectedSalesPrice || animal.purchaseCost || 0;
+      if (!estValue && (animal.totalFeedCost || animal.totalMedicationCost)) {
+        estValue = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+      }
+    }
+    setFormData({ ...formData, animalId, estimatedValue: estValue ? String(estValue) : "", weight: animal?.currentWeight ? String(animal.currentWeight) : "" });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -278,7 +291,7 @@ export default function MortalityTracking() {
                   </label>
                   <select
                     value={formData.animalId}
-                    onChange={(e) => setFormData({ ...formData, animalId: e.target.value })}
+                    onChange={(e) => handleAnimalChange(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
                     required
                   >
@@ -454,6 +467,8 @@ export default function MortalityTracking() {
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Cause</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Symptoms</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Days Sick</th>
+                  <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">Value Lost</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Disposal</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -485,6 +500,12 @@ export default function MortalityTracking() {
                     </td>
                     <td className="px-6 py-4 text-center text-gray-700">
                       {record.daysSick || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-right text-gray-700 font-semibold">
+                      {record.estimatedValue ? `₦${Number(record.estimatedValue).toLocaleString()}` : record.valueLost ? `₦${Number(record.valueLost).toLocaleString()}` : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">
+                      {record.disposalMethod || "-"}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button

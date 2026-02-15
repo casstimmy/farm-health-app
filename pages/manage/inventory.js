@@ -260,11 +260,21 @@ export default function ManageInventory() {
 
   const handleEditItem = (item) => {
     setEditingId(item._id);
-    setEditValue(item.item);
+    setEditValue({
+      item: item.item || "",
+      quantity: item.quantity ?? "",
+      minStock: item.minStock ?? "",
+      price: item.price ?? "",
+      costPrice: item.costPrice ?? "",
+      marginPercent: item.marginPercent ?? "",
+      salesPrice: item.salesPrice ?? "",
+      categoryId: item.categoryId || "",
+      showOnSite: item.showOnSite || false,
+    });
   };
 
   const handleSaveEdit = async () => {
-    if (!editValue.trim()) {
+    if (!editValue.item?.trim()) {
       setError("Item name cannot be empty");
       return;
     }
@@ -272,17 +282,33 @@ export default function ManageInventory() {
     setEditSaving(true);
     try {
       const token = localStorage.getItem("token");
+      const selectedCategory = categories.find(c => c._id === editValue.categoryId);
+      const payload = {
+        item: editValue.item,
+        quantity: Number(editValue.quantity) || 0,
+        minStock: Number(editValue.minStock) || 0,
+        price: Number(editValue.price) || 0,
+        costPrice: Number(editValue.costPrice) || 0,
+        marginPercent: Number(editValue.marginPercent) || 0,
+        salesPrice: Number(editValue.salesPrice) || 0,
+        showOnSite: editValue.showOnSite,
+      };
+      if (selectedCategory) {
+        payload.categoryId = selectedCategory._id;
+        payload.category = selectedCategory.name;
+        payload.categoryName = selectedCategory.name;
+      }
       const res = await fetch(`/api/inventory/${editingId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ item: editValue })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
-        setSuccess("✓ Item name updated!");
+        setSuccess("✓ Item updated!");
         setEditingId(null);
         setEditValue("");
         setTimeout(() => setSuccess(""), 2000);
@@ -295,6 +321,20 @@ export default function ManageInventory() {
       setError("Error updating item");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleToggleShowOnSite = async (item) => {
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`/api/inventory/${item._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ showOnSite: !item.showOnSite }),
+      });
+      fetchInventory();
+    } catch (err) {
+      console.error("Toggle showOnSite failed:", err);
     }
   };
 
@@ -1014,6 +1054,7 @@ export default function ManageInventory() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Margin %</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Sales Price</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Consumed</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Show on Site</th>
                   {canEdit && <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>}
                 </tr>
               </thead>
@@ -1026,74 +1067,164 @@ export default function ManageInventory() {
                     transition={{ delay: index * 0.05 }}
                     className="hover:bg-gray-50 transition-colors"
                   >
+                    {/* Item Name */}
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                       {editingId === item._id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="flex-1 px-3 py-1 border-2 border-blue-500 rounded-lg focus:outline-none"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleSaveEdit}
-                            disabled={editSaving}
-                            className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-60"
-                            title="Save"
-                          >
-                            {editSaving ? <FaSpinner className="animate-spin" size={14} /> : <FaCheck size={14} />}
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                            title="Cancel"
-                          >
-                            <FaTimes size={14} />
-                          </button>
-                        </div>
+                        <input
+                          type="text"
+                          value={editValue.item}
+                          onChange={(e) => setEditValue({ ...editValue, item: e.target.value })}
+                          className="w-full px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                          autoFocus
+                        />
                       ) : (
                         <span>{item.item}</span>
                       )}
                     </td>
+                    {/* Category */}
                     <td className="px-6 py-4 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${categoryColors[item.categoryName || item.category] || 'bg-gray-100 text-gray-800'}`}>
-                        {item.categoryName || item.category}
-                      </span>
+                      {editingId === item._id ? (
+                        <select
+                          value={editValue.categoryId}
+                          onChange={(e) => setEditValue({ ...editValue, categoryId: e.target.value })}
+                          className="w-full px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        >
+                          <option value="">-- Select --</option>
+                          {categories.map((cat) => (
+                            <option key={cat._id} value={cat._id}>{cat.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${categoryColors[item.categoryName || item.category] || 'bg-gray-100 text-gray-800'}`}>
+                          {item.categoryName || item.category}
+                        </span>
+                      )}
                     </td>
+                    {/* Quantity */}
                     <td className="px-6 py-4 text-sm">
-                      <span className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-bold text-sm">
-                        {item.quantity}
-                      </span>
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          value={editValue.quantity}
+                          onChange={(e) => setEditValue({ ...editValue, quantity: e.target.value })}
+                          className="w-20 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        <span className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-bold text-sm">
+                          {item.quantity}
+                        </span>
+                      )}
                     </td>
+                    {/* Min Stock */}
                     <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                      {item.minStock || "-"}
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          value={editValue.minStock}
+                          onChange={(e) => setEditValue({ ...editValue, minStock: e.target.value })}
+                          className="w-20 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        item.minStock || "-"
+                      )}
                     </td>
+                    {/* Price */}
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                      {formatCurrency(parseFloat(item.price || 0), businessSettings.currency)}
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editValue.price}
+                          onChange={(e) => setEditValue({ ...editValue, price: e.target.value })}
+                          className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        formatCurrency(parseFloat(item.price || 0), businessSettings.currency)
+                      )}
                     </td>
+                    {/* Cost Price */}
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {formatCurrency(parseFloat(item.costPrice || 0), businessSettings.currency)}
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editValue.costPrice}
+                          onChange={(e) => setEditValue({ ...editValue, costPrice: e.target.value })}
+                          className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        formatCurrency(parseFloat(item.costPrice || 0), businessSettings.currency)
+                      )}
                     </td>
+                    {/* Margin % */}
                     <td className="px-6 py-4 text-sm text-gray-700">
-                      {item.marginPercent ? `${item.marginPercent}%` : "-"}
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={editValue.marginPercent}
+                          onChange={(e) => setEditValue({ ...editValue, marginPercent: e.target.value })}
+                          className="w-20 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        item.marginPercent ? `${item.marginPercent}%` : "-"
+                      )}
                     </td>
+                    {/* Sales Price */}
                     <td className="px-6 py-4 text-sm font-semibold text-green-700">
-                      {formatCurrency(parseFloat(item.salesPrice || 0), businessSettings.currency)}
+                      {editingId === item._id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editValue.salesPrice}
+                          onChange={(e) => setEditValue({ ...editValue, salesPrice: e.target.value })}
+                          className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        />
+                      ) : (
+                        formatCurrency(parseFloat(item.salesPrice || 0), businessSettings.currency)
+                      )}
                     </td>
+                    {/* Consumed */}
                     <td className="px-6 py-4 text-sm text-gray-700">
                       {item.totalConsumed || 0}
                     </td>
+                    {/* Show on Site */}
+                    <td className="px-6 py-4 text-sm text-center">
+                      <button
+                        onClick={() => handleToggleShowOnSite(item)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${item.showOnSite ? 'bg-green-500' : 'bg-gray-300'}`}
+                        title={item.showOnSite ? 'Visible on site' : 'Hidden from site'}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${item.showOnSite ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </td>
+                    {/* Actions */}
                     {canEdit && (
                       <td className="px-6 py-4 text-sm">
                         {editingId === item._id ? (
-                          <div></div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleSaveEdit}
+                              disabled={editSaving}
+                              className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-60"
+                              title="Save"
+                            >
+                              {editSaving ? <FaSpinner className="animate-spin" size={14} /> : <FaCheck size={14} />}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                              title="Cancel"
+                            >
+                              <FaTimes size={14} />
+                            </button>
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEditItem(item)}
                               className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                              title="Edit item name"
+                              title="Edit item"
                             >
                               <FaEdit size={14} />
                             </button>
