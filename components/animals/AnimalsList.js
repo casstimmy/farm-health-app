@@ -7,8 +7,9 @@ import Loader from "@/components/Loader";
 import ImageViewer from "./ImageViewer";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
-export default function AnimalsList() {
+export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterStatus: parentFilterStatus = "all" }) {
     const { businessSettings } = useContext(BusinessContext);
     // Modal state for image viewer
     const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -20,11 +21,20 @@ export default function AnimalsList() {
   const [editableAnimal, setEditableAnimal] = useState({});
   const [user, setUser] = useState(null);
   const [visibleCount, setVisibleCount] = useState(20);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(parentSearchTerm);
+  const [filterStatus, setFilterStatus] = useState(parentFilterStatus);
   const [filteredAnimals, setFilteredAnimals] = useState([]);
   const [error, setError] = useState("");
   const [updateLoading, setUpdateLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+
+  useEffect(() => {
+    setSearchTerm(parentSearchTerm);
+  }, [parentSearchTerm]);
+
+  useEffect(() => {
+    setFilterStatus(parentFilterStatus);
+  }, [parentFilterStatus]);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -39,23 +49,29 @@ export default function AnimalsList() {
   }, []);
 
   useEffect(() => {
-    // Filter animals based on search
-    const filtered = animals.filter((animal) =>
-      [animal.tagId, animal.name, animal.species, animal.breed]
+    // Filter animals based on search and status
+    const filtered = animals.filter((animal) => {
+      const matchesSearch = !searchTerm || [animal.tagId, animal.name, animal.species, animal.breed]
         .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+        .some((field) => String(field).toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = filterStatus === "all" || animal.status === filterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
     setFilteredAnimals(filtered);
     setVisibleCount(20);
-  }, [animals, searchTerm]);
+  }, [animals, searchTerm, filterStatus]);
 
   const fetchAnimals = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/animals", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await getCachedData("api/animals", () => 
+        fetch("/api/animals", {
+          headers: { "Authorization": `Bearer ${token}` }
+        }).then(r => r.json()),
+        5 * 60 * 1000
+      );
       setAnimals(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching animals:", error);
@@ -131,6 +147,8 @@ export default function AnimalsList() {
         throw new Error(data.error || "Failed to delete animal");
       }
 
+      // Invalidate animals cache after deletion
+      invalidateCache("api/animals");
       setAnimals((prev) => prev.filter((a) => a._id !== _id));
     } catch (err) {
       setError(err.message || "Failed to delete animal");

@@ -627,7 +627,16 @@ export default function ManageInventory() {
                   step="0.01"
                   placeholder="Auto-calculated or enter"
                   value={formData.salesPrice}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const sp = parseFloat(e.target.value) || 0;
+                    const cp = parseFloat(formData.costPrice) || 0;
+                    const calcMargin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(2) : 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      salesPrice: e.target.value,
+                      marginPercent: calcMargin || prev.marginPercent,
+                    }));
+                  }}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                 />
               </div>

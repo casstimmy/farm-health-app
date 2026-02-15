@@ -8,6 +8,7 @@ import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, 
 import { Pie, Bar, Doughnut } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
+import { getCachedData, invalidateCachePattern } from "@/utils/cache";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -50,20 +51,20 @@ export default function Home() {
       try {
         setLoading(true);
         const headers = { Authorization: `Bearer ${token}` };
-        const [animalsRes, inventoryRes, treatmentRes, financeRes, mortalityRes, breedingRes, healthRes, feedingRes] = await Promise.all([
-          fetch("/api/animals", { headers }),
-          fetch("/api/inventory", { headers }),
-          fetch("/api/treatment", { headers }),
-          fetch("/api/finance", { headers }),
-          fetch("/api/mortality", { headers }),
-          fetch("/api/breeding", { headers }),
-          fetch("/api/health-records", { headers }),
-          fetch("/api/feeding", { headers }),
-        ]);
+        const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.json());
+        
+        // Use cache with 5-minute TTL for dashboard data
         const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          animalsRes.json(), inventoryRes.json(), treatmentRes.json(), financeRes.json(),
-          mortalityRes.json(), breedingRes.json(), healthRes.json(), feedingRes.json(),
+          getCachedData("api/animals", () => fetchApi("/api/animals"), 5 * 60 * 1000),
+          getCachedData("api/inventory", () => fetchApi("/api/inventory"), 5 * 60 * 1000),
+          getCachedData("api/treatment", () => fetchApi("/api/treatment"), 5 * 60 * 1000),
+          getCachedData("api/finance", () => fetchApi("/api/finance"), 5 * 60 * 1000),
+          getCachedData("api/mortality", () => fetchApi("/api/mortality"), 5 * 60 * 1000),
+          getCachedData("api/breeding", () => fetchApi("/api/breeding"), 5 * 60 * 1000),
+          getCachedData("api/health-records", () => fetchApi("/api/health-records"), 5 * 60 * 1000),
+          getCachedData("api/feeding", () => fetchApi("/api/feeding"), 5 * 60 * 1000),
         ]);
+        
         setData({
           animals: Array.isArray(animals) ? animals : [],
           inventory: Array.isArray(inventory) ? inventory : [],
@@ -100,7 +101,12 @@ export default function Home() {
       const res = await fetch("/api/seed", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
       const d = await res.json();
       if (!res.ok) { setSeedResult({ success: false, message: d.error || "Failed" }); }
-      else { setSeedResult({ success: true, message: "Database seeded! ✓", results: d.results }); setTimeout(() => window.location.reload(), 2000); }
+      else {
+        // Clear all cache after seeding
+        invalidateCachePattern(/^api\//);
+        setSeedResult({ success: true, message: "Database seeded! ✓", results: d.results }); 
+        setTimeout(() => window.location.reload(), 2000); 
+      }
     } catch (err) { setSeedResult({ success: false, message: err.message }); }
     finally { setSeedLoading(false); }
   };
@@ -303,7 +309,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Recent Health Records */}
             <ListCard title="Recent Health Records" icon="🏥" items={
-              stats.recentTreatments.slice(0, 5).map(h => ({
+              stats.recentTreatments.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 5).map(h => ({
                 label: h.animalTagId || h.animal?.tagId || "Unknown",
                 meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
                 emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : "💊",

@@ -11,6 +11,8 @@ export default function ManageAnimals() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   const handleSuccess = () => {
     setShowModal(false);
@@ -43,9 +45,18 @@ export default function ManageAnimals() {
 
       {/* Controls */}
       <FilterBar
-        searchPlaceholder="Search animals by name or tag..."
-        searchTerm=""
-        onSearchChange={() => {}}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search animals by name or tag..."
+        filters={[
+          { value: filterStatus, onChange: setFilterStatus, options: [
+            { value: "all", label: "All Status" },
+            { value: "Alive", label: "Alive" },
+            { value: "Dead", label: "Dead" },
+            { value: "Sold", label: "Sold" },
+            { value: "Archived", label: "Archived" },
+          ]}
+        ]}
         showAddButton={true}
         onAddClick={() => setShowModal(true)}
         isAddActive={showModal}
@@ -54,7 +65,7 @@ export default function ManageAnimals() {
       {/* Animals List */}
       <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">All Animals</h2>
-        <AnimalsList key={refreshTrigger} />
+        <AnimalsList key={refreshTrigger} searchTerm={searchTerm} filterStatus={filterStatus} />
       </div>
     </motion.div>
   );
