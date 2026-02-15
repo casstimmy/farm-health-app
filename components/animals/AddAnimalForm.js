@@ -55,6 +55,10 @@ export default function AddAnimalForm({ onSuccess, animal }) {
     location: "",
     paddock: "",
     currentWeight: "",
+    projectedMaxWeight: "",
+    purchaseCost: "",
+    marginPercent: "30",
+    projectedSalesPrice: "",
     weightDate: "",
     recordedBy: "",
     notes: "",
@@ -207,6 +211,10 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       const submitData = {
         ...formData,
         currentWeight: formData.currentWeight ? parseFloat(formData.currentWeight) : 0,
+        projectedMaxWeight: formData.projectedMaxWeight ? parseFloat(formData.projectedMaxWeight) : 0,
+        purchaseCost: formData.purchaseCost ? parseFloat(formData.purchaseCost) : 0,
+        marginPercent: formData.marginPercent ? parseFloat(formData.marginPercent) : 30,
+        projectedSalesPrice: formData.projectedSalesPrice ? parseFloat(formData.projectedSalesPrice) : 0,
         weightDate: formData.weightDate || new Date(),
         dob: formData.dob || null,
         acquisitionDate: formData.acquisitionDate || null
@@ -259,6 +267,10 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           location: "",
           paddock: "",
           currentWeight: "",
+          projectedMaxWeight: "",
+          purchaseCost: "",
+          marginPercent: "30",
+          projectedSalesPrice: "",
           weightDate: "",
           recordedBy: "",
           notes: "",
@@ -598,6 +610,82 @@ export default function AddAnimalForm({ onSuccess, animal }) {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+      </div>
+
+      {/* FINANCIAL INFO */}
+      <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4">
+        <h3 className="font-bold text-emerald-900 mb-4">💰 Financial & Projections</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="label">Projected Max Weight (kg)</label>
+            <input
+              type="number"
+              name="projectedMaxWeight"
+              value={formData.projectedMaxWeight}
+              onChange={handleChange}
+              className="input-field"
+              placeholder="e.g., 70"
+              step="0.1"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="label">Purchase Cost</label>
+            <input
+              type="number"
+              name="purchaseCost"
+              value={formData.purchaseCost}
+              onChange={(e) => {
+                const pc = parseFloat(e.target.value) || 0;
+                const mp = parseFloat(formData.marginPercent) || 0;
+                setFormData((prev) => ({
+                  ...prev,
+                  purchaseCost: e.target.value,
+                  projectedSalesPrice: mp > 0 ? (pc * (1 + mp / 100)).toFixed(2) : prev.projectedSalesPrice,
+                }));
+              }}
+              className="input-field"
+              placeholder="e.g., 15000"
+              step="0.01"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="label">Margin %</label>
+            <input
+              type="number"
+              name="marginPercent"
+              value={formData.marginPercent}
+              onChange={(e) => {
+                const mp = parseFloat(e.target.value) || 0;
+                const pc = parseFloat(formData.purchaseCost) || 0;
+                setFormData((prev) => ({
+                  ...prev,
+                  marginPercent: e.target.value,
+                  projectedSalesPrice: pc > 0 ? (pc * (1 + mp / 100)).toFixed(2) : prev.projectedSalesPrice,
+                }));
+              }}
+              className="input-field"
+              placeholder="e.g., 30"
+              step="0.1"
+              min="0"
+            />
+          </div>
+          <div>
+            <label className="label">Projected Sales Price</label>
+            <input
+              type="number"
+              name="projectedSalesPrice"
+              value={formData.projectedSalesPrice}
+              onChange={handleChange}
+              className="input-field"
+              placeholder="Auto-calculated or enter"
+              step="0.01"
+              min="0"
+            />
           </div>
         </div>
       </div>

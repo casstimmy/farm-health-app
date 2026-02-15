@@ -169,6 +169,7 @@ export default function Sidebar() {
       submenu: [
         { href: "/manage/inventory", label: "Inventory", icon: <FaBoxes className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/inventory-categories", label: "Categories", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
+        { href: "/manage/inventory-loss", label: "Losses/Wastage", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/feeding", label: "Feeding", icon: <FaLeaf className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/weight", label: "Weight Tracking", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager', 'Attendant'] },
       ],

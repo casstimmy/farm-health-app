@@ -41,5 +41,36 @@ const BreedingRecordSchema = new mongoose.Schema(
 BreedingRecordSchema.index({ doe: 1, matingDate: -1 });
 BreedingRecordSchema.index({ pregnancyStatus: 1 });
 
+// Post-save hook: create Finance income record when delivery is successful
+BreedingRecordSchema.post("save", async function (doc) {
+  try {
+    if (doc.pregnancyStatus === "Delivered" && doc.kidsAlive > 0) {
+      const Finance = mongoose.model("Finance");
+      // Check if a finance record already exists for this breeding event
+      const existing = await Finance.findOne({
+        category: "Breeding Income",
+        title: { $regex: doc.breedingId },
+      });
+      if (!existing) {
+        // Estimate value per kid (can be adjusted in the finance record later)
+        const estimatedValuePerKid = 5000;
+        await Finance.create({
+          date: doc.actualKiddingDate || new Date(),
+          type: "Income",
+          category: "Breeding Income",
+          title: `Breeding Success - ${doc.breedingId}`,
+          description: `${doc.kidsAlive} kid(s) born alive from breeding ${doc.breedingId}. Species: ${doc.species || "N/A"}.`,
+          amount: doc.kidsAlive * estimatedValuePerKid,
+          relatedAnimal: doc.doe,
+          recordedBy: "System",
+          status: "Completed",
+        });
+      }
+    }
+  } catch (err) {
+    console.error("BreedingRecord post-save hook error:", err);
+  }
+});
+
 export default mongoose.models.BreedingRecord ||
   mongoose.model("BreedingRecord", BreedingRecordSchema);

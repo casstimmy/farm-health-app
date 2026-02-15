@@ -129,6 +129,18 @@ export default function WeightTracking() {
     }).length;
   }, [feedingRecords]);
 
+  const lastFeedRecord = useMemo(() => {
+    if (!feedingRecords.length) return null;
+    const sorted = [...feedingRecords].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    return sorted[0];
+  }, [feedingRecords]);
+
+  const projectedMaxWeight = useMemo(() => {
+    return selectedAnimal?.projectedMaxWeight || null;
+  }, [selectedAnimal]);
+
   const recommendedFeeds = useMemo(() => {
     const weightKg = Number(latestWeight?.weightKg);
     if (!weightKg || Number.isNaN(weightKg)) return null;
@@ -143,6 +155,14 @@ export default function WeightTracking() {
       : feedingsLast24h > recommendedFeeds
       ? "high"
       : "ok";
+
+  const weightVsProjected = useMemo(() => {
+    const current = Number(latestWeight?.weightKg);
+    if (!current || !projectedMaxWeight) return null;
+    if (current >= projectedMaxWeight) return "reached";
+    const pct = ((current / projectedMaxWeight) * 100).toFixed(0);
+    return `${pct}%`;
+  }, [latestWeight, projectedMaxWeight]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -264,7 +284,7 @@ export default function WeightTracking() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <p className="text-gray-500">Current Weight</p>
             <p className="text-lg font-semibold text-gray-800">
@@ -272,24 +292,48 @@ export default function WeightTracking() {
             </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="text-gray-500">Last Feed Record</p>
+            {lastFeedRecord ? (
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  {lastFeedRecord.feedCategory || lastFeedRecord.feedTypeName || "Feed"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Qty: {lastFeedRecord.quantityConsumed ?? "N/A"} | {lastFeedRecord.date ? new Date(lastFeedRecord.date).toLocaleDateString() : ""}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No feeding records</p>
+            )}
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <p className="text-gray-500">Feeds (Last 24h)</p>
             <p className="text-lg font-semibold text-gray-800">{feedingsLast24h}</p>
+            {recommendedFeeds && (
+              <p className="text-xs text-gray-500">Target: {recommendedFeeds}</p>
+            )}
           </div>
           <div
             className={`rounded-xl p-4 border ${
-              feedCheckStatus === "high"
-                ? "bg-red-50 border-red-200"
-                : "bg-emerald-50 border-emerald-200"
+              weightVsProjected === "reached"
+                ? "bg-green-50 border-green-200"
+                : "bg-purple-50 border-purple-200"
             }`}
           >
-            <p className="text-gray-500">Recommended Max</p>
+            <p className="text-gray-500">Projected Max Weight</p>
             <p
               className={`text-lg font-semibold ${
-                feedCheckStatus === "high" ? "text-red-700" : "text-emerald-700"
+                weightVsProjected === "reached" ? "text-green-700" : "text-purple-700"
               }`}
             >
-              {recommendedFeeds ?? "N/A"}
+              {projectedMaxWeight ? `${projectedMaxWeight} kg` : "Not set"}
             </p>
+            {weightVsProjected && weightVsProjected !== "reached" && (
+              <p className="text-xs text-gray-500">{weightVsProjected} of projected max</p>
+            )}
+            {weightVsProjected === "reached" && (
+              <p className="text-xs text-green-600 font-semibold">Target reached!</p>
+            )}
           </div>
         </div>
 

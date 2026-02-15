@@ -60,6 +60,9 @@ export default function ManageInventory() {
     categoryId: "",
     minStock: "",
     price: "",
+    costPrice: "",
+    marginPercent: "",
+    salesPrice: "",
     unit: "",
     details: "",
     expiration: "",
@@ -193,6 +196,9 @@ export default function ManageInventory() {
         categoryName,
         minStock: formData.minStock,
         price: formData.price,
+        costPrice: formData.costPrice || 0,
+        marginPercent: formData.marginPercent || 0,
+        salesPrice: formData.salesPrice || 0,
         unit: formData.unit,
       };
 
@@ -225,6 +231,9 @@ export default function ManageInventory() {
           categoryId: "",
           minStock: "",
           price: "",
+          costPrice: "",
+          marginPercent: "",
+          salesPrice: "",
           unit: "",
           details: "",
           expiration: "",
@@ -522,6 +531,62 @@ export default function ManageInventory() {
                   step="0.01"
                   placeholder="e.g., 2500.00"
                   value={formData.price}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Cost Price</label>
+                <input
+                  type="number"
+                  name="costPrice"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g., 2000.00"
+                  value={formData.costPrice}
+                  onChange={(e) => {
+                    const cp = parseFloat(e.target.value) || 0;
+                    const mp = parseFloat(formData.marginPercent) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      costPrice: e.target.value,
+                      salesPrice: mp > 0 ? (cp * (1 + mp / 100)).toFixed(2) : prev.salesPrice,
+                    }));
+                  }}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Margin %</label>
+                <input
+                  type="number"
+                  name="marginPercent"
+                  min="0"
+                  max="1000"
+                  step="0.1"
+                  placeholder="e.g., 30"
+                  value={formData.marginPercent}
+                  onChange={(e) => {
+                    const mp = parseFloat(e.target.value) || 0;
+                    const cp = parseFloat(formData.costPrice) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      marginPercent: e.target.value,
+                      salesPrice: cp > 0 ? (cp * (1 + mp / 100)).toFixed(2) : prev.salesPrice,
+                    }));
+                  }}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sales Price</label>
+                <input
+                  type="number"
+                  name="salesPrice"
+                  min="0"
+                  step="0.01"
+                  placeholder="Auto-calculated or enter"
+                  value={formData.salesPrice}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                 />
@@ -945,6 +1010,10 @@ export default function ManageInventory() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Min Stock</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Cost Price</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Margin %</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Sales Price</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Consumed</th>
                   {canEdit && <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>}
                 </tr>
               </thead>
@@ -1002,6 +1071,18 @@ export default function ManageInventory() {
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                       {formatCurrency(parseFloat(item.price || 0), businessSettings.currency)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {formatCurrency(parseFloat(item.costPrice || 0), businessSettings.currency)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {item.marginPercent ? `${item.marginPercent}%` : "-"}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-green-700">
+                      {formatCurrency(parseFloat(item.salesPrice || 0), businessSettings.currency)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {item.totalConsumed || 0}
                     </td>
                     {canEdit && (
                       <td className="px-6 py-4 text-sm">

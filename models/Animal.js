@@ -34,8 +34,15 @@ const AnimalSchema = new mongoose.Schema(
     },
     paddock: String,
     currentWeight: { type: Number, default: 0 },
+    projectedMaxWeight: { type: Number, default: 0 },
     weightDate: Date,
     recordedBy: String,
+    // Financial tracking
+    purchaseCost: { type: Number, default: 0 },
+    marginPercent: { type: Number, default: 30 },
+    projectedSalesPrice: { type: Number, default: 0 },
+    totalFeedCost: { type: Number, default: 0 },
+    totalMedicationCost: { type: Number, default: 0 },
     images: [
       {
         full: { type: String, required: true },

@@ -1,24 +1,30 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { FaPlus, FaTimes } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
+import { BusinessContext } from "@/context/BusinessContext";
+import { formatCurrency } from "@/utils/formatting";
 
 const initialFormState = {
   date: "",
   feedCategory: "",
+  inventoryItem: "",
   quantityOffered: "",
   quantityConsumed: "",
+  unitCost: "",
+  totalCost: "",
   feedingMethod: "",
   notes: "",
 };
 
 export default function Feeding() {
   const router = useRouter();
+  const { businessSettings } = useContext(BusinessContext);
   const [animals, setAnimals] = useState([]);
   const [selectedAnimalId, setSelectedAnimalId] = useState("");
   const [records, setRecords] = useState([]);
@@ -29,6 +35,7 @@ export default function Feeding() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [formData, setFormData] = useState(initialFormState);
+  const [feedInventory, setFeedInventory] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -37,6 +44,7 @@ export default function Feeding() {
       return;
     }
     fetchAnimals();
+    fetchFeedInventory();
   }, [router]);
 
   useEffect(() => {
@@ -63,6 +71,24 @@ export default function Feeding() {
       console.error("Failed to fetch animals:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFeedInventory = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/inventory", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const feeds = (Array.isArray(data) ? data : []).filter(
+          (item) => (item.categoryName || item.category || "").toLowerCase() === "feed"
+        );
+        setFeedInventory(feeds);
+      }
+    } catch (err) {
+      console.error("Failed to fetch feed inventory:", err);
     }
   };
 
@@ -128,8 +154,11 @@ export default function Feeding() {
         feedingData: {
           date: formData.date ? new Date(formData.date) : new Date(),
           feedCategory: formData.feedCategory.trim(),
+          inventoryItem: formData.inventoryItem || undefined,
           quantityOffered: formData.quantityOffered ? Number(formData.quantityOffered) : undefined,
           quantityConsumed: formData.quantityConsumed ? Number(formData.quantityConsumed) : undefined,
+          unitCost: formData.unitCost ? Number(formData.unitCost) : 0,
+          totalCost: formData.totalCost ? Number(formData.totalCost) : 0,
           feedingMethod: formData.feedingMethod.trim() || undefined,
           notes: formData.notes.trim() || undefined,
         },
@@ -256,6 +285,34 @@ export default function Feeding() {
                 />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Feed Inventory Item</label>
+                <select
+                  name="inventoryItem"
+                  value={formData.inventoryItem}
+                  onChange={(e) => {
+                    const itemId = e.target.value;
+                    const invItem = feedInventory.find((i) => i._id === itemId);
+                    const uc = invItem ? (invItem.costPrice || invItem.price || 0) : 0;
+                    const qty = parseFloat(formData.quantityConsumed) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      inventoryItem: itemId,
+                      feedCategory: invItem ? invItem.item : prev.feedCategory,
+                      unitCost: uc,
+                      totalCost: (uc * qty).toFixed(2),
+                    }));
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">Select Feed Item (optional)</option>
+                  {feedInventory.map((item) => (
+                    <option key={item._id} value={item._id}>
+                      {item.item} (Qty: {item.quantity} {item.unit || ""})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity Offered</label>
                 <input
                   type="number"
@@ -274,11 +331,53 @@ export default function Feeding() {
                   type="number"
                   name="quantityConsumed"
                   value={formData.quantityConsumed}
-                  onChange={handleFormChange}
+                  onChange={(e) => {
+                    const qty = parseFloat(e.target.value) || 0;
+                    const uc = parseFloat(formData.unitCost) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      quantityConsumed: e.target.value,
+                      totalCost: (uc * qty).toFixed(2),
+                    }));
+                  }}
                   step="0.01"
                   min="0"
                   placeholder="e.g., 2.0"
                   className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Cost</label>
+                <input
+                  type="number"
+                  name="unitCost"
+                  value={formData.unitCost}
+                  onChange={(e) => {
+                    const uc = parseFloat(e.target.value) || 0;
+                    const qty = parseFloat(formData.quantityConsumed) || 0;
+                    setFormData((prev) => ({
+                      ...prev,
+                      unitCost: e.target.value,
+                      totalCost: (uc * qty).toFixed(2),
+                    }));
+                  }}
+                  step="0.01"
+                  min="0"
+                  placeholder="Auto from inventory"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Total Cost</label>
+                <input
+                  type="number"
+                  name="totalCost"
+                  value={formData.totalCost}
+                  onChange={handleFormChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="Auto-calculated"
+                  className="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
               <div>
@@ -356,6 +455,14 @@ export default function Feeding() {
                 <p>
                   <span className="font-semibold">Method:</span> {record.feedingMethod || "N/A"}
                 </p>
+                {record.totalCost > 0 && (
+                  <p>
+                    <span className="font-semibold">Cost:</span>{" "}
+                    <span className="text-orange-700 font-bold">
+                      {formatCurrency(record.totalCost, businessSettings.currency)}
+                    </span>
+                  </p>
+                )}
                 <p>
                   <span className="font-semibold">Notes:</span> {record.notes || "N/A"}
                 </p>

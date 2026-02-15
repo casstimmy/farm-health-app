@@ -1,12 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { FaSpinner, FaCheckCircle, FaTimesCircle, FaTimes, FaCheck, FaEdit, FaTrash } from "react-icons/fa";
 import Link from "next/link";
 
 import Modal from "../shared/Modal";
 import Loader from "@/components/Loader";
 import ImageViewer from "./ImageViewer";
+import { BusinessContext } from "@/context/BusinessContext";
+import { formatCurrency } from "@/utils/formatting";
 
 export default function AnimalsList() {
+    const { businessSettings } = useContext(BusinessContext);
     // Modal state for image viewer
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImages, setModalImages] = useState([]);
@@ -307,6 +310,11 @@ export default function AnimalsList() {
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800 hidden lg:table-cell">Breed</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">Status</th>
                 <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden sm:table-cell">Weight</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden lg:table-cell">Cost</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden lg:table-cell">Feed Cost</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden lg:table-cell">Med Cost</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden lg:table-cell">Proj. Sales</th>
+                <th className="px-4 py-4 text-center text-xs font-bold text-gray-800 hidden xl:table-cell">Profit</th>
                 {canDelete && <th className="px-2 py-4 text-center text-xs font-bold text-gray-800 w-12">Del</th>}
               </tr>
             </thead>
@@ -485,6 +493,47 @@ export default function AnimalsList() {
                           ⚖️ {animal.currentWeight ? `${animal.currentWeight} kg` : "—"}
                         </span>
                       </div>
+                    </td>
+
+                    {/* Purchase Cost */}
+                    <td className="px-4 py-4 text-center text-xs hidden lg:table-cell">
+                      <span className="text-xs font-semibold text-gray-700">
+                        {animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}
+                      </span>
+                    </td>
+
+                    {/* Feed Cost */}
+                    <td className="px-4 py-4 text-center text-xs hidden lg:table-cell">
+                      <span className="text-xs font-semibold text-orange-700">
+                        {animal.totalFeedCost ? formatCurrency(animal.totalFeedCost, businessSettings.currency) : "—"}
+                      </span>
+                    </td>
+
+                    {/* Medication Cost */}
+                    <td className="px-4 py-4 text-center text-xs hidden lg:table-cell">
+                      <span className="text-xs font-semibold text-red-700">
+                        {animal.totalMedicationCost ? formatCurrency(animal.totalMedicationCost, businessSettings.currency) : "—"}
+                      </span>
+                    </td>
+
+                    {/* Projected Sales */}
+                    <td className="px-4 py-4 text-center text-xs hidden lg:table-cell">
+                      <span className="text-xs font-semibold text-green-700">
+                        {animal.projectedSalesPrice ? formatCurrency(animal.projectedSalesPrice, businessSettings.currency) : "—"}
+                      </span>
+                    </td>
+
+                    {/* Estimated Profit */}
+                    <td className="px-4 py-4 text-center text-xs hidden xl:table-cell">
+                      {(() => {
+                        const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+                        const profit = (animal.projectedSalesPrice || 0) - totalCost;
+                        return (
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${profit >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {profit >= 0 ? "+" : ""}{formatCurrency(profit, businessSettings.currency)}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Delete Button */}

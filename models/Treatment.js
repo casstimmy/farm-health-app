@@ -23,6 +23,9 @@ const TreatmentSchema = new mongoose.Schema(
     },
     medicationName: String, // Denormalized for display
     dosage: String,
+    dosageQty: { type: Number, default: 1 },
+    unitCost: { type: Number, default: 0 },
+    totalCost: { type: Number, default: 0 },
     route: {
       type: String,
       enum: ["IM", "Oral", "Subcutaneous", "Spray", "Backline", "Other", ""],
@@ -50,17 +53,24 @@ const TreatmentSchema = new mongoose.Schema(
 TreatmentSchema.index({ animal: 1, date: -1 });
 TreatmentSchema.index({ recoveryStatus: 1 });
 
-// Post-save hook: optionally deduct inventory
+// Post-save hook: deduct inventory by dosageQty, update animal totalMedicationCost
 TreatmentSchema.post("save", async function (doc) {
-  if (doc.medication) {
-    try {
+  try {
+    if (doc.medication) {
+      const qty = doc.dosageQty || 1;
       const Inventory = mongoose.model("Inventory");
       await Inventory.findByIdAndUpdate(doc.medication, {
-        $inc: { quantity: -1 },
+        $inc: { quantity: -qty, totalConsumed: qty },
       });
-    } catch (err) {
-      console.error("Failed to deduct inventory after treatment:", err);
     }
+    if (doc.totalCost > 0) {
+      const Animal = mongoose.model("Animal");
+      await Animal.findByIdAndUpdate(doc.animal, {
+        $inc: { totalMedicationCost: doc.totalCost },
+      });
+    }
+  } catch (err) {
+    console.error("Treatment post-save hook error:", err);
   }
 });
 
