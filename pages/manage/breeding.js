@@ -4,16 +4,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaHeart, FaCalendar, FaVenus, FaMars, FaChevronRight, FaSpinner, FaTimes, FaCheck, FaBaby } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
+import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
+import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 export default function BreedingManagement() {
   const router = useRouter();
   const [animals, setAnimals] = useState([]);
   const [breedingRecords, setBreedingRecords] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [filterLocation, setFilterLocation] = useState("all");
   const [formData, setFormData] = useState({
     doe: "",
     buck: "",
@@ -21,6 +26,7 @@ export default function BreedingManagement() {
     breedingType: "Natural",
     breedingCoordinator: "",
     expectedDueDate: "",
+    location: "",
     notes: "",
   });
   const [saving, setSaving] = useState(false);
@@ -46,9 +52,10 @@ export default function BreedingManagement() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [animalsRes, breedingRes] = await Promise.all([
+      const [animalsRes, breedingRes, locRes] = await Promise.all([
         fetch("/api/animals", { headers }),
         fetch("/api/breeding", { headers }),
+        fetch("/api/locations", { headers }),
       ]);
 
       const animalsData = await animalsRes.json();
@@ -56,6 +63,9 @@ export default function BreedingManagement() {
 
       const breedingData = await breedingRes.json();
       setBreedingRecords(Array.isArray(breedingData) ? breedingData : []);
+
+      const locData = await locRes.json();
+      setLocations(Array.isArray(locData) ? locData : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
@@ -91,6 +101,7 @@ export default function BreedingManagement() {
         breedingCoordinator: formData.breedingCoordinator,
         expectedDueDate: formData.expectedDueDate || calculateDueDate(formData.matingDate),
         pregnancyStatus: "Pending",
+        location: formData.location || null,
         notes: formData.notes,
       };
 
@@ -116,6 +127,7 @@ export default function BreedingManagement() {
         breedingType: "Natural",
         breedingCoordinator: "",
         expectedDueDate: "",
+        location: "",
         notes: "",
       });
       setShowForm(false);
@@ -177,13 +189,13 @@ export default function BreedingManagement() {
     }
   };
 
-  const filteredRecords = breedingRecords.filter(record => {
+  const filteredRecords = filterByLocation(filterByPeriod(breedingRecords.filter(record => {
     const matchesSearch =
       record.doe?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.buck?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === "all" || record.pregnancyStatus === filterStatus;
     return matchesSearch && matchesFilter;
-  });
+  }), filterPeriod, "matingDate"), filterLocation);
 
   const stats = {
     total: breedingRecords.length,
@@ -283,43 +295,20 @@ export default function BreedingManagement() {
       />
 
       {/* Controls */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <input
-              type="text"
-              placeholder="Search by animal name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
-            >
-              <option value="all">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Not Pregnant">Not Pregnant</option>
-            </select>
-          </div>
-          <motion.button
-            onClick={() => setShowForm(!showForm)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-              showForm
-                ? "bg-gray-200 text-gray-700"
-                : "bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg hover:shadow-xl"
-            }`}
-          >
-            {showForm ? <FaTimes /> : <FaPlus />}
-            {showForm ? "Cancel" : "Add Breeding Record"}
-          </motion.button>
-        </div>
-      </div>
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search by animal name..."
+        filters={[
+          { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, { value: "Pending", label: "Pending" }, { value: "Confirmed", label: "Confirmed" }, { value: "Delivered", label: "Delivered" }, { value: "Not Pregnant", label: "Not Pregnant" }] },
+        ]}
+        showAddButton={true}
+        onAddClick={() => setShowForm(!showForm)}
+        isAddActive={showForm}
+        addLabel={showForm ? "Cancel" : "Add Breeding Record"}
+      />
 
       {/* Add Form */}
       <AnimatePresence>
@@ -429,6 +418,20 @@ export default function BreedingManagement() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
                   placeholder="Name of coordinator..."
                 />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Location</label>
+                <select
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
+                >
+                  <option value="">Select location...</option>
+                  {locations.map((l) => (
+                    <option key={l._id} value={l._id}>{l.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

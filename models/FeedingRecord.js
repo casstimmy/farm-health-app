@@ -25,6 +25,7 @@ const FeedingRecordSchema = new mongoose.Schema(
     totalCost: { type: Number, default: 0 },
     date: { type: Date, required: true, index: true },
     feedingMethod: String,
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     notes: String,
   },
   { timestamps: true }

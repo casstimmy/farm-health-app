@@ -15,7 +15,7 @@ async function handler(req, res) {
           type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
         query.type = normalizedType;
       }
-      const finances = await Finance.find(query).sort({ date: -1 });
+      const finances = await Finance.find(query).sort({ date: -1 }).populate("location");
       res.status(200).json(finances);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -42,6 +42,7 @@ async function handler(req, res) {
         relatedAnimal: financeData.relatedAnimal || undefined,
         relatedInventory: financeData.relatedInventory || undefined,
         recordedBy: financeData.recordedBy || "System",
+        location: financeData.location || null,
         notes: financeData.notes || "",
       });
 

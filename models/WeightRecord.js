@@ -11,6 +11,7 @@ const WeightRecordSchema = new mongoose.Schema(
     weightKg: { type: Number, required: true },
     recordedBy: String,
     date: { type: Date, required: true, index: true },
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     notes: String,
   },
   { timestamps: true }

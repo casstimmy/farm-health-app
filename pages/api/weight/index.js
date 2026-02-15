@@ -25,6 +25,7 @@ async function handler(req, res) {
         weightKg: weightData.weightKg,
         recordedBy: weightData.recordedBy || req.user?.name || "",
         date: weightData.date || new Date(),
+        location: weightData.location || null,
         notes: weightData.notes || "",
       });
 
@@ -46,7 +47,8 @@ async function handler(req, res) {
       // Return all weight records if no animalId
       const records = await WeightRecord.find()
         .sort({ date: -1 })
-        .populate("animal");
+        .populate("animal")
+        .populate("location");
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

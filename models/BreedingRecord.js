@@ -33,6 +33,7 @@ const BreedingRecordSchema = new mongoose.Schema(
     kidsAlive: { type: Number, default: 0 },
     kidsDead: { type: Number, default: 0 },
     complications: String,
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     notes: String,
   },
   { timestamps: true }

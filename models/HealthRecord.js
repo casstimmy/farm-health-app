@@ -54,6 +54,8 @@ const HealthRecordSchema = new mongoose.Schema(
       enum: ["Under Treatment", "Improving", "Recovered", "Regressing", ""],
     },
     postWeight: { type: Number, default: null },
+    // Location
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     // Notes / Treatment Plan Summary
     notes: String,
   },

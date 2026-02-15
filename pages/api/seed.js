@@ -12,6 +12,7 @@ import Inventory from "@/models/Inventory";
 import InventoryCategory from "@/models/InventoryCategory";
 import Finance from "@/models/Finance";
 import Service from "@/models/Service";
+import Location from "@/models/Location";
 import User from "@/models/User";
 import { withAuth } from "@/utils/middleware";
 
@@ -27,6 +28,7 @@ async function handler(req, res) {
   await dbConnect();
 
   const results = {
+    locations: 0,
     inventoryCategories: 0,
     inventoryItems: 0,
     feedTypes: 0,
@@ -44,6 +46,26 @@ async function handler(req, res) {
   };
 
   try {
+    // ─── 0. Locations ───
+    const locationData = [
+      { name: "Main Farm", description: "Primary goat farm facility", address: "KM 12 Abuja-Keffi Road", city: "Abuja", state: "FCT" },
+      { name: "Annex Farm", description: "Secondary farm location for breeding stock", address: "Plot 5 Gwagwalada", city: "Gwagwalada", state: "FCT" },
+    ];
+
+    const locationMap = {};
+    for (const loc of locationData) {
+      try {
+        let existing = await Location.findOne({ name: loc.name });
+        if (!existing) {
+          existing = await Location.create(loc);
+          results.locations++;
+        }
+        locationMap[loc.name] = existing._id;
+      } catch (err) {
+        results.errors.push(`Location ${loc.name}: ${err.message}`);
+      }
+    }
+
     // ─── 1. Inventory Categories ───
     const categoryData = [
       { name: "Medication", description: "Veterinary drugs and treatments" },
@@ -153,43 +175,46 @@ async function handler(req, res) {
     }
 
     // ─── 4. Animals (comprehensive herd) ───
+    const mainFarm = locationMap["Main Farm"] || null;
+    const annexFarm = locationMap["Annex Farm"] || null;
+
     const animalData = [
       // Boer Females
-      { tagId: "BGF001", name: "Boer Doe 1", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-03-15"), status: "Alive", currentWeight: 23, acquisitionType: "Purchased", purchaseCost: 45000, marginPercent: 30, projectedMaxWeight: 50, projectedSalesPrice: 58500 },
-      { tagId: "BGF002", name: "Boer Doe 2", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-04-20"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 42000, marginPercent: 30, projectedMaxWeight: 48, projectedSalesPrice: 54600 },
-      { tagId: "BGF003", name: "Boer Doe 3", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-05-10"), status: "Alive", currentWeight: 22, acquisitionType: "Purchased", purchaseCost: 44000, marginPercent: 30, projectedMaxWeight: 50 },
-      { tagId: "BGF004", name: "Boer Doe 4", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-06-01"), status: "Alive", currentWeight: 21, acquisitionType: "Purchased", purchaseCost: 43000, marginPercent: 30, projectedMaxWeight: 49 },
-      { tagId: "BGF005", name: "Boer Doe 5", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-07-15"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 40000, marginPercent: 30, projectedMaxWeight: 47 },
-      { tagId: "BGF006", name: "Boer Doe 6", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-08-20"), status: "Alive", currentWeight: 19, acquisitionType: "Purchased", purchaseCost: 38000, marginPercent: 30, projectedMaxWeight: 45 },
+      { tagId: "BGF001", name: "Amina", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-03-15"), status: "Alive", currentWeight: 23, acquisitionType: "Purchased", purchaseCost: 45000, marginPercent: 30, projectedMaxWeight: 50, projectedSalesPrice: 58500, location: mainFarm },
+      { tagId: "BGF002", name: "Zara", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-04-20"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 42000, marginPercent: 30, projectedMaxWeight: 48, projectedSalesPrice: 54600, location: mainFarm },
+      { tagId: "BGF003", name: "Fatima", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-05-10"), status: "Alive", currentWeight: 22, acquisitionType: "Purchased", purchaseCost: 44000, marginPercent: 30, projectedMaxWeight: 50, location: mainFarm },
+      { tagId: "BGF004", name: "Aisha", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-06-01"), status: "Alive", currentWeight: 21, acquisitionType: "Purchased", purchaseCost: 43000, marginPercent: 30, projectedMaxWeight: 49, location: mainFarm },
+      { tagId: "BGF005", name: "Safiya", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-07-15"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 40000, marginPercent: 30, projectedMaxWeight: 47, location: annexFarm },
+      { tagId: "BGF006", name: "Maryam", species: "Goat", breed: "Boer", gender: "Female", dob: new Date("2023-08-20"), status: "Alive", currentWeight: 19, acquisitionType: "Purchased", purchaseCost: 38000, marginPercent: 30, projectedMaxWeight: 45, location: annexFarm },
       // Boer Males
-      { tagId: "BGM001", name: "Boer Buck 1", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2022-12-10"), status: "Alive", currentWeight: 45, acquisitionType: "Purchased", purchaseCost: 85000, marginPercent: 30, projectedMaxWeight: 70, projectedSalesPrice: 110500 },
-      { tagId: "BGM002", name: "Boer Buck 2", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-02-15"), status: "Alive", currentWeight: 35, acquisitionType: "Purchased", purchaseCost: 65000, marginPercent: 30, projectedMaxWeight: 65 },
-      { tagId: "BGM003", name: "Boer Buck 3", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-04-01"), status: "Alive", currentWeight: 30, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 60 },
-      { tagId: "BGM004", name: "Boer Buck 4", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-05-20"), status: "Alive", currentWeight: 28, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 58 },
-      { tagId: "BGM005", name: "Boer Buck 5", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-07-01"), status: "Alive", currentWeight: 25, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 55 },
-      { tagId: "BGM006", name: "Boer Buck 6", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-08-10"), status: "Alive", currentWeight: 22, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 52 },
+      { tagId: "BGM001", name: "Sultan", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2022-12-10"), status: "Alive", currentWeight: 45, acquisitionType: "Purchased", purchaseCost: 85000, marginPercent: 30, projectedMaxWeight: 70, projectedSalesPrice: 110500, location: mainFarm },
+      { tagId: "BGM002", name: "Khalid", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-02-15"), status: "Alive", currentWeight: 35, acquisitionType: "Purchased", purchaseCost: 65000, marginPercent: 30, projectedMaxWeight: 65, location: mainFarm },
+      { tagId: "BGM003", name: "Hassan", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-04-01"), status: "Alive", currentWeight: 30, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 60, location: mainFarm },
+      { tagId: "BGM004", name: "Bashir", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-05-20"), status: "Alive", currentWeight: 28, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 58, location: annexFarm },
+      { tagId: "BGM005", name: "Danjo", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-07-01"), status: "Alive", currentWeight: 25, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 55, location: annexFarm },
+      { tagId: "BGM006", name: "Ameer", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2023-08-10"), status: "Alive", currentWeight: 22, acquisitionType: "Bred on farm", purchaseCost: 0, marginPercent: 30, projectedMaxWeight: 52, location: annexFarm },
       // Sahel
-      { tagId: "SGF001", name: "Sahel Doe 1", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-01-10"), status: "Alive", currentWeight: 23, acquisitionType: "Purchased", purchaseCost: 35000, marginPercent: 25, projectedMaxWeight: 45 },
-      { tagId: "SGF004", name: "Sahel Doe 4", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-09-01"), status: "Alive", currentWeight: 18, acquisitionType: "Purchased", purchaseCost: 30000, marginPercent: 25, projectedMaxWeight: 40 },
-      { tagId: "SGF005", name: "Sahel Doe 5", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-10-15"), status: "Alive", currentWeight: 17, acquisitionType: "Purchased", purchaseCost: 28000, marginPercent: 25, projectedMaxWeight: 38 },
-      { tagId: "SGF006", name: "Sahel Doe 6", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-11-01"), status: "Alive", currentWeight: 16, acquisitionType: "Purchased", purchaseCost: 27000, marginPercent: 25, projectedMaxWeight: 36 },
+      { tagId: "SGF001", name: "Hauwa", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-01-10"), status: "Alive", currentWeight: 23, acquisitionType: "Purchased", purchaseCost: 35000, marginPercent: 25, projectedMaxWeight: 45, location: mainFarm },
+      { tagId: "SGF004", name: "Binta", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-09-01"), status: "Alive", currentWeight: 18, acquisitionType: "Purchased", purchaseCost: 30000, marginPercent: 25, projectedMaxWeight: 40, location: mainFarm },
+      { tagId: "SGF005", name: "Nafisa", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-10-15"), status: "Alive", currentWeight: 17, acquisitionType: "Purchased", purchaseCost: 28000, marginPercent: 25, projectedMaxWeight: 38, location: mainFarm },
+      { tagId: "SGF006", name: "Jamila", species: "Goat", breed: "Sahel", gender: "Female", dob: new Date("2023-11-01"), status: "Alive", currentWeight: 16, acquisitionType: "Purchased", purchaseCost: 27000, marginPercent: 25, projectedMaxWeight: 36, location: annexFarm },
       // Wad
-      { tagId: "WGF003", name: "Wad Doe 3", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-06-15"), status: "Alive", currentWeight: 15, acquisitionType: "Purchased", purchaseCost: 25000, marginPercent: 25, projectedMaxWeight: 35 },
-      { tagId: "WGF004", name: "Wad Doe 4", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-07-20"), status: "Alive", currentWeight: 14, acquisitionType: "Purchased", purchaseCost: 24000, marginPercent: 25, projectedMaxWeight: 33 },
-      { tagId: "WGF005", name: "Wad Doe 5", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-08-25"), status: "Alive", currentWeight: 13, acquisitionType: "Purchased", purchaseCost: 23000, marginPercent: 25, projectedMaxWeight: 32 },
-      { tagId: "WGF006", name: "Wad Doe 6", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-09-30"), status: "Alive", currentWeight: 12, acquisitionType: "Purchased", purchaseCost: 22000, marginPercent: 25, projectedMaxWeight: 30 },
+      { tagId: "WGF003", name: "Halima", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-06-15"), status: "Alive", currentWeight: 15, acquisitionType: "Purchased", purchaseCost: 25000, marginPercent: 25, projectedMaxWeight: 35, location: mainFarm },
+      { tagId: "WGF004", name: "Asiya", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-07-20"), status: "Alive", currentWeight: 14, acquisitionType: "Purchased", purchaseCost: 24000, marginPercent: 25, projectedMaxWeight: 33, location: mainFarm },
+      { tagId: "WGF005", name: "Rukayya", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-08-25"), status: "Alive", currentWeight: 13, acquisitionType: "Purchased", purchaseCost: 23000, marginPercent: 25, projectedMaxWeight: 32, location: annexFarm },
+      { tagId: "WGF006", name: "Hadiza", species: "Goat", breed: "Wad", gender: "Female", dob: new Date("2023-09-30"), status: "Alive", currentWeight: 12, acquisitionType: "Purchased", purchaseCost: 22000, marginPercent: 25, projectedMaxWeight: 30, location: annexFarm },
       // Red Sokoto
-      { tagId: "RSF001", name: "Red Sokoto Doe 1", species: "Goat", breed: "Red Sokoto", gender: "Female", dob: new Date("2023-05-01"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 32000, marginPercent: 25, projectedMaxWeight: 40 },
+      { tagId: "RSF001", name: "Ummi", species: "Goat", breed: "Red Sokoto", gender: "Female", dob: new Date("2023-05-01"), status: "Alive", currentWeight: 20, acquisitionType: "Purchased", purchaseCost: 32000, marginPercent: 25, projectedMaxWeight: 40, location: mainFarm },
       // Hadija
-      { tagId: "HGF004", name: "Hadija Doe 4", species: "Goat", breed: "Hadija", gender: "Female", dob: new Date("2023-08-01"), status: "Alive", currentWeight: 18, acquisitionType: "Purchased", purchaseCost: 30000, marginPercent: 25, projectedMaxWeight: 38 },
-      { tagId: "HGF005", name: "Hadija Doe 5", species: "Goat", breed: "Hadija", gender: "Female", dob: new Date("2023-09-15"), status: "Alive", currentWeight: 17, acquisitionType: "Purchased", purchaseCost: 28000, marginPercent: 25, projectedMaxWeight: 36 },
+      { tagId: "HGF004", name: "Sadia", species: "Goat", breed: "Hadija", gender: "Female", dob: new Date("2023-08-01"), status: "Alive", currentWeight: 18, acquisitionType: "Purchased", purchaseCost: 30000, marginPercent: 25, projectedMaxWeight: 38, location: mainFarm },
+      { tagId: "HGF005", name: "Kawthar", species: "Goat", breed: "Hadija", gender: "Female", dob: new Date("2023-09-15"), status: "Alive", currentWeight: 17, acquisitionType: "Purchased", purchaseCost: 28000, marginPercent: 25, projectedMaxWeight: 36, location: mainFarm },
       // Sheep (for mortality seed)
-      { tagId: "S-212", name: "Balami Weaner", species: "Sheep", breed: "Balami", gender: "Female", dob: new Date("2025-06-01"), status: "Alive", currentWeight: 18.2, acquisitionType: "Bred on farm", purchaseCost: 45000, projectedMaxWeight: 50 },
+      { tagId: "S-212", name: "Lawal", species: "Sheep", breed: "Balami", gender: "Female", dob: new Date("2025-06-01"), status: "Alive", currentWeight: 18.2, acquisitionType: "Bred on farm", purchaseCost: 45000, projectedMaxWeight: 50, location: annexFarm },
       // Extra goats for mortality seed
-      { tagId: "G-102", name: "RS Kid", species: "Goat", breed: "Red Sokoto", gender: "Male", dob: new Date("2025-10-01"), status: "Alive", currentWeight: 8.5, acquisitionType: "Bred on farm", purchaseCost: 22000, projectedMaxWeight: 40 },
-      { tagId: "G-088", name: "Boer Buck Prime", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2022-06-01"), status: "Alive", currentWeight: 45, acquisitionType: "Purchased", purchaseCost: 120000, projectedMaxWeight: 70 },
-      { tagId: "G-155", name: "Kalahari Doe", species: "Goat", breed: "Kalahari", gender: "Female", dob: new Date("2023-01-15"), status: "Alive", currentWeight: 38, acquisitionType: "Purchased", purchaseCost: 85000, projectedMaxWeight: 55 },
-      { tagId: "G-201", name: "RS Kid 2", species: "Goat", breed: "Red Sokoto", gender: "Male", dob: new Date("2025-11-01"), status: "Alive", currentWeight: 7.2, acquisitionType: "Bred on farm", purchaseCost: 18500, projectedMaxWeight: 38 },
+      { tagId: "G-102", name: "Kamal", species: "Goat", breed: "Red Sokoto", gender: "Male", dob: new Date("2025-10-01"), status: "Alive", currentWeight: 8.5, acquisitionType: "Bred on farm", purchaseCost: 22000, projectedMaxWeight: 40, location: mainFarm },
+      { tagId: "G-088", name: "Ibrahim", species: "Goat", breed: "Boer", gender: "Male", dob: new Date("2022-06-01"), status: "Alive", currentWeight: 45, acquisitionType: "Purchased", purchaseCost: 120000, projectedMaxWeight: 70, location: mainFarm },
+      { tagId: "G-155", name: "Salma", species: "Goat", breed: "Kalahari", gender: "Female", dob: new Date("2023-01-15"), status: "Alive", currentWeight: 38, acquisitionType: "Purchased", purchaseCost: 85000, projectedMaxWeight: 55, location: annexFarm },
+      { tagId: "G-201", name: "Yusuf", species: "Goat", breed: "Red Sokoto", gender: "Male", dob: new Date("2025-11-01"), status: "Alive", currentWeight: 7.2, acquisitionType: "Bred on farm", purchaseCost: 18500, projectedMaxWeight: 38, location: mainFarm },
     ];
 
     const animalMap = {};

@@ -20,6 +20,7 @@ const MortalityRecordSchema = new mongoose.Schema(
     },
     valueLost: { type: Number, default: 0 },
     reportedBy: String,
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     notes: String,
   },
   { timestamps: true }

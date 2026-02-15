@@ -1,19 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaSkull, FaCalendar, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
+import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
+import { BusinessContext } from "@/context/BusinessContext";
+import { formatCurrency } from "@/utils/formatting";
+import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 export default function MortalityTracking() {
   const router = useRouter();
+  const { businessSettings } = useContext(BusinessContext);
   const [animals, setAnimals] = useState([]);
   const [mortalityRecords, setMortalityRecords] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCause, setFilterCause] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [filterLocation, setFilterLocation] = useState("all");
   const [formData, setFormData] = useState({
     animalId: "",
     dateOfDeath: "",
@@ -23,6 +31,7 @@ export default function MortalityTracking() {
     weight: "",
     estimatedValue: "",
     disposalMethod: "",
+    location: "",
     notes: "",
   });
   const [saving, setSaving] = useState(false);
@@ -59,9 +68,10 @@ export default function MortalityTracking() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [animalsRes, mortalityRes] = await Promise.all([
+      const [animalsRes, mortalityRes, locRes] = await Promise.all([
         fetch("/api/animals", { headers }),
         fetch("/api/mortality", { headers }),
+        fetch("/api/locations", { headers }),
       ]);
 
       const animalsData = await animalsRes.json();
@@ -69,6 +79,9 @@ export default function MortalityTracking() {
 
       const mortalityData = await mortalityRes.json();
       setMortalityRecords(Array.isArray(mortalityData) ? mortalityData : []);
+
+      const locData = await locRes.json();
+      setLocations(Array.isArray(locData) ? locData : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
@@ -120,6 +133,7 @@ export default function MortalityTracking() {
           weight: formData.weight ? Number(formData.weight) : null,
           estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0,
           disposalMethod: formData.disposalMethod,
+          location: formData.location || null,
           reportedBy: JSON.parse(localStorage.getItem("user") || "{}").name || "Unknown",
           notes: formData.notes,
         }),
@@ -141,6 +155,7 @@ export default function MortalityTracking() {
         weight: "",
         estimatedValue: "",
         disposalMethod: "",
+        location: "",
         notes: "",
       });
       setShowForm(false);
@@ -166,7 +181,7 @@ export default function MortalityTracking() {
     }
   };
 
-  const filteredRecords = mortalityRecords.filter(record => {
+  const filteredRecords = filterByLocation(filterByPeriod(mortalityRecords.filter(record => {
     const animalName = record.animal?.name || "";
     const animalTag = record.animal?.tagId || "";
     const matchesSearch =
@@ -174,7 +189,7 @@ export default function MortalityTracking() {
       animalTag.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterCause === "all" || record.cause === filterCause;
     return matchesSearch && matchesFilter;
-  });
+  }), filterPeriod, "dateOfDeath"), filterLocation);
 
   // Calculate stats
   const thisMonth = new Date().getMonth();
@@ -226,48 +241,26 @@ export default function MortalityTracking() {
         stats={[
           { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
           { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅" },
-          { label: "Est. Loss", value: `₦${totalEstimatedLoss.toLocaleString()}`, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
+          { label: "Est. Loss", value: formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
           { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true },
         ]}
       />
 
       {/* Controls */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <input
-              type="text"
-              placeholder="Search by animal name or tag..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-100"
-            />
-            <select
-              value={filterCause}
-              onChange={(e) => setFilterCause(e.target.value)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-100"
-            >
-              <option value="all">All Causes</option>
-              {causeOptions.map(cause => (
-                <option key={cause} value={cause}>{cause}</option>
-              ))}
-            </select>
-          </div>
-          <motion.button
-            onClick={() => setShowForm(!showForm)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
-              showForm
-                ? "bg-gray-200 text-gray-700"
-                : "bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-lg hover:shadow-xl"
-            }`}
-          >
-            {showForm ? <FaTimes /> : <FaPlus />}
-            {showForm ? "Cancel" : "Record Death"}
-          </motion.button>
-        </div>
-      </div>
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search by animal name or tag..."
+        filters={[
+          { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterCause, onChange: setFilterCause, options: [{ value: "all", label: "All Causes" }, ...causeOptions.map((c) => ({ value: c, label: c }))] },
+        ]}
+        showAddButton={true}
+        onAddClick={() => setShowForm(!showForm)}
+        isAddActive={showForm}
+        addLabel={showForm ? "Cancel" : "Record Death"}
+      />
 
       {/* Add Form */}
       <AnimatePresence>
@@ -401,6 +394,20 @@ export default function MortalityTracking() {
               </div>
 
               <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Location</label>
+                <select
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
+                >
+                  <option value="">Select location...</option>
+                  {locations.map((l) => (
+                    <option key={l._id} value={l._id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Notes</label>
                 <textarea
                   value={formData.notes}
@@ -502,7 +509,7 @@ export default function MortalityTracking() {
                       {record.daysSick || "-"}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-700 font-semibold">
-                      {record.estimatedValue ? `₦${Number(record.estimatedValue).toLocaleString()}` : record.valueLost ? `₦${Number(record.valueLost).toLocaleString()}` : "-"}
+                      {record.estimatedValue ? formatCurrency(Number(record.estimatedValue), businessSettings.currency) : record.valueLost ? formatCurrency(Number(record.valueLost), businessSettings.currency) : "-"}
                     </td>
                     <td className="px-6 py-4 text-gray-600 text-sm">
                       {record.disposalMethod || "-"}

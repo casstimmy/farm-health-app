@@ -6,9 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaTimes, FaSpinner, FaCheck, FaStethoscope, FaSearch, FaEdit, FaTrash } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
+import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
+import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Injection", "Oral", "Topical", "IV Drip", "Surgical", "Vaccination", "Deworming", "Other"];
@@ -26,6 +28,7 @@ const emptyForm = {
   duration: "",
   preWeight: "",
   vaccines: "",
+  location: "",
   treatmentA: { treatmentType: "", medication: "", dosage: "", route: "" },
   needsMultipleTreatments: false,
   treatmentB: { treatmentType: "", medication: "", dosage: "", route: "" },
@@ -45,11 +48,14 @@ export default function HealthRecords() {
   const [records, setRecords] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [medications, setMedications] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [filterLocation, setFilterLocation] = useState("all");
   const [formData, setFormData] = useState({ ...emptyForm });
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
@@ -67,18 +73,20 @@ export default function HealthRecords() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-      const [rRes, aRes, mRes] = await Promise.all([
+      const [rRes, aRes, mRes, lRes] = await Promise.all([
         fetch("/api/health-records", { headers }),
         fetch("/api/animals", { headers }),
         fetch("/api/inventory", { headers }),
+        fetch("/api/locations", { headers }),
       ]);
-      const [rData, aData, mData] = await Promise.all([rRes.json(), aRes.json(), mRes.json()]);
+      const [rData, aData, mData, lData] = await Promise.all([rRes.json(), aRes.json(), mRes.json(), lRes.json()]);
       setRecords(Array.isArray(rData) ? rData : []);
       setAnimals(Array.isArray(aData) ? aData : []);
       const meds = (Array.isArray(mData) ? mData : []).filter(i =>
         ["medication", "medications", "medical supplies"].includes((i.categoryName || i.category || "").toLowerCase())
       );
       setMedications(meds);
+      setLocations(Array.isArray(lData) ? lData : []);
     } catch (err) {
       console.error("Failed to fetch:", err);
     } finally {
@@ -113,6 +121,7 @@ export default function HealthRecords() {
       duration: record.duration || "",
       preWeight: record.preWeight || "",
       vaccines: record.vaccines || "",
+      location: record.location?._id || record.location || "",
       treatmentA: {
         treatmentType: record.treatmentA?.treatmentType || "",
         medication: record.treatmentA?.medication?._id || record.treatmentA?.medication || "",
@@ -191,7 +200,7 @@ export default function HealthRecords() {
     }
   };
 
-  const filtered = records.filter(r => {
+  const filtered = filterByLocation(filterByPeriod(records.filter(r => {
     const matchSearch = !searchTerm ||
       (r.animalTagId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.diagnosis || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,7 +208,7 @@ export default function HealthRecords() {
       (r.treatedBy || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter = filterStatus === "all" || r.recoveryStatus === filterStatus;
     return matchSearch && matchFilter;
-  });
+  }), filterPeriod), filterLocation);
 
   const stats = {
     total: records.length,
@@ -227,29 +236,20 @@ export default function HealthRecords() {
       ]} />
 
       {/* Controls */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by tag, diagnosis, symptoms..."
-                className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
-            </div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
-              <option value="all">All Status</option>
-              {RECOVERY_STATUS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <motion.button onClick={() => { setShowForm(!showForm); setEditId(null); setFormData({ ...emptyForm }); }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${showForm ? "bg-gray-200 text-gray-700" : "bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-lg"}`}>
-            {showForm ? <FaTimes /> : <FaPlus />}
-            {showForm ? "Cancel" : "New Health Record"}
-          </motion.button>
-        </div>
-      </div>
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        placeholder="Search by tag, diagnosis, symptoms..."
+        filters={[
+          { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, ...RECOVERY_STATUS.map((s) => ({ value: s, label: s }))] },
+        ]}
+        showAddButton={true}
+        onAddClick={() => { setShowForm(!showForm); setEditId(null); setFormData({ ...emptyForm }); }}
+        isAddActive={showForm}
+        addLabel={showForm ? "Cancel" : "New Health Record"}
+      />
 
       {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg font-semibold">⚠️ {error}</div>}
       {success && <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg font-semibold">✅ {success}</div>}
@@ -288,6 +288,14 @@ export default function HealthRecords() {
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Time</label>
                     <input type="time" value={formData.time} onChange={(e) => handleChange("time", e.target.value)}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Location</label>
+                    <select value={formData.location} onChange={(e) => handleChange("location", e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
+                      <option value="">Select location...</option>
+                      {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                    </select>
                   </div>
                 </div>
                 {selectedAnimal && (

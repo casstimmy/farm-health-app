@@ -30,6 +30,7 @@ async function handler(req, res) {
         totalCost: feedingData.totalCost || 0,
         date: feedingData.date || new Date(),
         feedingMethod: feedingData.feedingMethod || "",
+        location: feedingData.location || animal.location || null,
         notes: feedingData.notes || "",
       });
 
@@ -52,7 +53,8 @@ async function handler(req, res) {
       const records = await FeedingRecord.find()
         .sort({ date: -1 })
         .populate("animal")
-        .populate("feedType");
+        .populate("feedType")
+        .populate("location");
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -51,6 +51,7 @@ const FinanceSchema = new mongoose.Schema(
       default: null,
     },
     recordedBy: String,
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     notes: String,
   },
   { timestamps: true }

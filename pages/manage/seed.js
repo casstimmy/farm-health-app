@@ -88,6 +88,7 @@ export default function SeedDatabase() {
 
   const resultItems = result
     ? [
+        { label: "Locations", count: result.locations },
         { label: "Inventory Categories", count: result.inventoryCategories },
         { label: "Inventory Items", count: result.inventoryItems },
         { label: "Feed Types", count: result.feedTypes },

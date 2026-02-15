@@ -337,7 +337,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               value={formData.name}
               onChange={handleChange}
               className="input-field"
-              placeholder="e.g., Gentle Kay"
+              placeholder="e.g., Amina"
             />
           </div>
 
