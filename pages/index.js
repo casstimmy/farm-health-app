@@ -46,6 +46,9 @@ export default function Home() {
   const [allInventory, setAllInventory] = useState([]);
   const [allTreatments, setAllTreatments] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState("today");
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedResult, setSeedResult] = useState(null);
+  const [isOnline, setIsOnline] = useState(true);
 
   /* =======================
      FETCH DATA
@@ -91,6 +94,25 @@ export default function Home() {
   }, [router]);
 
   /* =======================
+     CONNECTIVITY CHECK
+  ======================= */
+  useEffect(() => {
+    // Set initial online status
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  /* =======================
      DATE FILTER
   ======================= */
   const isWithinPeriod = (date) => {
@@ -107,6 +129,55 @@ export default function Home() {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }
     return true;
+  };
+
+  /* =======================
+     SEED DATABASE
+  ======================= */
+  const handleSeedDatabase = async () => {
+    if (!confirm("Are you sure you want to seed the database with sample data? This will add test records.")) {
+      return;
+    }
+
+    setSeedLoading(true);
+    setSeedResult(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/seed", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSeedResult({
+          success: false,
+          message: data.error || "Failed to seed database",
+        });
+      } else {
+        setSeedResult({
+          success: true,
+          message: "Database seeded successfully! ✓",
+          results: data.results,
+        });
+        // Refresh dashboard data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+    } catch (err) {
+      setSeedResult({
+        success: false,
+        message: err.message || "Error seeding database",
+      });
+    } finally {
+      setSeedLoading(false);
+    }
   };
 
   /* =======================
@@ -196,22 +267,82 @@ export default function Home() {
     <>
       {/* Header */}
       <header className="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-10 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-10 rounded-b-3xl shadow-lg">
-        <div className="flex justify-between items-start gap-4">
+        <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold mb-2">{businessSettings.businessName}</h1>
             <p className="text-green-50 text-xl font-light">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
           </div>
-          <select
-            className="bg-white text-gray-900 border-2 border-green-200 px-6 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 font-semibold shadow-lg"
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-          >
-            <option value="today">📅 Today</option>
-            <option value="week">📊 This Week</option>
-            <option value="month">📈 This Month</option>
-          </select>
+          <div className="flex gap-3 items-center flex-wrap">
+            {user?.role === "SuperAdmin" && (
+              <motion.button
+                onClick={handleSeedDatabase}
+                disabled={seedLoading || !isOnline}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title={!isOnline ? "App is offline - seed data cannot be pushed" : "Seed database with sample data"}
+                className="bg-white text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-50 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {seedLoading ? (
+                  <>
+                    <FaSpinner className="animate-spin w-4 h-4" />
+                    <span className="text-sm">Seeding...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{!isOnline ? "📡" : "🌱"}</span>
+                    <span className="text-sm hidden sm:inline">{!isOnline ? "Offline" : "Seed DB"}</span>
+                  </>
+                )}
+              </motion.button>
+            )}
+            <select
+              className="bg-white text-gray-900 border-2 border-green-200 px-6 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300 font-semibold shadow-lg"
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+            >
+              <option value="today">📅 Today</option>
+              <option value="week">📊 This Week</option>
+              <option value="month">📈 This Month</option>
+            </select>
+          </div>
         </div>
       </header>
+
+      {/* Offline Notification */}
+      {!isOnline && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2"
+        >
+          <span>📡</span>
+          <span>You are currently offline. Seeding data is disabled until connection is restored.</span>
+        </motion.div>
+      )}
+
+      {/* Seed Result Notification */}
+      {seedResult && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 p-4 rounded-lg border-l-4 font-semibold ${
+            seedResult.success
+              ? "bg-green-50 border-green-500 text-green-700"
+              : "bg-red-50 border-red-500 text-red-700"
+          }`}
+        >
+          <div>{seedResult.message}</div>
+          {seedResult.results && (
+            <div className="mt-2 text-sm space-y-1">
+              {Object.entries(seedResult.results).map(([key, value]) => (
+                <div key={key}>
+                  • {key.replace(/([A-Z])/g, " $1").trim()}: {value}
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {loading ? (
         <Loader message="Loading your dashboard..." color="green-600" />

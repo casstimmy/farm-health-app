@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
@@ -14,6 +14,23 @@ export default function SeedDatabase() {
   const [seeding, setSeeding] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    // Set initial online status
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   if (roleLoading) {
     return (
@@ -101,6 +118,16 @@ export default function SeedDatabase() {
       <div className="max-w-2xl mx-auto">
         {/* Seed Card */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
+          {!isOnline && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2"
+            >
+              <span>📡</span>
+              <span>You are currently offline. Seeding data is disabled until connection is restored.</span>
+            </motion.div>
+          )}
           <div className="text-center">
             <FaDatabase className="text-purple-500 text-5xl mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -123,9 +150,10 @@ export default function SeedDatabase() {
 
             <button
               onClick={handleSeed}
-              disabled={seeding}
+              disabled={seeding || !isOnline}
+              title={!isOnline ? "App is offline - seeding is disabled" : ""}
               className={`px-8 py-4 rounded-xl text-white font-semibold text-lg transition-all ${
-                seeding
+                seeding || !isOnline
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-purple-600 hover:bg-purple-700 hover:shadow-lg active:scale-95"
               }`}
@@ -134,6 +162,11 @@ export default function SeedDatabase() {
                 <span className="flex items-center gap-3">
                   <FaSpinner className="animate-spin" />
                   Seeding Database...
+                </span>
+              ) : !isOnline ? (
+                <span className="flex items-center gap-3">
+                  <span>📡</span>
+                  Offline - Cannot Seed
                 </span>
               ) : (
                 <span className="flex items-center gap-3">
