@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const AnimalDataContext = createContext(null);
 
@@ -17,39 +18,66 @@ export function AnimalDataProvider({ children }) {
   const [error, setError] = useState(null);
   const hasLoadedRef = useRef(false);
   const isMountedRef = useRef(true);
+  const latestRequestIdRef = useRef(0);
+  const animalsRef = useRef([]);
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => { isMountedRef.current = false; };
   }, []);
 
+  useEffect(() => {
+    animalsRef.current = animals;
+  }, [animals]);
+
   /** Fetch all animals from the API */
   const fetchAnimals = useCallback(async () => {
+    const requestId = ++latestRequestIdRef.current;
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
-      if (isMountedRef.current) setLoading(false);
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
+        setAnimals([]);
+        setError(null);
+        setLoading(false);
+      }
       return [];
     }
     try {
       // Only show loading spinner on first load to prevent flicker
       if (!hasLoadedRef.current && isMountedRef.current) setLoading(true);
-      const res = await fetch("/api/animals", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch animals");
-      const data = await res.json();
-      const result = Array.isArray(data) ? data : [];
-      if (isMountedRef.current) {
+
+      const result = await getCachedData(
+        "api/animals",
+        async () => {
+          const res = await fetch("/api/animals", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            throw new Error(`Failed to fetch animals (${res.status})`);
+          }
+
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
+        },
+        60 * 1000
+      );
+
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
         setAnimals(result);
         setError(null);
         hasLoadedRef.current = true;
       }
       return result;
     } catch (err) {
-      if (isMountedRef.current) setError(err.message);
-      return [];
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
+        setError(err.message);
+      }
+      return animalsRef.current;
     } finally {
-      if (isMountedRef.current) setLoading(false);
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -58,8 +86,30 @@ export function AnimalDataProvider({ children }) {
     fetchAnimals();
   }, [fetchAnimals]);
 
+  // Re-validate animal data when app regains focus/network.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchAnimals();
+      }
+    };
+
+    const handleOnline = () => {
+      fetchAnimals();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [fetchAnimals]);
+
   /** Update a single animal in cache (after editing) */
   const updateAnimalInCache = useCallback((animalId, updatedFields) => {
+    invalidateCache("api/animals");
     setAnimals((prev) =>
       prev.map((a) => (a._id === animalId ? { ...a, ...updatedFields } : a))
     );
@@ -67,11 +117,13 @@ export function AnimalDataProvider({ children }) {
 
   /** Add a new animal to cache */
   const addAnimalToCache = useCallback((newAnimal) => {
+    invalidateCache("api/animals");
     setAnimals((prev) => [newAnimal, ...prev]);
   }, []);
 
   /** Remove an animal from cache */
   const removeAnimalFromCache = useCallback((animalId) => {
+    invalidateCache("api/animals");
     setAnimals((prev) => prev.filter((a) => a._id !== animalId));
   }, []);
 

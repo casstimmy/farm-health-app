@@ -8,6 +8,7 @@ import { FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, Fa
 import dynamic from "next/dynamic";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 // Lazy-load Chart.js components to reduce initial bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -37,6 +38,8 @@ export default function Home() {
   const { businessSettings } = useContext(BusinessContext);
   const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
+  const [dashboardReady, setDashboardReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [user, setUser] = useState(null);
   const [data, setData] = useState({ animals: [], inventory: [], treatments: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
   const [isOnline, setIsOnline] = useState(true);
@@ -44,39 +47,82 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
-    if (!token || !userData) { router.push("/login"); return; }
+    if (!token || !userData) {
+      router.push("/login");
+      return;
+    }
     setUser(JSON.parse(userData));
 
     async function fetchData() {
       try {
         setLoading(true);
+        setLoadError("");
         const headers = { Authorization: `Bearer ${token}` };
-        const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.ok ? r.json() : []);
+        const fetchApi = async (name, endpoint) => {
+          try {
+            const payload = await getCachedData(
+              `api/home/${name}`,
+              async () => {
+                const response = await fetch(endpoint, { headers });
+                if (!response.ok) {
+                  throw new Error(`${name} failed (${response.status})`);
+                }
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+              },
+              60 * 1000
+            );
+            return { ok: true, data: payload };
+          } catch (error) {
+            return { ok: false, data: [] };
+          }
+        };
         
         // Fetch all data directly in parallel — simple and reliable
         const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          fetchApi("/api/animals"),
-          fetchApi("/api/inventory"),
-          fetchApi("/api/treatment"),
-          fetchApi("/api/finance"),
-          fetchApi("/api/mortality"),
-          fetchApi("/api/breeding"),
-          fetchApi("/api/health-records"),
-          fetchApi("/api/feeding"),
+          fetchApi("animals", "/api/animals"),
+          fetchApi("inventory", "/api/inventory"),
+          fetchApi("treatment", "/api/treatment"),
+          fetchApi("finance", "/api/finance"),
+          fetchApi("mortality", "/api/mortality"),
+          fetchApi("breeding", "/api/breeding"),
+          fetchApi("health-records", "/api/health-records"),
+          fetchApi("feeding", "/api/feeding"),
         ]);
         
+        const successCount = [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding].filter((item) => item.ok).length;
+        const minimumMajorityReady = successCount >= 5 && animals.ok && inventory.ok;
+
         setData({
-          animals: Array.isArray(animals) ? animals : [],
-          inventory: Array.isArray(inventory) ? inventory : [],
-          treatments: Array.isArray(treatments) ? treatments : [],
-          finance: Array.isArray(finance) ? finance : [],
-          mortality: Array.isArray(mortality) ? mortality : [],
-          breeding: Array.isArray(breeding) ? breeding : [],
-          healthRecords: Array.isArray(healthRecords) ? healthRecords : [],
-          feeding: Array.isArray(feeding) ? feeding : [],
+          animals: animals.data,
+          inventory: inventory.data,
+          treatments: treatments.data,
+          finance: finance.data,
+          mortality: mortality.data,
+          breeding: breeding.data,
+          healthRecords: healthRecords.data,
+          feeding: feeding.data,
         });
+
+        if (!minimumMajorityReady) {
+          invalidateCache("api/home/animals");
+          invalidateCache("api/home/inventory");
+          invalidateCache("api/home/treatment");
+          invalidateCache("api/home/finance");
+          invalidateCache("api/home/mortality");
+          invalidateCache("api/home/breeding");
+          invalidateCache("api/home/health-records");
+          invalidateCache("api/home/feeding");
+          setDashboardReady(false);
+          setLoadError("Dashboard is waiting on required data. Check connection and retry.");
+          return;
+        }
+
+        setDashboardReady(true);
       } catch (err) {
         console.error("Dashboard load failed:", err);
+        setDashboardReady(false);
+        setLoadError("Dashboard failed to load. Please retry.");
       } finally {
         setLoading(false);
       }
@@ -241,6 +287,17 @@ export default function Home() {
 
       {loading ? (
         <Loader message="Loading dashboard..." color="green-600" />
+      ) : !dashboardReady ? (
+        <div className="bg-white rounded-xl border border-red-200 p-6">
+          <h2 className="text-lg font-bold text-red-700 mb-2">Dashboard not ready</h2>
+          <p className="text-sm text-gray-600 mb-4">{loadError || "Required data is still loading."}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+          >
+            Retry Load
+          </button>
+        </div>
       ) : (
         <>
           {/* Quick Actions */}

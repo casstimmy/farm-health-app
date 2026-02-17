@@ -11,7 +11,7 @@ import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterStatus: parentFilterStatus = "all" }) {
     const { businessSettings } = useContext(BusinessContext);
-    const { animals: globalAnimals, loading: globalLoading, fetchAnimals, updateAnimalInCache, removeAnimalFromCache } = useAnimalData();
+    const { animals: globalAnimals, loading: globalLoading, updateAnimalInCache, removeAnimalFromCache } = useAnimalData();
     // Modal state for image viewer
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImages, setModalImages] = useState([]);
@@ -189,9 +189,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
       if (res.ok) {
         // Update local state
         setModalImages(updatedImages);
-        setAnimals((prev) =>
-          prev.map((a) => (a._id === animalId ? { ...a, images: updatedImages } : a))
-        );
+        updateAnimalInCache(animalId, { images: updatedImages });
       }
     } catch (error) {
       console.error("Failed to delete image:", error);
@@ -262,9 +260,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
       const updatedAnimal = { ...animal, images: updatedImages };
       setModalImages(updatedImages);
       setModalAnimal(updatedAnimal);
-      setAnimals((prev) =>
-        prev.map((a) => (a._id === animalId ? updatedAnimal : a))
-      );
+      updateAnimalInCache(animalId, { images: updatedImages });
       
       // Reset file input
       e.target.value = "";
@@ -478,7 +474,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
                           className="border px-2 py-1 rounded text-xs"
                         >
                           <option value="Alive">Alive</option>
-                          <option value="Sick">Sick</option>
+                          <option value="Quarantined">Quarantined</option>
                           <option value="Sold">Sold</option>
                           <option value="Dead">Dead</option>
                         </select>

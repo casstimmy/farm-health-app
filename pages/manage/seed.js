@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle } from "react-icons/fa";
@@ -150,14 +150,14 @@ export default function SeedDatabase() {
   };
 
   // ──── Excel Handlers ────
-  const handleDrag = useCallback((e) => {
+  const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
     else if (e.type === "dragleave") setDragActive(false);
-  }, []);
+  };
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -169,7 +169,7 @@ export default function SeedDatabase() {
       setError("Please upload an Excel (.xlsx, .xls) or CSV file");
       setTimeout(() => setError(""), 3000);
     }
-  }, []);
+  };
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];

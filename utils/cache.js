@@ -7,6 +7,24 @@
 const cache = new Map();
 const requestInProgress = new Map();
 
+function getSessionSuffix() {
+  if (typeof window === "undefined") return "server";
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return "guest";
+
+    // Use a short suffix to isolate cache across sessions without storing sensitive data.
+    return token.slice(-12);
+  } catch (error) {
+    return "guest";
+  }
+}
+
+function normalizeKey(key) {
+  return `${key}::${getSessionSuffix()}`;
+}
+
 /**
  * Get cached data or fetch if not cached
  * @param {string} key - Unique cache key (usually the API endpoint)
@@ -16,36 +34,43 @@ const requestInProgress = new Map();
  */
 export async function getCachedData(key, fetchFn, ttl = 5 * 60 * 1000) {
   const now = Date.now();
+  const scopedKey = normalizeKey(key);
 
   // Check if data is still in cache and not expired
-  if (cache.has(key)) {
-    const { data, timestamp } = cache.get(key);
+  if (cache.has(scopedKey)) {
+    const { data, timestamp } = cache.get(scopedKey);
     if (now - timestamp < ttl) {
       return data;
     } else {
-      cache.delete(key);
+      cache.delete(scopedKey);
     }
   }
 
   // If request is already in progress, wait for it
-  if (requestInProgress.has(key)) {
-    return requestInProgress.get(key);
+  if (requestInProgress.has(scopedKey)) {
+    return requestInProgress.get(scopedKey);
   }
 
   // Fetch new data
   const promise = (async () => {
     try {
       const data = await fetchFn();
-      cache.set(key, { data, timestamp: now });
-      requestInProgress.delete(key);
+
+      // Avoid caching transient empty API payloads (common during token race or intermittent failures).
+      const shouldSkipApiEmptyArray = key.startsWith("api/") && Array.isArray(data) && data.length === 0;
+      if (!shouldSkipApiEmptyArray) {
+        cache.set(scopedKey, { data, timestamp: Date.now() });
+      }
+
+      requestInProgress.delete(scopedKey);
       return data;
     } catch (error) {
-      requestInProgress.delete(key);
+      requestInProgress.delete(scopedKey);
       throw error;
     }
   })();
 
-  requestInProgress.set(key, promise);
+  requestInProgress.set(scopedKey, promise);
   return promise;
 }
 
@@ -54,8 +79,10 @@ export async function getCachedData(key, fetchFn, ttl = 5 * 60 * 1000) {
  * @param {string} key - Cache key to invalidate
  */
 export function invalidateCache(key) {
-  cache.delete(key);
-  requestInProgress.delete(key);
+  const suffix = getSessionSuffix();
+  const scopedKey = `${key}::${suffix}`;
+  cache.delete(scopedKey);
+  requestInProgress.delete(scopedKey);
 }
 
 /**

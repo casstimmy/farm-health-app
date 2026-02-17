@@ -492,8 +492,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             >
               <option value="Bred on farm">Bred on farm</option>
               <option value="Purchased">Purchased</option>
-              <option value="Imported">Imported</option>
-              <option value="Gift">Gift</option>
+              <option value="Donated">Donated</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -602,7 +602,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               className="input-field"
             >
               <option value="Alive">Alive ✓</option>
-              <option value="Sick">Sick 🤒</option>
+              <option value="Quarantined">Quarantined</option>
               <option value="Sold">Sold 💰</option>
               <option value="Dead">Dead ✗</option>
             </select>
