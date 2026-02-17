@@ -10,7 +10,13 @@ import BusinessSettings from "@/models/BusinessSettings";
 
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop";
 
-export default function Login({ staffList = [], locations = [], loginHeroImage = "" }) {
+export default function Login({
+  staffList = [],
+  locations = [],
+  loginHeroImage = "",
+  businessLogo = "",
+  businessName = "Farm Health",
+}) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [location, setLocation] = useState(locations?.[0] || "");
   const [pin, setPin] = useState("");
@@ -114,9 +120,13 @@ export default function Login({ staffList = [], locations = [], loginHeroImage =
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
-              className="w-14 h-14 bg-emerald-400/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-emerald-300/30"
+              className="w-14 h-14 bg-emerald-400/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-emerald-300/30 overflow-hidden"
             >
-              <span className="text-3xl">🐐</span>
+              {businessLogo ? (
+                <img src={businessLogo} alt="Business Logo" className="w-full h-full object-contain p-1 bg-white/80" />
+              ) : (
+                <span className="text-lg font-bold">FH</span>
+              )}
             </motion.div>
             <motion.h1 
               initial={{ y: 30, opacity: 0 }}
@@ -124,7 +134,7 @@ export default function Login({ staffList = [], locations = [], loginHeroImage =
               transition={{ delay: 0.3, duration: 0.6 }}
               className="text-5xl font-bold mb-3 leading-tight"
             >
-              Farm Health
+              {businessName}
             </motion.h1>
             <motion.p 
               initial={{ y: 30, opacity: 0 }}
@@ -170,10 +180,14 @@ export default function Login({ staffList = [], locations = [], loginHeroImage =
         <div className="w-full max-w-sm px-4">
           {/* Mobile Header */}
           <div className="lg:hidden text-center mb-3">
-            <span className="text-3xl">�</span>
-            <h1 className="text-xl font-bold text-gray-800">Farm Health</h1>
+            {businessLogo ? (
+              <img src={businessLogo} alt="Business Logo" className="w-12 h-12 object-contain mx-auto mb-1" />
+            ) : (
+              <span className="text-xl font-bold text-gray-700">FH</span>
+            )}
+            <h1 className="text-xl font-bold text-gray-800">{businessName}</h1>
           </div>
-          
+
           <div className="mb-4">
             <h2 className="text-xl font-bold text-gray-800">Welcome Back</h2>
             <p className="text-gray-500 text-sm">Sign in to continue</p>
@@ -385,15 +399,21 @@ export async function getServerSideProps() {
       ? locationDocs.map((loc) => loc.name)
       : ["Default Farm"];
 
-    // Fetch business settings for hero image
-    const settings = await BusinessSettings.findOne().select("loginHeroImage").lean();
+    // Fetch business settings for branding and hero image
+    const settings = await BusinessSettings.findOne()
+      .select("loginHeroImage businessLogo businessName")
+      .lean();
     const loginHeroImage = settings?.loginHeroImage || "";
+    const businessLogo = settings?.businessLogo || "";
+    const businessName = settings?.businessName || "Farm Health";
 
     return {
       props: {
         staffList: JSON.parse(JSON.stringify(staffList)),
         locations: JSON.parse(JSON.stringify(locations)),
         loginHeroImage,
+        businessLogo,
+        businessName,
       },
     };
   } catch (error) {
@@ -403,6 +423,8 @@ export async function getServerSideProps() {
         staffList: [], 
         locations: ["Default Farm"],
         loginHeroImage: "",
+        businessLogo: "",
+        businessName: "Farm Health",
       } 
     };
   }

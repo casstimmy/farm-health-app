@@ -49,7 +49,10 @@ export function AnimalDataProvider({ children }) {
       const result = await getCachedData(
         "api/animals",
         async () => {
-          const res = await fetch("/api/animals", {
+          // Compact mode returns fields needed for listing/selects and is much faster for large datasets.
+          // Full animal details are fetched by ID where needed.
+          const endpoint = "/api/animals?compact=true";
+          const res = await fetch(endpoint, {
             headers: { Authorization: `Bearer ${token}` },
           });
 

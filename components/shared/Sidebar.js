@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useRole, canAccessMenuItem } from "@/hooks/useRole";
+import { BusinessContext } from "@/context/BusinessContext";
 import {
   FaHome,
   FaLeaf,
@@ -23,6 +24,7 @@ export default function Sidebar() {
   const { pathname } = router;
   const submenuRef = useRef(null);
   const { user, isLoading } = useRole();
+  const { businessSettings } = useContext(BusinessContext);
 
   const toggleMenu = (menu) => {
     setOpenMenu(openMenu === menu ? null : menu);
@@ -45,52 +47,6 @@ export default function Sidebar() {
       };
     }
   }, [openMenu]);
-
-  // Auto-open submenu when navigating to a page in that section
-  useEffect(() => {
-    const menuStructure = [
-      {
-        section: "Animals",
-        submenu: [
-          "/manage/animals",
-          "/manage/archive",
-          "/manage/health-records",
-          "/manage/treatments",
-        ],
-      },
-      {
-        section: "Operations",
-        submenu: [
-          "/manage/inventory",
-          "/manage/services",
-          "/manage/feeding",
-          "/manage/weight",
-        ],
-      },
-      {
-        section: "Management",
-        submenu: [
-          "/manage/users",
-          "/manage/roles",
-        ],
-      },
-      {
-        section: "Finance",
-        submenu: [
-          "/manage/transactions",
-          "/manage/reports",
-        ],
-      },
-    ];
-
-    const activeSection = menuStructure.find((menu) =>
-      menu.submenu.some((item) => pathname === item)
-    );
-
-    if (activeSection) {
-      setOpenMenu(activeSection.section);
-    }
-  }, [pathname]);
 
   useEffect(() => {
     const handleStart = () => setLoading(true);
@@ -234,6 +190,22 @@ export default function Sidebar() {
     <>
       {/* Sidebar Navigation */}
       <aside className="w-20 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r-2 border-gray-200 shadow-lg flex-shrink-0 h-full overflow-y-auto">
+        <div className="mt-3 mb-2 flex justify-center">
+          <Link href="/" className="w-12 h-12 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
+            {businessSettings?.businessLogo ? (
+              <img
+                src={businessSettings.businessLogo}
+                alt="Business Logo"
+                className="w-full h-full object-contain p-1"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <span className="text-xs font-bold text-green-700">FH</span>
+            )}
+          </Link>
+        </div>
         <nav className="mt-6">
           <ul className="space-y-1">
             {/* Home */}

@@ -61,5 +61,6 @@ const AnimalSchema = new mongoose.Schema(
 // Compound indexes for common queries
 AnimalSchema.index({ species: 1, status: 1 });
 AnimalSchema.index({ location: 1 });
+AnimalSchema.index({ createdAt: -1 });
 
 export default mongoose.models.Animal || mongoose.model("Animal", AnimalSchema);

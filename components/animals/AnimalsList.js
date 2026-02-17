@@ -161,10 +161,24 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     );
   }
 
-  const handleImageClick = (animal) => {
+  const handleImageClick = async (animal) => {
     setModalImages(animal.images || []);
     setModalAnimal(animal);
     setImageModalOpen(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/animals/${animal._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const fullAnimal = await res.json();
+      setModalAnimal(fullAnimal);
+      setModalImages(fullAnimal.images || []);
+      updateAnimalInCache(animal._id, { images: fullAnimal.images || [] });
+    } catch (err) {
+      console.error("Failed to load full animal images:", err);
+    }
   };
 
   const handleDeleteImage = async (animalId, imageIndex) => {

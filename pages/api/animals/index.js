@@ -8,16 +8,42 @@ async function handler(req, res) {
   if (req.method === "GET") {
     try {
       // All authenticated users can view animals
-      const { archived } = req.query;
+      const { archived, compact } = req.query;
       const filter = archived === "true" 
         ? { isArchived: true } 
         : { isArchived: { $ne: true } };
-      const animals = await Animal.find(filter)
-        .populate("sire", "tagId name")
-        .populate("dam", "tagId name")
-        .populate("location", "name")
-        .sort({ createdAt: -1 })
-        .lean();
+
+      const isCompact = compact === "true" || compact === "1";
+      let query = Animal.find(filter).sort({ createdAt: -1 });
+
+      if (isCompact) {
+        query = query.select({
+          tagId: 1,
+          name: 1,
+          species: 1,
+          breed: 1,
+          gender: 1,
+          status: 1,
+          isArchived: 1,
+          location: 1,
+          currentWeight: 1,
+          purchaseCost: 1,
+          totalFeedCost: 1,
+          totalMedicationCost: 1,
+          projectedSalesPrice: 1,
+          marginPercent: 1,
+          images: { $slice: 1 },
+          createdAt: 1,
+          updatedAt: 1,
+        });
+      } else {
+        query = query
+          .populate("sire", "tagId name")
+          .populate("dam", "tagId name")
+          .populate("location", "name");
+      }
+
+      const animals = await query.lean();
       res.status(200).json(animals);
     } catch (error) {
       res.status(500).json({ error: error.message });
