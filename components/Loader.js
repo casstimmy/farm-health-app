@@ -45,7 +45,8 @@ export default function Loader({
   size = "md",
   fullPage = false,
   inline = false,
-  overlay = false
+  overlay = false,
+  businessLogo = null
 }) {
   const colorTheme = LOADER_COLORS[color] || LOADER_COLORS["green-600"];
   const sizeClass = sizeConfig[size];
@@ -57,6 +58,17 @@ export default function Loader({
       transition={{ duration: 0.3 }}
       className="inline-block text-center"
     >
+      {businessLogo && (
+        <motion.img 
+          src={businessLogo} 
+          alt="Logo"
+          className="h-16 w-16 mx-auto mb-4 object-contain rounded-lg"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          onError={(e) => { e.target.style.display = "none"; }}
+        />
+      )}
       <div className={`animate-spin rounded-full ${sizeClass.spinner} border-4 ${colorTheme.spinner} mx-auto`}></div>
       {message && (
         <motion.p 

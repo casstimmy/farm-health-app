@@ -14,7 +14,7 @@ import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filter
 export default function MortalityTracking() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
-  const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
+  const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [mortalityRecords, setMortalityRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -71,7 +71,7 @@ export default function MortalityTracking() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [animalsData, mortalityRes, locRes] = await Promise.all([
-        fetchGlobalAnimals(),
+        fetchGlobalAnimals(true), // Force refresh to get latest status
         fetch("/api/mortality", { headers }),
         fetch("/api/locations", { headers }),
       ]);
@@ -90,7 +90,8 @@ export default function MortalityTracking() {
     }
   };
 
-  const aliveAnimals = animals; // Show all animals - same animal's offspring can have multiple deaths
+  // Show all animals (dead and alive) with their status
+  const allAnimalsForDropdown = animals;
 
   // Auto-calculate estimated value from selected animal
   const handleAnimalChange = (animalId) => {
@@ -289,10 +290,10 @@ export default function MortalityTracking() {
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
                     required
                   >
-                    <option value="">Select animal...</option>
-                    {aliveAnimals.map((animal) => (
+                    <option value="">Select animal (with status)...</option>
+                    {allAnimalsForDropdown.map((animal) => (
                       <option key={animal._id} value={animal._id}>
-                        {animal.name} ({animal.tagId}) - {animal.species}
+                        {animal.name} ({animal.tagId}) - {animal.species} — Status: {animal.status || "Unknown"}
                       </option>
                     ))}
                   </select>
@@ -454,6 +455,30 @@ export default function MortalityTracking() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Dead Animals Summary */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <FaSkull className="text-red-600" />
+          Animals with Dead Status
+        </h3>
+        {animals.filter(a => a.status === "Dead").length === 0 ? (
+          <p className="text-gray-500">No animals with dead status found.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {animals.filter(a => a.status === "Dead").map(animal => (
+              <div key={animal._id} className="p-4 border border-red-200 rounded-lg bg-red-50">
+                <p className="font-semibold text-gray-900">{animal.name || "N/A"}</p>
+                <p className="text-sm text-gray-600">Tag ID: {animal.tagId}</p>
+                <p className="text-sm text-gray-600">Species: {animal.species}</p>
+                {animal.weightDate && (
+                  <p className="text-xs text-gray-500 mt-2">Last weighed: {new Date(animal.weightDate).toLocaleDateString()}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Records List */}
       {loading ? (

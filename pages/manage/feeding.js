@@ -172,14 +172,28 @@ export default function Feeding() {
       location: record.location?._id || record.location || "",
       notes: record.notes || "",
     });
-    setFeedItems([{
-      feedCategory: record.feedTypeName || record.feedCategory || "",
-      inventoryItem: record.inventoryItem || "",
-      quantityOffered: record.quantityOffered || "",
-      quantityConsumed: record.quantityConsumed || "",
-      unitCost: record.unitCost || "",
-      totalCost: record.totalCost || "",
-    }]);
+    
+    // Handle both new (feedItems array) and old (single item) data structures
+    if (record.feedItems && Array.isArray(record.feedItems) && record.feedItems.length > 0) {
+      setFeedItems(record.feedItems.map(fi => ({
+        feedCategory: fi.feedTypeName || "",
+        inventoryItem: fi.inventoryItem?._id || fi.inventoryItem || "",
+        quantityOffered: fi.quantityOffered || "",
+        quantityConsumed: fi.quantityConsumed || "",
+        unitCost: fi.unitCost || "",
+        totalCost: fi.totalCost || "",
+      })));
+    } else {
+      // Fallback for old data structure
+      setFeedItems([{
+        feedCategory: record.feedTypeName || record.feedCategory || "",
+        inventoryItem: record.inventoryItem?._id || record.inventoryItem || "",
+        quantityOffered: record.quantityOffered || "",
+        quantityConsumed: record.quantityConsumed || "",
+        unitCost: record.unitCost || "",
+        totalCost: record.totalCost || "",
+      }]);
+    }
     setShowForm(true);
   };
 
@@ -188,23 +202,34 @@ export default function Feeding() {
     setError("");
 
     if (editingId) {
-      // Edit existing record (single item)
+      // Edit existing record with current feedItems
       setFormLoading(true);
       try {
         const token = localStorage.getItem("token");
-        const fi = feedItems[0] || {};
+        
+        // Process feedItems with calculations
+        const processedFeedItems = feedItems.filter(fi => fi.feedCategory?.trim()).map(fi => ({
+          feedTypeName: fi.feedCategory.trim(),
+          inventoryItem: fi.inventoryItem || undefined,
+          quantityOffered: parseFloat(fi.quantityOffered) || 0,
+          quantityConsumed: parseFloat(fi.quantityConsumed) || 0,
+          unitCost: parseFloat(fi.unitCost) || 0,
+          totalCost: parseFloat(fi.totalCost) || 0,
+        }));
+
+        if (processedFeedItems.length === 0) {
+          setError("At least one feed item is required");
+          setFormLoading(false);
+          return;
+        }
+
         const res = await fetch(`/api/feeding/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            feedTypeName: fi.feedCategory?.trim() || "",
-            inventoryItem: fi.inventoryItem || undefined,
-            quantityOffered: parseFloat(fi.quantityOffered) || 0,
-            quantityConsumed: parseFloat(fi.quantityConsumed) || 0,
-            unitCost: parseFloat(fi.unitCost) || 0,
-            totalCost: parseFloat(fi.totalCost) || 0,
+            feedItems: processedFeedItems,
             date: formData.date ? new Date(formData.date) : new Date(),
-            feedingMethod: formData.feedingMethod || "",
+            feedingMethod: formData.feedingMethod || undefined,
             location: formData.location || undefined,
             notes: formData.notes?.trim() || "",
           }),
@@ -244,67 +269,71 @@ export default function Feeding() {
       const count = targetIds.length;
       const results = [];
 
-      // For each feed item, create a record per animal
-      for (const fi of validFeedItems) {
-        let totalQtyOffered = parseFloat(fi.quantityOffered) || 0;
-        let totalQtyConsumed = parseFloat(fi.quantityConsumed) || 0;
-        let totalUC = parseFloat(fi.unitCost) || 0;
-        let perAnimalOffered = totalQtyOffered;
-        let perAnimalConsumed = totalQtyConsumed;
+      // Create ONE record per animal with ALL feed items
+      const animalResults = await Promise.all(
+        targetIds.map(async (animalId) => {
+          // Process each feed item for this animal
+          const processedFeedItems = validFeedItems.map((fi) => {
+            let totalQtyOffered = parseFloat(fi.quantityOffered) || 0;
+            let totalQtyConsumed = parseFloat(fi.quantityConsumed) || 0;
+            let totalUC = parseFloat(fi.unitCost) || 0;
+            let perAnimalOffered = totalQtyOffered;
+            let perAnimalConsumed = totalQtyConsumed;
 
-        if (feedingMode === "group" && count > 1 && distributionMethod === "equal") {
-          perAnimalOffered = +(totalQtyOffered / count).toFixed(4);
-          perAnimalConsumed = +(totalQtyConsumed / count).toFixed(4);
-        }
-
-        let totalWeight = 0;
-        if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
-          totalWeight = targetIds.reduce((sum, id) => {
-            const animal = aliveAnimals.find((a) => a._id === id);
-            return sum + (animal?.currentWeight || 1);
-          }, 0);
-        }
-
-        const itemResults = await Promise.all(
-          targetIds.map(async (animalId) => {
-            let qtyOff = perAnimalOffered;
-            let qtyCon = perAnimalConsumed;
+            if (feedingMode === "group" && count > 1 && distributionMethod === "equal") {
+              perAnimalOffered = +(totalQtyOffered / count).toFixed(4);
+              perAnimalConsumed = +(totalQtyConsumed / count).toFixed(4);
+            }
 
             if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
+              const totalWeight = targetIds.reduce((sum, id) => {
+                const animal = aliveAnimals.find((a) => a._id === id);
+                return sum + (animal?.currentWeight || 1);
+              }, 0);
               const animal = aliveAnimals.find((a) => a._id === animalId);
               const weight = animal?.currentWeight || 1;
               const ratio = weight / totalWeight;
-              qtyOff = +(totalQtyOffered * ratio).toFixed(4);
-              qtyCon = +(totalQtyConsumed * ratio).toFixed(4);
+              perAnimalOffered = +(totalQtyOffered * ratio).toFixed(4);
+              perAnimalConsumed = +(totalQtyConsumed * ratio).toFixed(4);
             }
 
-            const perCost = +(totalUC * qtyCon).toFixed(2);
-            const payload = {
-              animalId,
-              feedingData: {
-                date: formData.date ? new Date(formData.date) : new Date(),
-                feedCategory: fi.feedCategory.trim(),
-                inventoryItem: fi.inventoryItem || undefined,
-                quantityOffered: qtyOff,
-                quantityConsumed: qtyCon,
-                unitCost: totalUC,
-                totalCost: perCost,
-                feedingMethod: formData.feedingMethod || undefined,
-                location: formData.location || undefined,
-                notes: formData.notes?.trim() || undefined,
-              },
+            const perCost = +(totalUC * perAnimalConsumed).toFixed(2);
+            
+            return {
+              feedTypeName: fi.feedCategory.trim(),
+              inventoryItem: fi.inventoryItem || undefined,
+              quantityOffered: perAnimalOffered,
+              quantityConsumed: perAnimalConsumed,
+              unitCost: totalUC,
+              totalCost: perCost,
             };
+          });
 
-            const res = await fetch("/api/feeding", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify(payload),
-            });
-            return res.ok;
-          })
-        );
-        results.push(...itemResults);
-      }
+          // Calculate totals
+          const totalQuantityOffered = processedFeedItems.reduce((sum, fi) => sum + fi.quantityOffered, 0);
+          const totalQuantityConsumed = processedFeedItems.reduce((sum, fi) => sum + fi.quantityConsumed, 0);
+          const totalFeedCost = processedFeedItems.reduce((sum, fi) => sum + fi.totalCost, 0);
+
+          const payload = {
+            animalId,
+            feedingData: {
+              date: formData.date ? new Date(formData.date) : new Date(),
+              feedItems: processedFeedItems,
+              feedingMethod: formData.feedingMethod || undefined,
+              location: formData.location || undefined,
+              notes: formData.notes?.trim() || undefined,
+            },
+          };
+
+          const res = await fetch("/api/feeding", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload),
+          });
+          return res.ok;
+        })
+      );
+      results.push(...animalResults);
 
       const successCount = results.filter(Boolean).length;
       const failCount = results.length - successCount;
@@ -655,13 +684,23 @@ export default function Feeding() {
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date ? new Date(record.date).toLocaleDateString() : "—"}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.animal?.name || record.animal?.tagId || "—"}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">{record.feedTypeName || record.feedCategory || "—"}</span>
+                      {record.feedItems && record.feedItems.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {record.feedItems.map((fi, fidx) => (
+                            <span key={fidx} className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap">
+                              {fi.feedTypeName || "—"}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.quantityOffered ?? "—"}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.quantityConsumed ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered ?? record.quantityOffered ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed ?? record.quantityConsumed ?? "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.feedingMethod || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{formatCurrency(record.totalCost || 0, businessSettings.currency)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>
                     <td className="px-4 py-3 text-sm text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit">

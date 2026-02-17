@@ -59,8 +59,8 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
   }, [globalAnimals, globalLoading]);
 
   useEffect(() => {
-    // Filter animals based on search and status
-    const filtered = animals.filter((animal) => {
+    // Filter animals based on search and status, then sort by status (alive first, dead last)
+    let filtered = animals.filter((animal) => {
       const matchesSearch = !searchTerm || [animal.tagId, animal.name, animal.species, animal.breed]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(searchTerm.toLowerCase()));
@@ -69,6 +69,14 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
       
       return matchesSearch && matchesStatus;
     });
+    
+    // Sort: Alive first, Dead last
+    filtered = filtered.sort((a, b) => {
+      if (a.status === "Alive" && b.status !== "Alive") return -1;
+      if (a.status !== "Alive" && b.status === "Alive") return 1;
+      return 0;
+    });
+    
     setFilteredAnimals(filtered);
     setVisibleCount(20);
   }, [animals, searchTerm, filterStatus]);

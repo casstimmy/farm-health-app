@@ -41,7 +41,18 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo & Business Name */}
           <Link href="/" className="font-bold text-2xl flex items-center gap-2 hover:opacity-90 transition">
-            <span className="text-3xl">🐑</span>
+            {businessSettings.businessLogo ? (
+              <img 
+                src={businessSettings.businessLogo} 
+                alt="Business Logo" 
+                className="h-12 w-12 object-contain rounded-lg"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
+              />
+            ) : (
+              <span className="text-3xl">🐑</span>
+            )}
             <div className="hidden sm:flex flex-col">
               <span>Farm Health</span>
               <span className="text-xs font-normal text-green-100">{businessSettings.businessName}</span>

@@ -22,12 +22,14 @@ export default function BusinessSetup() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const fileInputRef = useRef(null);
+  const logoInputRef = useRef(null);
   const [formData, setFormData] = useState({
     businessName: "",
     businessEmail: "",
     businessPhone: "",
     businessAddress: "",
     businessDescription: "",
+    businessLogo: "",
     loginHeroImage: "",
     currency: "NGN",
     timezone: "UTC+1",
@@ -64,6 +66,7 @@ export default function BusinessSetup() {
           businessPhone: data.businessPhone || "",
           businessAddress: data.businessAddress || "",
           businessDescription: data.businessDescription || "",
+          businessLogo: data.businessLogo || "",
           loginHeroImage: data.loginHeroImage || "",
           currency: data.currency || "NGN",
           timezone: data.timezone || "UTC+1",
@@ -125,6 +128,55 @@ export default function BusinessSetup() {
         fileInputRef.current.value = "";
       }
     }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Logo size must be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const res = await axios.post("/api/upload", formDataUpload);
+      const uploaded = res.data?.links || [];
+      
+      if (uploaded.length > 0) {
+        const imageUrl = uploaded[0]?.full || uploaded[0];
+        setFormData((prev) => ({ ...prev, businessLogo: imageUrl }));
+        setSuccess("Logo uploaded successfully!");
+        setTimeout(() => setSuccess(""), 2000);
+      } else {
+        setError("Failed to upload logo - no URL returned");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Error uploading logo: " + (err.response?.data?.error || err.message));
+    } finally {
+      setUploading(false);
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData((prev) => ({ ...prev, businessLogo: "" }));
   };
 
   const handleRemoveImage = () => {
@@ -284,7 +336,82 @@ export default function BusinessSetup() {
           {/* Divider */}
           <div className="border-t border-gray-200"></div>
 
-          {/* Section: Settings */}
+          {/* Section: Business Logo */}
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <span className="text-3xl">🎯</span>
+              Business Logo
+            </h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Upload your farm business logo. This will be displayed in the navigation bar and throughout the application. Recommended size: 200x200px or larger.
+            </p>
+
+            <div className="space-y-4">
+              {/* Logo Preview */}
+              <div className="relative w-full max-w-xs h-40 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100 flex items-center justify-center">
+                {formData.businessLogo ? (
+                  <img
+                    src={formData.businessLogo}
+                    alt="Business logo preview"
+                    className="w-full h-full object-contain p-2"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.parentElement.innerHTML = '<div class="text-6xl">📸</div>';
+                    }}
+                  />
+                ) : (
+                  <div className="text-6xl text-gray-300">📸</div>
+                )}
+                {formData.businessLogo && (
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">Custom</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Controls */}
+              <div className="flex flex-wrap gap-3">
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <FaUpload />
+                      Upload Logo
+                    </>
+                  )}
+                </button>
+                {formData.businessLogo && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveLogo}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <FaTrash />
+                    Remove Logo
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200"></div>
           <div>
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
               <span className="text-3xl">⚙️</span>
