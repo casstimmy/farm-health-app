@@ -6,9 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
-import Loader from "@/components/Loader";
 import { invalidateCachePattern } from "@/utils/cache";
-import { useAnimalData } from "@/context/AnimalDataContext";
 
 const SEED_CATEGORIES = [
   { key: "locations", label: "Locations", icon: "📍", desc: "Farm locations and zones" },
@@ -39,7 +37,6 @@ const PASTE_DATA_TYPES = [
 export default function SeedDatabase() {
   const router = useRouter();
   const { user, isLoading: roleLoading, isAdmin } = useRole();
-  const { fetchAnimals: refreshAnimals } = useAnimalData();
   const [seeding, setSeeding] = useState(false);
   const [seedProgress, setSeedProgress] = useState(0);
   const [seedStep, setSeedStep] = useState("");
@@ -80,7 +77,7 @@ export default function SeedDatabase() {
   if (roleLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader message="Loading..." />
+        <FaSpinner className="animate-spin text-purple-600 text-3xl" />
       </div>
     );
   }
@@ -143,7 +140,6 @@ export default function SeedDatabase() {
       setSeedStep("Complete!");
       setResult(data.results || data);
       invalidateCachePattern("api/");
-      refreshAnimals();
     } catch (err) {
       clearInterval(progressInterval);
       setError("Failed to seed database. Please try again.");
@@ -211,7 +207,6 @@ export default function SeedDatabase() {
       setImportProgress(100);
       setImportResult(data);
       invalidateCachePattern("api/");
-      refreshAnimals();
     } catch (err) {
       setError("Import failed: " + err.message);
       setImportProgress(0);
@@ -248,7 +243,6 @@ export default function SeedDatabase() {
       setPasteProgress(100);
       setPasteResult(data);
       invalidateCachePattern("api/");
-      refreshAnimals();
     } catch (err) {
       setError("Paste import failed: " + err.message);
       setPasteProgress(0);

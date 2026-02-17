@@ -16,7 +16,6 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [modalImages, setModalImages] = useState([]);
     const [modalAnimal, setModalAnimal] = useState(null);
-  const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editIndex, setEditIndex] = useState(null);
   const [editableAnimal, setEditableAnimal] = useState({});
@@ -37,7 +36,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     setFilterStatus(parentFilterStatus);
   }, [parentFilterStatus]);
 
-  // Load animals from global context
+  // Load user from localStorage once
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -47,12 +46,10 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
         console.error("Error parsing user data");
       }
     }
-    fetchAnimals();
   }, []);
 
-  // Sync local animals state with global context
+  // Sync loading state with global context
   useEffect(() => {
-    setAnimals(globalAnimals);
     if (globalAnimals.length > 0 || !globalLoading) {
       setLoading(false);
     }
@@ -60,7 +57,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
 
   useEffect(() => {
     // Filter animals based on search and status, then sort by status (alive first, dead last)
-    let filtered = animals.filter((animal) => {
+    let filtered = globalAnimals.filter((animal) => {
       const matchesSearch = !searchTerm || [animal.tagId, animal.name, animal.species, animal.breed]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(searchTerm.toLowerCase()));
@@ -79,7 +76,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
     
     setFilteredAnimals(filtered);
     setVisibleCount(20);
-  }, [animals, searchTerm, filterStatus]);
+  }, [globalAnimals, searchTerm, filterStatus]);
 
   const handleEditClick = (index, animal) => {
     setEditIndex(index);
@@ -173,7 +170,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
   const handleDeleteImage = async (animalId, imageIndex) => {
     try {
       const token = localStorage.getItem("token");
-      const animal = animals.find((a) => a._id === animalId);
+      const animal = globalAnimals.find((a) => a._id === animalId);
       if (!animal) return;
 
       // Remove image from array
@@ -238,7 +235,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
       }
       
       // Find the current animal
-      const animal = animals.find((a) => a._id === animalId);
+      const animal = globalAnimals.find((a) => a._id === animalId);
       if (!animal) {
         throw new Error("Animal not found");
       }
@@ -303,7 +300,7 @@ export default function AnimalsList({ searchTerm: parentSearchTerm = "", filterS
       )}
 
       <div className="overflow-x-auto">
-        {animals.length === 0 ? (
+        {globalAnimals.length === 0 ? (
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
             <p className="text-4xl mb-3">🐑</p>
             <p className="text-gray-700 font-semibold text-lg">No animals found</p>

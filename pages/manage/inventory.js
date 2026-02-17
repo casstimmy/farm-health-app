@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaTrash } from "react-icons/fa";
+import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaTrash, FaMinus } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
@@ -54,6 +54,10 @@ export default function ManageInventory() {
     supplier: "",
   });
   const canEdit = user && ["SuperAdmin", "Manager"].includes(user.role);
+  const [showConsumeModal, setShowConsumeModal] = useState(false);
+  const [consumeItem, setConsumeItem] = useState(null);
+  const [consumeLoading, setConsumeLoading] = useState(false);
+  const [consumeForm, setConsumeForm] = useState({ quantity: 1, reason: "Used", type: "Used", notes: "" });
   const [formData, setFormData] = useState({
     name: "",
     quantity: "",
@@ -438,7 +442,61 @@ export default function ManageInventory() {
     }
   };
 
+  const openConsumeModal = (item) => {
+    setConsumeItem(item);
+    setConsumeForm({ quantity: 1, reason: "Used", type: "Used", notes: "" });
+    setShowConsumeModal(true);
+  };
 
+  const handleConsume = async () => {
+    if (!consumeItem || consumeForm.quantity < 1) return;
+    if (consumeForm.quantity > consumeItem.quantity) {
+      setError("Cannot consume more than available stock");
+      return;
+    }
+    setConsumeLoading(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      // Map consume type to InventoryLoss type
+      const lossTypeMap = { Used: "Wasted", Damaged: "Damaged", Sold: "Lost", Fed: "Wasted", Expired: "Expired" };
+      const res = await fetch("/api/inventory-loss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          inventoryItem: consumeItem._id,
+          itemName: consumeItem.item,
+          type: lossTypeMap[consumeForm.type] || "Wasted",
+          quantity: Number(consumeForm.quantity),
+          reason: `${consumeForm.type}: ${consumeForm.reason || consumeForm.notes || consumeForm.type}`,
+          notes: consumeForm.notes,
+          reportedBy: user?.name || user?.email || "Unknown",
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to record consumption");
+      }
+      setSuccess(`✓ ${consumeForm.quantity} ${consumeItem.unit || "units"} of ${consumeItem.item} consumed (${consumeForm.type})`);
+      setShowConsumeModal(false);
+      setConsumeItem(null);
+      invalidateCache("api/inventory");
+      fetchInventory();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConsumeLoading(false);
+    }
+  };
+
+  const isLowStock = (item) => {
+    const min = item.minStock || 0;
+    if (min <= 0) return false;
+    return item.quantity <= min;
+  };
+
+  const isOutOfStock = (item) => item.quantity <= 0;
 
   const categoryColors = {
     "Medication": "bg-red-100 text-red-800",
@@ -1079,7 +1137,13 @@ export default function ManageInventory() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className="hover:bg-gray-50 transition-colors"
+                    className={`transition-colors ${
+                      isOutOfStock(item)
+                        ? "bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500"
+                        : isLowStock(item)
+                        ? "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500"
+                        : "hover:bg-gray-50"
+                    }`}
                   >
                     {/* Item Name */}
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
@@ -1124,9 +1188,17 @@ export default function ManageInventory() {
                           className="w-20 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
                         />
                       ) : (
-                        <span className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-bold text-sm">
-                          {item.quantity}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-4 py-2 rounded-lg font-bold text-sm ${
+                            isOutOfStock(item) ? "bg-red-200 text-red-900" :
+                            isLowStock(item) ? "bg-yellow-200 text-yellow-900" :
+                            "bg-blue-100 text-blue-800"
+                          }`}>
+                            {item.quantity}
+                          </span>
+                          {isOutOfStock(item) && <span className="text-xs font-bold text-red-600">OUT</span>}
+                          {!isOutOfStock(item) && isLowStock(item) && <span className="text-xs font-bold text-yellow-600">LOW</span>}
+                        </div>
                       )}
                     </td>
                     {/* Min Stock */}
@@ -1236,6 +1308,14 @@ export default function ManageInventory() {
                         ) : (
                           <div className="flex items-center gap-2">
                             <button
+                              onClick={() => openConsumeModal(item)}
+                              disabled={item.quantity <= 0}
+                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Use / Consume Stock"
+                            >
+                              <FaMinus size={14} />
+                            </button>
+                            <button
                               onClick={() => handleEditItem(item)}
                               className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                               title="Edit item"
@@ -1263,6 +1343,77 @@ export default function ManageInventory() {
           </div>
         )}
       </div>
+
+      {/* Consume / Use Stock Modal */}
+      <Modal
+        isOpen={showConsumeModal}
+        onClose={() => { setShowConsumeModal(false); setConsumeItem(null); }}
+        title={`Use Stock — ${consumeItem?.item || ""}`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+            <span className="text-sm text-gray-600">Available Quantity</span>
+            <span className="font-bold text-lg">{consumeItem?.quantity || 0} {consumeItem?.unit || ""}</span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Use *</label>
+            <input
+              type="number"
+              min="1"
+              max={consumeItem?.quantity || 1}
+              value={consumeForm.quantity}
+              onChange={(e) => setConsumeForm({ ...consumeForm, quantity: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+              placeholder="Enter quantity"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+            <select
+              value={consumeForm.type}
+              onChange={(e) => setConsumeForm({ ...consumeForm, type: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+            >
+              <option value="Used">Used (General)</option>
+              <option value="Fed">Fed to Animals</option>
+              <option value="Sold">Sold</option>
+              <option value="Damaged">Damaged</option>
+              <option value="Expired">Expired</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <textarea
+              rows={2}
+              value={consumeForm.notes}
+              onChange={(e) => setConsumeForm({ ...consumeForm, notes: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+              placeholder="Additional details..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => { setShowConsumeModal(false); setConsumeItem(null); }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConsume}
+              disabled={consumeLoading || !consumeForm.quantity || consumeForm.quantity < 1}
+              className="px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+            >
+              {consumeLoading ? <FaSpinner className="animate-spin" size={12} /> : <FaMinus size={12} />}
+              Deduct Stock
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={showImportModal}

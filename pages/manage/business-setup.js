@@ -237,7 +237,6 @@ export default function BusinessSetup() {
         title="Business Setup"
         subtitle="Configure your farm business details"
         gradient="from-blue-600 to-blue-700"
-        icon="🏢"
       />
 
       {/* Settings Form */}
@@ -264,10 +263,8 @@ export default function BusinessSetup() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Section: Basic Information */}
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <span className="text-3xl">📝</span>
-              Basic Information
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Basic Information</h3>
+            <p className="text-sm text-gray-500 mb-6">Core details about your farm business</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -338,12 +335,9 @@ export default function BusinessSetup() {
 
           {/* Section: Business Logo */}
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <span className="text-3xl">🎯</span>
-              Business Logo
-            </h3>
-            <p className="text-gray-600 text-sm mb-6">
-              Upload your farm business logo. This will be displayed in the navigation bar and throughout the application. Recommended size: 200x200px or larger.
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Business Logo</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Displayed in the navigation bar and throughout the application. Recommended: 200×200px or larger.
             </p>
 
             <div className="space-y-4">
@@ -356,11 +350,11 @@ export default function BusinessSetup() {
                     className="w-full h-full object-contain p-2"
                     onError={(e) => {
                       e.target.style.display = "none";
-                      e.target.parentElement.innerHTML = '<div class="text-6xl">📸</div>';
+                      e.target.parentElement.innerHTML = '<div class="text-gray-300 text-sm">No preview</div>';
                     }}
                   />
                 ) : (
-                  <div className="text-6xl text-gray-300">📸</div>
+                  <div className="text-gray-400 text-sm">No logo uploaded</div>
                 )}
                 {formData.businessLogo && (
                   <div className="absolute top-2 right-2">
@@ -413,10 +407,8 @@ export default function BusinessSetup() {
           {/* Divider */}
           <div className="border-t border-gray-200"></div>
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <span className="text-3xl">⚙️</span>
-              Settings
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Settings</h3>
+            <p className="text-sm text-gray-500 mb-6">Regional and formatting preferences</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -456,12 +448,9 @@ export default function BusinessSetup() {
 
           {/* Section: Login Hero Image */}
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <span className="text-3xl">🖼️</span>
-              Login Page Hero Image
-            </h3>
-            <p className="text-gray-600 text-sm mb-6">
-              Customize the hero image displayed on the login and registration pages. If no custom image is set, a default farm image will be used.
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Login Page Hero Image</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Displayed on the login and registration pages. A default farm image is used if none is set.
             </p>
 
             <div className="space-y-4">
@@ -569,10 +558,10 @@ export default function BusinessSetup() {
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
-        <h4 className="font-bold text-blue-900 mb-2">💡 Information</h4>
-        <p className="text-blue-800 text-sm">
-          These settings will be used throughout the system for business information display, currency formatting, and timezone calculations. Changes take effect immediately.
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+        <h4 className="font-medium text-gray-800 mb-1 text-sm">Note</h4>
+        <p className="text-gray-600 text-sm">
+          These settings are used throughout the system for display, currency formatting, and timezone calculations. Changes take effect immediately.
         </p>
       </div>
     </motion.div>
