@@ -401,6 +401,19 @@ export default function BusinessSetup() {
                   </button>
                 )}
               </div>
+
+              {/* URL Input (optional manual entry) */}
+              <div>
+                <label className="label">Or enter logo URL directly</label>
+                <input
+                  type="url"
+                  name="businessLogo"
+                  placeholder="https://example.com/your-logo.png"
+                  value={formData.businessLogo}
+                  onChange={handleChange}
+                  className="input-field max-w-md"
+                />
+              </div>
             </div>
           </div>
 

@@ -9,6 +9,8 @@ export function BusinessProvider({ children }) {
     businessPhone: "",
     businessAddress: "",
     businessDescription: "",
+    businessLogo: "",
+    loginHeroImage: "",
     currency: "NGN",
     timezone: "UTC+1",
   });
@@ -38,6 +40,8 @@ export function BusinessProvider({ children }) {
           businessPhone: data.businessPhone || "",
           businessAddress: data.businessAddress || "",
           businessDescription: data.businessDescription || "",
+          businessLogo: data.businessLogo || "",
+          loginHeroImage: data.loginHeroImage || "",
           currency: data.currency || "NGN",
           timezone: data.timezone || "UTC+1",
         });
