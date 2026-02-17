@@ -129,15 +129,15 @@ export default function ExpenseEntry() {
       <PageHeader
         title="Record Expense"
         subtitle="Quick expense entry — accessible to all staff"
-        gradient="from-red-500 to-red-600"
+        gradient="from-amber-500 to-orange-500"
         icon="💸"
         actions={
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors font-medium backdrop-blur-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-lg transition-colors font-medium shadow-md"
           >
             {showForm ? <FaTimes /> : <FaPlus />}
-            {showForm ? "Hide Form" : "Show Form"}
+            {showForm ? "Hide Form" : "Add Expense"}
           </button>
         }
       />
@@ -159,12 +159,12 @@ export default function ExpenseEntry() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm text-gray-600">Today&apos;s Expenses</p>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(todayTotal, currency)}</p>
           <p className="text-xs text-gray-500">{todayExpenses.length} record{todayExpenses.length !== 1 ? "s" : ""}</p>
         </div>
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
           <p className="text-sm text-gray-600">Total Expenses</p>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalAll, currency)}</p>
           <p className="text-xs text-gray-500">{expenses.length} record{expenses.length !== 1 ? "s" : ""}</p>
@@ -185,14 +185,14 @@ export default function ExpenseEntry() {
             exit={{ opacity: 0, height: 0 }}
             className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden"
           >
-            <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-3">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <FaMoneyBillWave /> New Expense
               </h3>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2">💸 Expense Details</h4>
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2">💸 Expense Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="label">Title / Item *</label>
@@ -286,7 +286,7 @@ export default function ExpenseEntry() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold disabled:opacity-60 flex items-center gap-2"
+                  className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold disabled:opacity-60 flex items-center gap-2 shadow-md"
                 >
                   {submitting ? <><FaSpinner className="animate-spin" /> Saving...</> : <><FaReceipt /> Record Expense</>}
                 </button>
@@ -296,17 +296,17 @@ export default function ExpenseEntry() {
         )}
       </AnimatePresence>
 
-      {/* Recent Expenses Table */}
+      {/* Today's Expenses Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
-            <FaReceipt className="text-red-500" /> Recent Expenses
+            <FaReceipt className="text-amber-500" /> Today&apos;s Expenses
           </h3>
         </div>
-        {expenses.length === 0 ? (
+        {todayExpenses.length === 0 ? (
           <div className="text-center py-16">
             <span className="text-5xl mb-4 block">💸</span>
-            <p className="text-gray-500 text-lg">No expenses recorded yet</p>
+            <p className="text-gray-500 text-lg">No expenses recorded today</p>
             <p className="text-gray-400 text-sm mt-1">Use the form above to add your first expense</p>
           </div>
         ) : (
@@ -322,18 +322,18 @@ export default function ExpenseEntry() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {expenses.slice(0, 20).map((exp) => (
+                {todayExpenses.map((exp) => (
                   <tr key={exp._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {new Date(exp.date).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{exp.title}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                      <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
                         {exp.category}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-red-600">
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-orange-600">
                       {formatCurrency(exp.amount, currency)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{exp.paymentMethod}</td>

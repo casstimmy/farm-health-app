@@ -59,6 +59,7 @@ export default function Feeding() {
   const [selectedGroupIds, setSelectedGroupIds] = useState([]);
   const [groupSelectAll, setGroupSelectAll] = useState(false);
   const [distributionMethod, setDistributionMethod] = useState("equal");
+  const [editingFeedIdx, setEditingFeedIdx] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -70,9 +71,9 @@ export default function Feeding() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Force-refresh animals from global context and fetch the rest in parallel
+      // Animals from global context (cached); fetch the rest in parallel
       const [animalsData, recordsRes, invRes, locRes] = await Promise.all([
-        fetchAnimals(true),
+        fetchAnimals(),
         fetch("/api/feeding", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
@@ -240,6 +241,7 @@ export default function Feeding() {
         setShowForm(false);
         setFormData({ ...initialFormState });
         setFeedItems([{ ...emptyFeedItem }]);
+        setEditingFeedIdx(null);
         fetchAll();
         setTimeout(() => setSuccess(""), 3000);
       } catch (err) {
@@ -342,8 +344,9 @@ export default function Feeding() {
       setSuccess(`${successCount} feeding record${successCount > 1 ? "s" : ""} saved!`);
       setFormData({ ...initialFormState });
       setFeedItems([{ ...emptyFeedItem }]);
+      setEditingFeedIdx(null);
       setShowForm(false);
-      setSelectedGroupIds([]);
+      setSelectedGroupIds([]); 
       setGroupSelectAll(false);
       fetchAll();
       setTimeout(() => setSuccess(""), 3000);
@@ -371,22 +374,23 @@ export default function Feeding() {
   // Filtered records
   let filteredRecords = records.filter((record) => {
     const animalName = record.animal?.name || record.animal?.tagId || "";
+    const feedTypeNames = record.feedItems?.map(fi => fi.feedTypeName || "").join(" ") || record.feedTypeName || record.feedCategory || "";
     const matchSearch =
       searchTerm === "" ||
-      (record.feedTypeName || record.feedCategory || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      feedTypeNames.toLowerCase().includes(searchTerm.toLowerCase()) ||
       animalName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchType = filterType === "all" || (record.feedTypeName || record.feedCategory) === filterType;
+    const matchType = filterType === "all" || feedTypeNames.includes(filterType);
     return matchSearch && matchType;
   });
   filteredRecords = filterByPeriod(filteredRecords, filterPeriod);
   filteredRecords = filterByLocation(filteredRecords, filterLocation);
 
-  const feedTypes = [...new Set(records.map((r) => r.feedTypeName || r.feedCategory).filter(Boolean))];
+  const feedTypes = [...new Set(records.flatMap((r) => r.feedItems?.map(fi => fi.feedTypeName) || [r.feedTypeName || r.feedCategory]).filter(Boolean))];
 
   // Stats
   const totalRecords = records.length;
-  const totalFeedCost = records.reduce((sum, r) => sum + (r.totalCost || 0), 0);
-  const totalConsumed = records.reduce((sum, r) => sum + (r.quantityConsumed || 0), 0);
+  const totalFeedCost = records.reduce((sum, r) => sum + (r.totalFeedCost || r.totalCost || 0), 0);
+  const totalConsumed = records.reduce((sum, r) => sum + (r.totalQuantityConsumed || r.quantityConsumed || 0), 0);
   const todayRecords = records.filter((r) => {
     const d = new Date(r.date);
     return d.toDateString() === new Date().toDateString();
@@ -402,7 +406,7 @@ export default function Feeding() {
         icon="🌾"
         actions={
           <button
-            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState }); setFeedItems([{ ...emptyFeedItem }]); }}
+            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState }); setFeedItems([{ ...emptyFeedItem }]); setEditingFeedIdx(null); }}
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
           >
             {showForm ? <FaTimes /> : <FaPlus />}
@@ -525,12 +529,7 @@ export default function Feeding() {
             <form onSubmit={handleSubmit}>
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items</h4>
-                  {!editingId && (
-                    <button type="button" onClick={addFeedItem} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
-                      <FaPlus size={10} /> Add Item
-                    </button>
-                  )}
+                  <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items ({feedItems.filter(fi => fi.feedCategory?.trim()).length} added)</h4>
                 </div>
 
                 <div className="space-y-4">
@@ -556,58 +555,112 @@ export default function Feeding() {
                     </div>
                   </div>
 
-                  {/* Feed items list */}
-                  {feedItems.map((fi, idx) => (
-                    <div key={idx} className={`bg-white border ${feedItems.length > 1 ? "border-green-300" : "border-gray-200"} rounded-lg p-4 ${feedItems.length > 1 ? "relative" : ""}`}>
-                      {feedItems.length > 1 && (
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-green-700">Feed Item #{idx + 1}</span>
-                          <button type="button" onClick={() => removeFeedItem(idx)} className="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1">
-                            <FaTimes size={10} /> Remove
-                          </button>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div>
-                          <label className="label">Feed Inventory Item</label>
-                          <select value={fi.inventoryItem} onChange={(e) => handleInventorySelect(e.target.value, idx)} className="input-field">
-                            <option value="">-- Select Feed Item --</option>
-                            {feedInventory.map((item) => (
-                              <option key={item._id} value={item._id}>{item.item} (Stock: {item.quantity})</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="label">Feed Category *</label>
-                          <input type="text" value={fi.feedCategory} onChange={(e) => {
-                            const updated = [...feedItems];
-                            updated[idx] = { ...updated[idx], feedCategory: e.target.value };
-                            setFeedItems(updated);
-                          }} placeholder="Hay, Grain, Supplement..." className="input-field" required />
-                        </div>
-                        <div>
-                          <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
-                          <input type="number" step="0.01" min="0" value={fi.quantityOffered} onChange={(e) => {
-                            const updated = [...feedItems];
-                            updated[idx] = { ...updated[idx], quantityOffered: e.target.value };
-                            setFeedItems(updated);
-                          }} placeholder="e.g., 10" className="input-field" />
-                        </div>
-                        <div>
-                          <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
-                          <input type="number" step="0.01" min="0" value={fi.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value, idx)} placeholder="e.g., 8" className="input-field" />
-                        </div>
-                        <div>
-                          <label className="label">Unit Cost</label>
-                          <input type="number" step="0.01" min="0" value={fi.unitCost} onChange={(e) => recalcTotal("unitCost", e.target.value, idx)} placeholder="Auto from inventory" className="input-field" />
-                        </div>
-                        <div>
-                          <label className="label">Total Cost</label>
-                          <input type="number" step="0.01" value={fi.totalCost} readOnly className="input-field bg-gray-50" />
-                        </div>
+                  {/* Collapsed feed items entries */}
+                  {feedItems.filter((fi, idx) => fi.feedCategory?.trim() && editingFeedIdx !== idx).length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">Added Feed Items</p>
+                      <div className="flex flex-wrap gap-2">
+                        {feedItems.map((fi, idx) => {
+                          if (!fi.feedCategory?.trim() || editingFeedIdx === idx) return null;
+                          const invItem = feedInventory.find(i => i._id === fi.inventoryItem);
+                          return (
+                            <div key={idx} className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 shadow-sm">
+                              <span className="text-sm font-semibold text-gray-900">{fi.feedCategory}</span>
+                              {fi.quantityConsumed && <span className="text-xs text-gray-500">• {fi.quantityConsumed} units</span>}
+                              {fi.totalCost && parseFloat(fi.totalCost) > 0 && <span className="text-xs text-orange-600 font-medium">• {formatCurrency(parseFloat(fi.totalCost), businessSettings.currency)}</span>}
+                              <button type="button" onClick={() => setEditingFeedIdx(idx)} className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded transition-colors" title="Edit">
+                                <FaEdit size={11} />
+                              </button>
+                              <button type="button" onClick={() => removeFeedItem(idx)} className="p-1 bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors" title="Remove">
+                                <FaTimes size={11} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Active feed item form (either new or editing) */}
+                  {(() => {
+                    const activeIdx = editingFeedIdx !== null ? editingFeedIdx : feedItems.findIndex(fi => !fi.feedCategory?.trim());
+                    const fi = activeIdx >= 0 ? feedItems[activeIdx] : null;
+                    const idx = activeIdx;
+                    if (!fi) return (
+                      <button type="button" onClick={() => { addFeedItem(); setEditingFeedIdx(feedItems.length); }} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors w-full justify-center">
+                        <FaPlus size={12} /> Add Another Feed Item
+                      </button>
+                    );
+                    return (
+                      <div className="bg-white border border-green-300 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-green-700">{editingFeedIdx !== null ? `Editing Feed Item #${idx + 1}` : "New Feed Item"}</span>
+                          {feedItems.filter(fi => fi.feedCategory?.trim()).length > 0 && editingFeedIdx !== null && (
+                            <button type="button" onClick={() => setEditingFeedIdx(null)} className="text-gray-500 hover:text-gray-700 text-xs font-medium flex items-center gap-1">
+                              <FaCheck size={10} /> Done
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div>
+                            <label className="label">Feed Inventory Item</label>
+                            <select value={fi.inventoryItem} onChange={(e) => handleInventorySelect(e.target.value, idx)} className="input-field">
+                              <option value="">-- Select Feed Item --</option>
+                              {feedInventory.map((item) => (
+                                <option key={item._id} value={item._id}>{item.item} (Stock: {item.quantity})</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="label">Feed Category *</label>
+                            <input type="text" value={fi.feedCategory} onChange={(e) => {
+                              const updated = [...feedItems];
+                              updated[idx] = { ...updated[idx], feedCategory: e.target.value };
+                              setFeedItems(updated);
+                            }} placeholder="Hay, Grain, Supplement..." className="input-field" />
+                          </div>
+                          <div>
+                            <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                            <input type="number" step="0.01" min="0" value={fi.quantityOffered} onChange={(e) => {
+                              const updated = [...feedItems];
+                              updated[idx] = { ...updated[idx], quantityOffered: e.target.value };
+                              setFeedItems(updated);
+                            }} placeholder="e.g., 10" className="input-field" />
+                          </div>
+                          <div>
+                            <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                            <input type="number" step="0.01" min="0" value={fi.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value, idx)} placeholder="e.g., 8" className="input-field" />
+                          </div>
+                          <div>
+                            <label className="label">Unit Cost</label>
+                            <input type="number" step="0.01" min="0" value={fi.unitCost} onChange={(e) => recalcTotal("unitCost", e.target.value, idx)} placeholder="Auto from inventory" className="input-field" />
+                          </div>
+                          <div>
+                            <label className="label">Total Cost</label>
+                            <input type="number" step="0.01" value={fi.totalCost} readOnly className="input-field bg-gray-50" />
+                          </div>
+                        </div>
+                        <div className="flex justify-between mt-3 pt-3 border-t border-green-100">
+                          {editingFeedIdx !== null ? (
+                            <button type="button" onClick={() => setEditingFeedIdx(null)} className="flex items-center gap-1 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors">
+                              <FaCheck size={10} /> Done Editing
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">Fill in category to add this item</span>
+                          )}
+                          <button type="button" onClick={() => {
+                            if (fi.feedCategory?.trim()) {
+                              setEditingFeedIdx(null);
+                              addFeedItem();
+                              setEditingFeedIdx(feedItems.length);
+                            }
+                          }} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                            <FaPlus size={10} /> Add Another
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

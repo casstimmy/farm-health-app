@@ -23,7 +23,7 @@ async function handler(req, res) {
   } else if (req.method === "GET") {
     try {
       // Return all treatments, populated with animal details
-      const treatments = await Treatment.find().populate('animal');
+      const treatments = await Treatment.find().populate('animal').lean();
       res.status(200).json(treatments);
     } catch (error) {
       res.status(500).json({ error: error.message });

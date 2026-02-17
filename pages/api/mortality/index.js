@@ -9,7 +9,8 @@ async function handler(req, res) {
     try {
       const records = await MortalityRecord.find()
         .sort({ dateOfDeath: -1 })
-        .populate("animal", "tagId name species breed gender");
+        .populate("animal", "tagId name species breed gender")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

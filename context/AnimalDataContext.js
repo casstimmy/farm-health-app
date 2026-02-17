@@ -17,6 +17,7 @@ export function AnimalDataProvider({ children }) {
   const [lastFetched, setLastFetched] = useState(null);
   const fetchPromiseRef = useRef(null);
   const isMountedRef = useRef(true);
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -27,6 +28,7 @@ export function AnimalDataProvider({ children }) {
    * Fetch all animals from API (only if not already loaded or stale)
    * - De-duplicates concurrent calls
    * - 10-minute stale threshold
+   * - Only shows loading spinner on first load (prevents flickering)
    */
   const fetchAnimals = useCallback(async (force = false) => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -45,7 +47,8 @@ export function AnimalDataProvider({ children }) {
 
     const promise = (async () => {
       try {
-        if (isMountedRef.current) setLoading(true);
+        // Only show loading spinner on first load to prevent data flickering
+        if (!hasLoadedOnce.current && isMountedRef.current) setLoading(true);
         const res = await fetch("/api/animals", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -56,6 +59,7 @@ export function AnimalDataProvider({ children }) {
           setAnimals(result);
           setLastFetched(Date.now());
           setError(null);
+          hasLoadedOnce.current = true;
         }
         return result;
       } catch (err) {

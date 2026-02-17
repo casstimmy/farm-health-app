@@ -16,7 +16,8 @@ async function handler(req, res) {
         .populate("sire", "tagId name")
         .populate("dam", "tagId name")
         .populate("location", "name")
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
       res.status(200).json(animals);
     } catch (error) {
       res.status(500).json({ error: error.message });

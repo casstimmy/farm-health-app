@@ -17,7 +17,8 @@ async function handler(req, res) {
         .populate("animal", "tagId name species breed gender currentWeight")
         .populate("treatmentA.medication", "item unit price")
         .populate("treatmentB.medication", "item unit price")
-        .sort({ date: -1 });
+        .sort({ date: -1 })
+        .lean();
 
       res.status(200).json(records);
     } catch (error) {

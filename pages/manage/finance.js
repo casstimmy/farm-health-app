@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { FaPlus, FaTimes, FaTrash, FaSpinner, FaCheck, FaChartPie, FaChartBar, FaEdit } from "react-icons/fa";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from "chart.js";
-import { Pie, Bar } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
@@ -14,7 +13,16 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+// Lazy-load Chart.js to reduce bundle size
+const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
+const Pie = dynamic(() => import("react-chartjs-2").then(mod => mod.Pie), { ssr: false, loading: ChartLoader });
+const Bar = dynamic(() => import("react-chartjs-2").then(mod => mod.Bar), { ssr: false, loading: ChartLoader });
+
+if (typeof window !== "undefined") {
+  import("chart.js").then(({ Chart, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement }) => {
+    Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+  });
+}
 
 const EXPENSE_CATEGORIES = ["Feed", "Medication", "Transport", "Utilities", "Equipment", "Labor", "Admin", "Maintenance", "Petty Cash", "Other"];
 const CATEGORY_COLORS = ["#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#10b981", "#ec4899", "#6366f1", "#14b8a6", "#f97316", "#6b7280"];

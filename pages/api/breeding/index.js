@@ -10,7 +10,8 @@ async function handler(req, res) {
       const records = await BreedingRecord.find()
         .sort({ matingDate: -1 })
         .populate("doe", "tagId name species breed")
-        .populate("buck", "tagId name species breed");
+        .populate("buck", "tagId name species breed")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

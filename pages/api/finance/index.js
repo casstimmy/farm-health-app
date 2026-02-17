@@ -15,7 +15,7 @@ async function handler(req, res) {
           type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
         query.type = normalizedType;
       }
-      const finances = await Finance.find(query).sort({ date: -1 }).populate("location");
+      const finances = await Finance.find(query).sort({ date: -1 }).populate("location").lean();
       res.status(200).json(finances);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { FaPlus, FaTimes, FaTrash, FaSpinner, FaCheck, FaChartPie, FaChartBar, FaEdit } from "react-icons/fa";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from "chart.js";
-import { Pie, Bar } from "react-chartjs-2";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
@@ -14,7 +13,16 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+// Lazy-load Chart.js to reduce bundle size
+const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
+const Pie = dynamic(() => import("react-chartjs-2").then(mod => mod.Pie), { ssr: false, loading: ChartLoader });
+const Bar = dynamic(() => import("react-chartjs-2").then(mod => mod.Bar), { ssr: false, loading: ChartLoader });
+
+if (typeof window !== "undefined") {
+  import("chart.js").then(({ Chart, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement }) => {
+    Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+  });
+}
 
 const EXPENSE_CATEGORIES = ["Feed", "Medication", "Transport", "Utilities", "Equipment", "Labor", "Admin", "Maintenance", "Petty Cash", "Other"];
 const CATEGORY_COLORS = ["#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#10b981", "#ec4899", "#6366f1", "#14b8a6", "#f97316", "#6b7280"];
@@ -41,6 +49,8 @@ export default function Transactions() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -200,12 +210,12 @@ export default function Transactions() {
         </motion.div>
       )}
 
-      <FilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Search transactions..."
+      <FilterBar searchTerm={searchTerm} onSearchChange={(v) => { setSearchTerm(v); setCurrentPage(1); }} placeholder="Search transactions..."
         filters={[
-          { value: filterCategory, onChange: setFilterCategory, options: [{ value: "all", label: "All Categories" }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))] },
-          { value: filterType, onChange: setFilterType, options: [{ value: "all", label: "All Types" }, { value: "Income", label: "Income" }, { value: "Expense", label: "Expense" }] },
-          { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterCategory, onChange: (v) => { setFilterCategory(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Categories" }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))] },
+          { value: filterType, onChange: (v) => { setFilterType(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Types" }, { value: "Income", label: "Income" }, { value: "Expense", label: "Expense" }] },
+          { value: filterPeriod, onChange: (v) => { setFilterPeriod(v); setCurrentPage(1); }, options: PERIOD_OPTIONS },
+          { value: filterLocation, onChange: (v) => { setFilterLocation(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
       />
 
@@ -213,43 +223,84 @@ export default function Transactions() {
         {filtered.length === 0 ? (
           <div className="text-center py-16"><span className="text-5xl mb-4 block">💸</span><p className="text-gray-500 text-lg">No transactions found</p></div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b-2 border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Title</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Payment</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Location</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Amount</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filtered.map((record, idx) => (
-                  <motion.tr key={record._id || idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">{record.date ? new Date(record.date).toLocaleDateString() : "—"}</td>
-                    <td className="px-4 py-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${record.type?.toLowerCase() === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{record.type?.toLowerCase() === "income" ? "Income" : "Expense"}</span></td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.title}</td>
-                    <td className="px-4 py-3 text-sm"><span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">{record.category || "—"}</span></td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{record.vendor || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{record.paymentMethod || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
-                    <td className={`px-4 py-3 text-sm text-right font-bold ${record.type?.toLowerCase() === "income" ? "text-green-700" : "text-red-700"}`}>{record.type?.toLowerCase() === "income" ? "+" : "-"}{formatCurrency(record.amount || 0, businessSettings.currency)}</td>
-                    <td className="px-4 py-3 text-sm text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit"><FaEdit size={13} /></button>
-                        <button onClick={() => handleDelete(record._id)} disabled={deleting === record._id} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg disabled:opacity-50" title="Delete">{deleting === record._id ? <FaSpinner className="animate-spin" size={13} /> : <FaTrash size={13} />}</button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Payment</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Location</th>
+                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {(() => {
+                    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                    const safePage = Math.min(currentPage, totalPages);
+                    const startIdx = (safePage - 1) * itemsPerPage;
+                    const paginatedRecords = filtered.slice(startIdx, startIdx + itemsPerPage);
+                    return paginatedRecords.map((record, idx) => (
+                      <motion.tr key={record._id || idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{record.date ? new Date(record.date).toLocaleDateString() : "—"}</td>
+                        <td className="px-4 py-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${record.type?.toLowerCase() === "income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{record.type?.toLowerCase() === "income" ? "Income" : "Expense"}</span></td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.title}</td>
+                        <td className="px-4 py-3 text-sm"><span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">{record.category || "—"}</span></td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{record.vendor || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{record.paymentMethod || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
+                        <td className={`px-4 py-3 text-sm text-right font-bold ${record.type?.toLowerCase() === "income" ? "text-green-700" : "text-red-700"}`}>{record.type?.toLowerCase() === "income" ? "+" : "-"}{formatCurrency(record.amount || 0, businessSettings.currency)}</td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit"><FaEdit size={13} /></button>
+                            <button onClick={() => handleDelete(record._id)} disabled={deleting === record._id} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg disabled:opacity-50" title="Delete">{deleting === record._id ? <FaSpinner className="animate-spin" size={13} /> : <FaTrash size={13} />}</button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination Controls */}
+            {(() => {
+              const totalPages = Math.ceil(filtered.length / itemsPerPage);
+              const safePage = Math.min(currentPage, totalPages);
+              if (totalPages <= 1) return null;
+              const startIdx = (safePage - 1) * itemsPerPage + 1;
+              const endIdx = Math.min(safePage * itemsPerPage, filtered.length);
+              const maxVisiblePages = 5;
+              let startPage = Math.max(1, safePage - Math.floor(maxVisiblePages / 2));
+              let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+              if (endPage - startPage + 1 < maxVisiblePages) startPage = Math.max(1, endPage - maxVisiblePages + 1);
+              const pages = [];
+              for (let i = startPage; i <= endPage; i++) pages.push(i);
+              return (
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span>Showing {startIdx}–{endIdx} of {filtered.length}</span>
+                    <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white">
+                      {[10, 15, 25, 50].map(n => <option key={n} value={n}>{n} per page</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} className="px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">«</button>
+                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                    {pages.map(page => (
+                      <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${page === safePage ? "bg-orange-600 text-white border border-orange-600" : "border border-gray-300 bg-white hover:bg-gray-100 text-gray-700"}`}>{page}</button>
+                    ))}
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                    <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages} className="px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">»</button>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
         )}
       </div>
     </div>

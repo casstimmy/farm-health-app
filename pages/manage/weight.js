@@ -49,9 +49,9 @@ export default function WeightTracking() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Fetch animals from global context (force refresh to get latest weights) and records/locations
+      // Animals from global context (cached); fetch records and locations in parallel
       const [animalsData, recordsRes, locRes] = await Promise.all([
-        fetchGlobalAnimals(true),
+        fetchGlobalAnimals(),
         fetch("/api/weight", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
@@ -106,11 +106,16 @@ export default function WeightTracking() {
   });
 
   const historyRecords = useMemo(() => {
-    if (!historyAnimalId) return [];
-    let recs = allRecords.filter((r) => {
-      const recAnimalId = r.animal?._id || r.animal;
-      return String(recAnimalId) === String(historyAnimalId);
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    let recs;
+    if (!historyAnimalId || historyAnimalId === "all") {
+      // Show all weight records across all animals
+      recs = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      recs = allRecords.filter((r) => {
+        const recAnimalId = r.animal?._id || r.animal;
+        return String(recAnimalId) === String(historyAnimalId);
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
     recs = filterByPeriod(recs, filterPeriod);
     return recs;
   }, [historyAnimalId, allRecords, filterPeriod]);
@@ -210,7 +215,7 @@ export default function WeightTracking() {
 
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={() => { setViewMode("overview"); setHistoryAnimalId(""); }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "overview" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>All Animals</button>
-        <button onClick={() => setViewMode("history")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "history" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Weight History</button>
+        <button onClick={() => { setViewMode("history"); if (!historyAnimalId) setHistoryAnimalId("all"); }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "history" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>Weight History</button>
       </div>
 
       <FilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Search by name, tag, or breed..."
@@ -279,20 +284,23 @@ export default function WeightTracking() {
           <div className="bg-white rounded-xl shadow border border-gray-200 p-4 flex flex-col md:flex-row md:items-center gap-4">
             <label className="label mb-0">Select Animal:</label>
             <select value={historyAnimalId} onChange={(e) => setHistoryAnimalId(e.target.value)} className="input-field md:w-80">
-              <option value="">-- Choose Animal --</option>
+              <option value="all">All Animals</option>
               {aliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}
             </select>
-            {historyAnimal && (
+            {historyAnimal && historyAnimalId !== "all" && (
               <div className="flex gap-4 text-sm text-gray-600">
                 <span>Birth: <strong>{historyAnimal.birthWeight || "?"} kg</strong></span>
                 <span>Current: <strong>{historyAnimal.currentWeight || "?"} kg</strong></span>
                 <span>Proj. Max: <strong>{historyAnimal.projectedMaxWeight || "?"} kg</strong></span>
               </div>
             )}
+            {historyAnimalId === "all" && (
+              <span className="text-sm text-purple-600 font-medium">{historyRecords.length} total records</span>
+            )}
           </div>
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {historyRecords.length === 0 ? (
-              <div className="text-center py-16"><span className="text-5xl mb-4 block">📊</span><p className="text-gray-500 text-lg">{historyAnimalId ? "No records found" : "Select an animal"}</p></div>
+              <div className="text-center py-16"><span className="text-5xl mb-4 block">📊</span><p className="text-gray-500 text-lg">No records found</p></div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -300,6 +308,7 @@ export default function WeightTracking() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">#</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
+                      {(historyAnimalId === "all") && <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Animal</th>}
                       <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Weight (kg)</th>
                       <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Change</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Location</th>
@@ -309,12 +318,14 @@ export default function WeightTracking() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {historyRecords.map((record, idx) => {
-                      const prev = historyRecords[idx + 1];
+                      const prev = historyAnimalId !== "all" ? historyRecords[idx + 1] : null;
                       const diff = prev ? +(record.weightKg - prev.weightKg).toFixed(2) : null;
+                      const animalInfo = historyAnimalId === "all" ? animals.find(a => a._id === (record.animal?._id || record.animal)) : null;
                       return (
                         <motion.tr key={record._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.03 }} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 text-sm text-gray-500">{historyRecords.length - idx}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{record.date ? new Date(record.date).toLocaleDateString() : "—"}</td>
+                          {historyAnimalId === "all" && <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.animal?.name || animalInfo?.name || record.animal?.tagId || animalInfo?.tagId || "—"}</td>}
                           <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">{record.weightKg} kg</td>
                           <td className="px-4 py-3 text-sm text-center">
                             {diff !== null ? (
@@ -322,7 +333,7 @@ export default function WeightTracking() {
                                 {diff > 0 ? <FaArrowUp size={10} /> : diff < 0 ? <FaArrowDown size={10} /> : <FaMinus size={10} />}
                                 {diff > 0 ? "+" : ""}{diff} kg
                               </span>
-                            ) : <span className="text-gray-400 text-xs">First</span>}
+                            ) : <span className="text-gray-400 text-xs">{historyAnimalId === "all" ? "—" : "First"}</span>}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
                           <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{record.notes || "—"}</td>

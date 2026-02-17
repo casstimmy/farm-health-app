@@ -9,7 +9,7 @@ async function handler(req, res) {
   if (req.method === "GET") {
     try {
       // All authenticated users can view inventory
-      const inventory = await Inventory.find().sort({ dateAdded: -1 });
+      const inventory = await Inventory.find().sort({ dateAdded: -1 }).lean();
       res.status(200).json(inventory);
     } catch (error) {
       res.status(500).json({ error: error.message });

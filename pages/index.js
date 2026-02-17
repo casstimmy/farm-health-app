@@ -4,26 +4,25 @@ import { useEffect, useState, useMemo, useContext } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { FaSpinner, FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, FaLeaf, FaDollarSign, FaExclamationTriangle } from "react-icons/fa";
-import { Pie, Bar, Doughnut } from "react-chartjs-2";
+import { FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, FaLeaf, FaDollarSign, FaExclamationTriangle } from "react-icons/fa";
+import dynamic from "next/dynamic";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
-import { getCachedData, invalidateCachePattern } from "@/utils/cache";
+import { getCachedData } from "@/utils/cache";
 import { useAnimalData } from "@/context/AnimalDataContext";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend);
+// Lazy-load Chart.js components to reduce initial bundle size
+const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
+const Pie = dynamic(() => import("react-chartjs-2").then(mod => mod.Pie), { ssr: false, loading: ChartLoader });
+const Bar = dynamic(() => import("react-chartjs-2").then(mod => mod.Bar), { ssr: false, loading: ChartLoader });
+const Doughnut = dynamic(() => import("react-chartjs-2").then(mod => mod.Doughnut), { ssr: false, loading: ChartLoader });
+
+// Register Chart.js components (lazy - only when charts render)
+if (typeof window !== "undefined") {
+  import("chart.js").then(({ Chart, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend }) => {
+    Chart.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Title, Tooltip, Legend);
+  });
+}
 
 const fmt = (v = 0) => Number(v).toLocaleString("en-US");
 const fmtMoney = (v = 0, c = "NGN") => {
@@ -34,13 +33,11 @@ const fmtMoney = (v = 0, c = "NGN") => {
 export default function Home() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
-  const { animals: cachedAnimals, fetchAnimals, forceRefresh: forceRefreshAnimals } = useAnimalData();
+  const { animals: cachedAnimals, fetchAnimals } = useAnimalData();
   const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [data, setData] = useState({ animals: [], inventory: [], treatments: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [seedResult, setSeedResult] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -94,25 +91,6 @@ export default function Home() {
     window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
-
-  const handleSeedDatabase = async () => {
-    if (!confirm("Seed the database with sample data? This will add test records.")) return;
-    setSeedLoading(true); setSeedResult(null);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/seed", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
-      const d = await res.json();
-      if (!res.ok) { setSeedResult({ success: false, message: d.error || "Failed" }); }
-      else {
-        // Clear all cache after seeding
-        invalidateCachePattern("api/");
-        forceRefreshAnimals();
-        setSeedResult({ success: true, message: "Database seeded! ✓", results: d.results }); 
-        setTimeout(() => window.location.reload(), 2000); 
-      }
-    } catch (err) { setSeedResult({ success: false, message: err.message }); }
-    finally { setSeedLoading(false); }
-  };
 
   // ─── Computed Stats ───
   const stats = useMemo(() => {
@@ -211,12 +189,6 @@ export default function Home() {
             <p className="text-green-50 text-lg">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
-            {user?.role === "SuperAdmin" && (
-              <motion.button onClick={handleSeedDatabase} disabled={seedLoading || !isOnline} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                className="bg-white text-green-700 px-4 py-2 rounded-lg font-bold hover:bg-green-50 shadow-lg disabled:opacity-50 flex items-center gap-2">
-                {seedLoading ? <><FaSpinner className="animate-spin w-4 h-4" /><span className="text-sm">Seeding...</span></> : <><span>🌱</span><span className="text-sm hidden sm:inline">Seed DB</span></>}
-              </motion.button>
-            )}
           </div>
         </div>
       </header>
@@ -225,20 +197,6 @@ export default function Home() {
         <div className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2">
           📡 You are currently offline.
         </div>
-      )}
-
-      {seedResult && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 p-4 rounded-lg border-l-4 font-semibold ${seedResult.success ? "bg-green-50 border-green-500 text-green-700" : "bg-red-50 border-red-500 text-red-700"}`}>
-          <div>{seedResult.message}</div>
-          {seedResult.results && (
-            <div className="mt-2 text-sm space-y-1">
-              {Object.entries(seedResult.results).filter(([k]) => k !== "errors").map(([key, value]) => (
-                <div key={key}>• {key.replace(/([A-Z])/g, " $1").trim()}: {typeof value === "number" ? value : JSON.stringify(value)}</div>
-              ))}
-            </div>
-          )}
-        </motion.div>
       )}
 
       {loading ? (

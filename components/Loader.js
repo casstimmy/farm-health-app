@@ -3,11 +3,12 @@
  * Centralized loading spinner for all async operations
  * 
  * Features:
+ * - Auto-detects business logo from BusinessContext
+ * - Simulated progress bar with percentage
  * - Multiple display variants (card, fullPage, inline, overlay)
  * - Color themes matching Tailwind palette
  * - Customizable messages and sizes
  * - Smooth animations with Framer Motion
- * - Specialized loaders for buttons and tables
  * 
  * Usage:
  * <Loader message="Loading..." color="blue-600" />
@@ -15,29 +16,55 @@
  * <OverlayLoader message="Saving..." />
  */
 
+import { useContext, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { BusinessContext } from "@/context/BusinessContext";
 
 // Color theme definitions
 const LOADER_COLORS = {
-  "blue-600": { spinner: "border-blue-600", bg: "from-blue-50 to-blue-100", text: "text-blue-700" },
-  "green-600": { spinner: "border-green-600", bg: "from-green-50 to-green-100", text: "text-green-700" },
-  "red-600": { spinner: "border-red-600", bg: "from-red-50 to-red-100", text: "text-red-700" },
-  "purple-600": { spinner: "border-purple-600", bg: "from-purple-50 to-purple-100", text: "text-purple-700" },
-  "orange-600": { spinner: "border-orange-600", bg: "from-orange-50 to-orange-100", text: "text-orange-700" },
-  "pink-600": { spinner: "border-pink-600", bg: "from-pink-50 to-pink-100", text: "text-pink-700" },
-  "yellow-600": { spinner: "border-yellow-600", bg: "from-yellow-50 to-yellow-100", text: "text-yellow-700" },
-  "teal-600": { spinner: "border-teal-600", bg: "from-teal-50 to-teal-100", text: "text-teal-700" },
+  "blue-600": { spinner: "border-blue-600", bg: "from-blue-500 to-blue-600", text: "text-blue-700", track: "bg-blue-100" },
+  "green-600": { spinner: "border-green-600", bg: "from-green-500 to-green-600", text: "text-green-700", track: "bg-green-100" },
+  "red-600": { spinner: "border-red-600", bg: "from-red-500 to-red-600", text: "text-red-700", track: "bg-red-100" },
+  "purple-600": { spinner: "border-purple-600", bg: "from-purple-500 to-purple-600", text: "text-purple-700", track: "bg-purple-100" },
+  "orange-600": { spinner: "border-orange-600", bg: "from-orange-500 to-orange-600", text: "text-orange-700", track: "bg-orange-100" },
+  "pink-600": { spinner: "border-pink-600", bg: "from-pink-500 to-pink-600", text: "text-pink-700", track: "bg-pink-100" },
+  "yellow-600": { spinner: "border-yellow-600", bg: "from-yellow-500 to-yellow-600", text: "text-yellow-700", track: "bg-yellow-100" },
+  "teal-600": { spinner: "border-teal-600", bg: "from-teal-500 to-teal-600", text: "text-teal-700", track: "bg-teal-100" },
 };
 
 const sizeConfig = {
-  sm: { spinner: "h-6 w-6", text: "text-sm", padding: "py-4" },
-  md: { spinner: "h-12 w-12", text: "text-base", padding: "py-16" },
-  lg: { spinner: "h-16 w-16", text: "text-lg", padding: "py-20" }
+  sm: { spinner: "h-6 w-6", logo: "h-8 w-8", text: "text-sm", padding: "py-4", bar: "h-1" },
+  md: { spinner: "h-10 w-10", logo: "h-14 w-14", text: "text-base", padding: "py-16", bar: "h-1.5" },
+  lg: { spinner: "h-14 w-14", logo: "h-20 w-20", text: "text-lg", padding: "py-20", bar: "h-2" }
 };
 
 /**
+ * Hook for simulated progress (auto-increment to ~90%)
+ */
+function useSimulatedProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    let timeout;
+    const tick = () => {
+      setProgress((prev) => {
+        if (prev >= 90) return prev;
+        // Fast at first, then slow down
+        const increment = prev < 30 ? 8 : prev < 60 ? 4 : prev < 80 ? 2 : 0.5;
+        return Math.min(prev + increment, 92);
+      });
+      // Faster ticks initially, slower later
+      const delay = progress < 30 ? 200 : progress < 60 ? 400 : 800;
+      timeout = setTimeout(tick, delay);
+    };
+    timeout = setTimeout(tick, 100);
+    return () => clearTimeout(timeout);
+  }, []);
+  return progress;
+}
+
+/**
  * Main Loader Component
- * Flexible loader that adapts to different contexts
+ * Automatically shows business logo and progress bar
  */
 export default function Loader({ 
   message = "Loading...", 
@@ -46,39 +73,66 @@ export default function Loader({
   fullPage = false,
   inline = false,
   overlay = false,
-  businessLogo = null
+  businessLogo = null,
+  showProgress = true
 }) {
+  // Auto-detect business logo from context
+  let contextLogo = null;
+  try {
+    const ctx = useContext(BusinessContext);
+    contextLogo = ctx?.businessSettings?.businessLogo;
+  } catch (e) {
+    // Context may not be available
+  }
+  const logo = businessLogo || contextLogo;
+  
   const colorTheme = LOADER_COLORS[color] || LOADER_COLORS["green-600"];
   const sizeClass = sizeConfig[size];
+  const progress = useSimulatedProgress();
 
   const spinnerContent = (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className="inline-block text-center"
+      className="inline-block text-center w-full"
     >
-      {businessLogo && (
+      {logo && (
         <motion.img 
-          src={businessLogo} 
+          src={logo} 
           alt="Logo"
-          className="h-16 w-16 mx-auto mb-4 object-contain rounded-lg"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
+          className={`${sizeClass.logo} mx-auto mb-3 object-contain rounded-lg`}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, type: "spring" }}
           onError={(e) => { e.target.style.display = "none"; }}
         />
       )}
-      <div className={`animate-spin rounded-full ${sizeClass.spinner} border-4 ${colorTheme.spinner} mx-auto`}></div>
+      <div className={`animate-spin rounded-full ${sizeClass.spinner} border-4 border-gray-200 ${colorTheme.spinner} border-t-transparent mx-auto`}
+        style={{ borderTopColor: "transparent" }}
+      ></div>
       {message && (
         <motion.p 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className={`${sizeClass.text} text-gray-600 mt-4 font-medium`}
+          className={`${sizeClass.text} text-gray-600 mt-3 font-medium`}
         >
           {message}
         </motion.p>
+      )}
+      {showProgress && size !== "sm" && (
+        <div className="mt-3 w-48 mx-auto">
+          <div className={`w-full ${colorTheme.track} rounded-full ${sizeClass.bar} overflow-hidden`}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`h-full bg-gradient-to-r ${colorTheme.bg} rounded-full`}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">{Math.round(progress)}%</p>
+        </div>
       )}
     </motion.div>
   );
@@ -123,8 +177,7 @@ export default function Loader({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="text-center bg-white rounded-2xl shadow-lg border border-gray-100"
-      style={{ padding: sizeClass.padding }}
+      className="text-center bg-white rounded-2xl shadow-lg border border-gray-100 py-16 px-8"
     >
       {spinnerContent}
     </motion.div>
@@ -208,15 +261,22 @@ export function ShimmerLoader({ message = "Loading...", height = "h-4" }) {
 }
 
 /**
- * Progress Loader - For operations with progress indication
- * Shows progress percentage during longer operations
+ * Progress Loader - For operations with known progress (e.g. seeding, importing)
+ * Shows progress percentage with logo
  */
 export function ProgressLoader({ 
   message = "Processing...", 
   progress = 0, 
   color = "blue-600",
-  showPercentage = true 
+  showPercentage = true,
+  businessLogo = null
 }) {
+  let contextLogo = null;
+  try {
+    const ctx = useContext(BusinessContext);
+    contextLogo = ctx?.businessSettings?.businessLogo;
+  } catch (e) {}
+  const logo = businessLogo || contextLogo;
   const colorTheme = LOADER_COLORS[color] || LOADER_COLORS["blue-600"];
 
   return (
@@ -225,14 +285,24 @@ export function ProgressLoader({
       animate={{ opacity: 1 }}
       className="w-full max-w-sm mx-auto text-center py-8"
     >
+      {logo && (
+        <motion.img 
+          src={logo} 
+          alt="Logo"
+          className="h-14 w-14 mx-auto mb-4 object-contain rounded-lg"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onError={(e) => { e.target.style.display = "none"; }}
+        />
+      )}
       <div className="mb-4">
         <p className="text-gray-700 font-semibold mb-2">{message}</p>
-        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div className={`w-full ${colorTheme.track} rounded-full h-2 overflow-hidden`}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(progress, 100)}%` }}
             transition={{ duration: 0.5 }}
-            className={`h-full bg-gradient-to-r ${colorTheme.bg}`}
+            className={`h-full bg-gradient-to-r ${colorTheme.bg} rounded-full`}
           />
         </div>
         {showPercentage && (

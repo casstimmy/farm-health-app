@@ -75,7 +75,8 @@ async function handler(req, res) {
       if (animalId) {
         const records = await FeedingRecord.find({ animal: animalId })
           .sort({ date: -1 })
-          .populate("feedItems.inventoryItem");
+          .populate("feedItems.inventoryItem")
+          .lean();
         return res.status(200).json(records);
       }
 
@@ -84,7 +85,8 @@ async function handler(req, res) {
         .sort({ date: -1 })
         .populate("animal")
         .populate("feedItems.inventoryItem")
-        .populate("location");
+        .populate("location")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

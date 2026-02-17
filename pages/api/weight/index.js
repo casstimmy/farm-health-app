@@ -40,7 +40,7 @@ async function handler(req, res) {
       if (animalId) {
         const records = await WeightRecord.find({ animal: animalId }).sort({
           date: -1,
-        });
+        }).lean();
         return res.status(200).json(records);
       }
 
@@ -48,7 +48,8 @@ async function handler(req, res) {
       const records = await WeightRecord.find()
         .sort({ date: -1 })
         .populate("animal")
-        .populate("location");
+        .populate("location")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });
