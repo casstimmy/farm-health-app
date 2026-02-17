@@ -6,19 +6,16 @@ import AnimalsList from "@/components/animals/AnimalsList";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Modal from "@/components/shared/Modal";
-import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function ManageAnimals() {
   const router = useRouter();
-  const { forceRefresh } = useAnimalData();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
   const handleSuccess = () => {
     setShowModal(false);
-    // Force refresh the global animal cache after adding a new animal
-    forceRefresh();
+    // AddAnimalForm already adds the new animal to the global cache via addAnimalToCache
   };
 
   return (

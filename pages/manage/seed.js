@@ -39,7 +39,7 @@ const PASTE_DATA_TYPES = [
 export default function SeedDatabase() {
   const router = useRouter();
   const { user, isLoading: roleLoading, isAdmin } = useRole();
-  const { forceRefresh: forceRefreshAnimals } = useAnimalData();
+  const { fetchAnimals: refreshAnimals } = useAnimalData();
   const [seeding, setSeeding] = useState(false);
   const [seedProgress, setSeedProgress] = useState(0);
   const [seedStep, setSeedStep] = useState("");
@@ -143,7 +143,7 @@ export default function SeedDatabase() {
       setSeedStep("Complete!");
       setResult(data.results || data);
       invalidateCachePattern("api/");
-      forceRefreshAnimals();
+      refreshAnimals();
     } catch (err) {
       clearInterval(progressInterval);
       setError("Failed to seed database. Please try again.");
@@ -211,7 +211,7 @@ export default function SeedDatabase() {
       setImportProgress(100);
       setImportResult(data);
       invalidateCachePattern("api/");
-      forceRefreshAnimals();
+      refreshAnimals();
     } catch (err) {
       setError("Import failed: " + err.message);
       setImportProgress(0);
@@ -248,7 +248,7 @@ export default function SeedDatabase() {
       setPasteProgress(100);
       setPasteResult(data);
       invalidateCachePattern("api/");
-      forceRefreshAnimals();
+      refreshAnimals();
     } catch (err) {
       setError("Paste import failed: " + err.message);
       setPasteProgress(0);

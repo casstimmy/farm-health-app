@@ -8,8 +8,6 @@ import { FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, Fa
 import dynamic from "next/dynamic";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
-import { getCachedData, invalidateCachePattern } from "@/utils/cache";
-import { useAnimalData } from "@/context/AnimalDataContext";
 
 // Lazy-load Chart.js components to reduce initial bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -37,7 +35,6 @@ const fmtMoney = (v = 0, c = "NGN") => {
 export default function Home() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
-  const { animals: cachedAnimals, fetchAnimals, forceRefresh, loading: animalsLoading } = useAnimalData();
   const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -56,20 +53,20 @@ export default function Home() {
         const headers = { Authorization: `Bearer ${token}` };
         const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.ok ? r.json() : []);
         
-        // Force-refresh animals from DB to guarantee fresh data on homepage
-        const [animalsData, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          forceRefresh(),
-          getCachedData("api/inventory", () => fetchApi("/api/inventory"), 5 * 60 * 1000),
-          getCachedData("api/treatment", () => fetchApi("/api/treatment"), 5 * 60 * 1000),
-          getCachedData("api/finance", () => fetchApi("/api/finance"), 5 * 60 * 1000),
-          getCachedData("api/mortality", () => fetchApi("/api/mortality"), 5 * 60 * 1000),
-          getCachedData("api/breeding", () => fetchApi("/api/breeding"), 5 * 60 * 1000),
-          getCachedData("api/health-records", () => fetchApi("/api/health-records"), 5 * 60 * 1000),
-          getCachedData("api/feeding", () => fetchApi("/api/feeding"), 5 * 60 * 1000),
+        // Fetch all data directly in parallel — simple and reliable
+        const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
+          fetchApi("/api/animals"),
+          fetchApi("/api/inventory"),
+          fetchApi("/api/treatment"),
+          fetchApi("/api/finance"),
+          fetchApi("/api/mortality"),
+          fetchApi("/api/breeding"),
+          fetchApi("/api/health-records"),
+          fetchApi("/api/feeding"),
         ]);
         
         setData({
-          animals: Array.isArray(animalsData) ? animalsData : [],
+          animals: Array.isArray(animals) ? animals : [],
           inventory: Array.isArray(inventory) ? inventory : [],
           treatments: Array.isArray(treatments) ? treatments : [],
           finance: Array.isArray(finance) ? finance : [],

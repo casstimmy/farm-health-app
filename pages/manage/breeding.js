@@ -11,7 +11,7 @@ import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filter
 
 export default function BreedingManagement() {
   const router = useRouter();
-  const { fetchAnimals: fetchGlobalAnimals, forceRefresh } = useAnimalData();
+  const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [breedingRecords, setBreedingRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -263,7 +263,7 @@ export default function BreedingManagement() {
       setSuccess(`Kid ${kidForm.tagId} registered successfully! Linked to ${doeAnimal?.tagId || "Dam"} × ${buckAnimal?.tagId || "Sire"}`);
       setShowRegisterKids(null);
       setKidForm({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
-      forceRefresh();
+      fetchGlobalAnimals();
       fetchData();
     } catch (err) {
       setError(err.message);
