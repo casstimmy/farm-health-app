@@ -8,7 +8,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const item = await Inventory.findById(id);
+      const item = await Inventory.findById(id).lean();
       if (!item) {
         return res.status(404).json({ error: "Item not found" });
       }

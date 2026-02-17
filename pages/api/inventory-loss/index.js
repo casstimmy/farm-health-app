@@ -15,7 +15,8 @@ async function handler(req, res) {
 
       const records = await InventoryLoss.find(filter)
         .sort({ date: -1 })
-        .populate("inventoryItem", "item category unit");
+        .populate("inventoryItem", "item category unit")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

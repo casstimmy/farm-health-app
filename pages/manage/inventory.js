@@ -8,6 +8,7 @@ import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
 import Modal from "@/components/shared/Modal";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 export default function ManageInventory() {
   const { businessSettings } = useContext(BusinessContext);
@@ -82,10 +83,12 @@ export default function ManageInventory() {
   const fetchInventory = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/inventory", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await getCachedData("api/inventory", async () => {
+        const res = await fetch("/api/inventory", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await res.json();
+      }, 3 * 60 * 1000);
       setInventory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
@@ -97,10 +100,12 @@ export default function ManageInventory() {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/inventory-categories", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await getCachedData("api/inventory-categories", async () => {
+        const res = await fetch("/api/inventory-categories", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await res.json();
+      }, 3 * 60 * 1000);
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching categories:", error);

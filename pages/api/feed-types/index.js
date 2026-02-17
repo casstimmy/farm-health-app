@@ -7,7 +7,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const feedTypes = await FeedType.find().sort({ name: 1 });
+      const feedTypes = await FeedType.find().sort({ name: 1 }).lean();
       res.status(200).json(feedTypes);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -9,7 +9,7 @@ async function handler(req, res) {
     try {
       const { type } = req.query;
       const filter = type ? { type } : {};
-      const lookups = await MedicationLookup.find(filter).sort({ value: 1 });
+      const lookups = await MedicationLookup.find(filter).sort({ value: 1 }).lean();
       return res.status(200).json(lookups);
     } catch (error) {
       return res.status(500).json({ error: error.message });

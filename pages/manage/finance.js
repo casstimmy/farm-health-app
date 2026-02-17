@@ -12,6 +12,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 // Lazy-load Chart.js to reduce bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -61,12 +62,18 @@ export default function Finance() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const [finRes, locRes] = await Promise.all([
-        fetch("/api/finance", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
+      const [finData, locData] = await Promise.all([
+        getCachedData("api/finance", async () => {
+          const res = await fetch("/api/finance", { headers: { Authorization: `Bearer ${token}` } });
+          return res.ok ? await res.json() : [];
+        }, 3 * 60 * 1000),
+        getCachedData("api/locations", async () => {
+          const res = await fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } });
+          return res.ok ? await res.json() : [];
+        }, 3 * 60 * 1000),
       ]);
-      if (finRes.ok) setAllFinance(await finRes.json());
-      if (locRes.ok) setLocations(await locRes.json() || []);
+      setAllFinance(finData);
+      setLocations(locData || []);
     } catch (err) { setError("Failed to fetch data"); }
     finally { setLoading(false); }
   };

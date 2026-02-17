@@ -8,7 +8,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const record = await InventoryLoss.findById(id).populate("inventoryItem", "item category unit");
+      const record = await InventoryLoss.findById(id).populate("inventoryItem", "item category unit").lean();
       if (!record) return res.status(404).json({ error: "Record not found" });
       res.status(200).json(record);
     } catch (error) {

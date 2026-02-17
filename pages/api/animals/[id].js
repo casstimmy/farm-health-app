@@ -9,7 +9,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const animal = await Animal.findById(id);
+      const animal = await Animal.findById(id).lean();
       if (!animal) {
         return res.status(404).json({ error: "Animal not found" });
       }

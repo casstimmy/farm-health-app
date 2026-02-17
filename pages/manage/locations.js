@@ -9,6 +9,7 @@ import FilterBar from "@/components/shared/FilterBar";
 import Modal from "@/components/shared/Modal";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 export default function ManageLocations() {
   const router = useRouter();
@@ -48,10 +49,12 @@ export default function ManageLocations() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/locations", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
+      const data = await getCachedData("api/locations", async () => {
+        const res = await fetch("/api/locations", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return await res.json();
+      }, 3 * 60 * 1000);
       setLocations(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching locations:", error);

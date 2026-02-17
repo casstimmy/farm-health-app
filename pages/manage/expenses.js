@@ -8,6 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const EXPENSE_CATEGORIES = [
   "Feed",
@@ -55,13 +56,13 @@ export default function ExpenseEntry() {
   const fetchExpenses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/expenses", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setExpenses(Array.isArray(data) ? data : []);
-      }
+      const data = await getCachedData("api/expenses", async () => {
+        const res = await fetch("/api/expenses", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return res.ok ? await res.json() : [];
+      }, 3 * 60 * 1000);
+      setExpenses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load expenses:", err);
     } finally {

@@ -16,7 +16,7 @@ async function handler(req, res) {
       const record = await VaccinationRecord.findById(id).populate(
         "animal",
         "tagId name species breed"
-      );
+      ).lean();
       if (!record) {
         return res.status(404).json({ error: "Vaccination record not found" });
       }

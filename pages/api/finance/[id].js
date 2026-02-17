@@ -14,7 +14,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const finance = await Finance.findById(id);
+      const finance = await Finance.findById(id).lean();
       if (!finance) {
         return res.status(404).json({ error: "Record not found" });
       }

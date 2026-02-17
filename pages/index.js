@@ -8,7 +8,7 @@ import { FaPlus, FaHeart, FaWeight, FaPills, FaBoxOpen, FaChartLine, FaSkull, Fa
 import dynamic from "next/dynamic";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
-import { getCachedData } from "@/utils/cache";
+import { getCachedData, invalidateCachePattern } from "@/utils/cache";
 import { useAnimalData } from "@/context/AnimalDataContext";
 
 // Lazy-load Chart.js components to reduce initial bundle size
@@ -24,6 +24,10 @@ if (typeof window !== "undefined") {
   });
 }
 
+const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#06b6d4", "#84cc16", "#e11d48"];
+const SPECIES_EMOJI = { Goat: "🐐", Cattle: "🐄", Cow: "🐄", Sheep: "🐑", Pig: "🐖", Chicken: "🐔", Poultry: "🐔", Horse: "🐴", Rabbit: "🐇", Fish: "🐟", Turkey: "🦃", Duck: "🦆", Dog: "🐕", Cat: "🐈" };
+const getSpeciesEmoji = (species) => SPECIES_EMOJI[species] || "🐾";
+
 const fmt = (v = 0) => Number(v).toLocaleString("en-US");
 const fmtMoney = (v = 0, c = "NGN") => {
   const s = c === "NGN" ? "₦" : c === "USD" ? "$" : c === "EUR" ? "€" : "£";
@@ -33,7 +37,7 @@ const fmtMoney = (v = 0, c = "NGN") => {
 export default function Home() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
-  const { animals: cachedAnimals, fetchAnimals } = useAnimalData();
+  const { animals: cachedAnimals, fetchAnimals, forceRefresh, loading: animalsLoading } = useAnimalData();
   const currency = businessSettings?.currency || "NGN";
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -50,11 +54,11 @@ export default function Home() {
       try {
         setLoading(true);
         const headers = { Authorization: `Bearer ${token}` };
-        const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.json());
+        const fetchApi = (endpoint) => fetch(endpoint, { headers }).then(r => r.ok ? r.json() : []);
         
-        // Animals come from global context (shared cache); other data uses TTL cache
+        // Force-refresh animals from DB to guarantee fresh data on homepage
         const [animalsData, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          fetchAnimals(),
+          forceRefresh(),
           getCachedData("api/inventory", () => fetchApi("/api/inventory"), 5 * 60 * 1000),
           getCachedData("api/treatment", () => fetchApi("/api/treatment"), 5 * 60 * 1000),
           getCachedData("api/finance", () => fetchApi("/api/finance"), 5 * 60 * 1000),
@@ -99,12 +103,33 @@ export default function Home() {
     const totalAnimals = animals.length;
     const aliveCount = alive.length;
     const deadCount = animals.filter(a => a.status === "Dead").length;
+    const soldCount = animals.filter(a => a.status === "Sold").length;
+    const quarantinedCount = animals.filter(a => a.status === "Quarantined").length;
     const maleCount = alive.filter(a => a.gender === "Male").length;
     const femaleCount = alive.filter(a => a.gender === "Female").length;
+
+    // Species breakdown (all animal types)
+    const speciesMap = {};
+    alive.forEach(a => { 
+      const sp = a.species || "Unknown";
+      speciesMap[sp] = (speciesMap[sp] || 0) + 1; 
+    });
 
     // Breed distribution
     const breedMap = {};
     alive.forEach(a => { breedMap[a.breed || "Unknown"] = (breedMap[a.breed || "Unknown"] || 0) + 1; });
+
+    // Species-breed breakdown for detail
+    const speciesBreedMap = {};
+    alive.forEach(a => {
+      const sp = a.species || "Unknown";
+      if (!speciesBreedMap[sp]) speciesBreedMap[sp] = { total: 0, male: 0, female: 0, breeds: {} };
+      speciesBreedMap[sp].total++;
+      if (a.gender === "Male") speciesBreedMap[sp].male++;
+      if (a.gender === "Female") speciesBreedMap[sp].female++;
+      const br = a.breed || "Unknown";
+      speciesBreedMap[sp].breeds[br] = (speciesBreedMap[sp].breeds[br] || 0) + 1;
+    });
 
     // Financial
     const totalIncome = finance.filter(f => f.type === "Income").reduce((s, f) => s + (f.amount || 0), 0);
@@ -126,22 +151,22 @@ export default function Home() {
     const totalDeaths = mortality.length;
     const mortalityLoss = mortality.reduce((s, m) => s + (m.estimatedValue || 0), 0);
 
-    // Breeding
+    // Breeding — includes populated doe/buck with tagId and name
     const totalBreeding = breeding.length;
     const delivered = breeding.filter(b => b.pregnancyStatus === "Delivered");
     const totalKids = delivered.reduce((s, b) => s + (b.kidsAlive || 0), 0);
     const confirmed = breeding.filter(b => b.pregnancyStatus === "Confirmed").length;
+    const pendingBreeding = breeding.filter(b => b.pregnancyStatus === "Pending").length;
 
     // Treatments & health
     const activeTreatments = healthRecords.filter(h => h.recoveryStatus === "Under Treatment" || h.recoveryStatus === "Improving").length;
     const recovered = healthRecords.filter(h => h.recoveryStatus === "Recovered").length;
 
-    // Recent records — show latest regardless of date (sorted newest first)
+    // Recent records — sorted newest first
     const recentTreatments = [...healthRecords].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const recentFeedings = [...feeding].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    
-    // Recent breeding — sorted by mating date, newest first
     const recentBreeding = [...breeding].sort((a, b) => new Date(b.matingDate || b.createdAt || 0) - new Date(a.matingDate || a.createdAt || 0));
+    const recentMortality = [...mortality].sort((a, b) => new Date(b.dateOfDeath || b.createdAt || 0) - new Date(a.dateOfDeath || a.createdAt || 0));
 
     // Expense by category
     const expByCat = {};
@@ -149,27 +174,48 @@ export default function Home() {
       expByCat[f.category || "Other"] = (expByCat[f.category || "Other"] || 0) + (f.amount || 0);
     });
 
+    // Weight averages by species
+    const weightBySpecies = {};
+    alive.forEach(a => {
+      if (a.currentWeight > 0) {
+        const sp = a.species || "Unknown";
+        if (!weightBySpecies[sp]) weightBySpecies[sp] = { total: 0, count: 0 };
+        weightBySpecies[sp].total += a.currentWeight;
+        weightBySpecies[sp].count++;
+      }
+    });
+    Object.keys(weightBySpecies).forEach(sp => {
+      weightBySpecies[sp].avg = Math.round(weightBySpecies[sp].total / weightBySpecies[sp].count * 10) / 10;
+    });
+
     return {
-      totalAnimals, aliveCount, deadCount, maleCount, femaleCount, breedMap,
+      totalAnimals, aliveCount, deadCount, soldCount, quarantinedCount, maleCount, femaleCount,
+      speciesMap, breedMap, speciesBreedMap,
       totalIncome, totalExpense, netPL,
       totalPurchaseCost, totalFeedCost, totalMedCost, totalProjectedSales,
       totalItems, lowStock, inventoryValue,
       totalDeaths, mortalityLoss,
-      totalBreeding, delivered: delivered.length, totalKids, confirmed,
-      activeTreatments, recovered, recentTreatments, recentFeedings, recentBreeding,
-      expByCat,
+      totalBreeding, delivered: delivered.length, totalKids, confirmed, pendingBreeding,
+      activeTreatments, recovered,
+      recentTreatments, recentFeedings, recentBreeding, recentMortality,
+      expByCat, weightBySpecies,
     };
   }, [data]);
 
   // ─── Chart Data ───
+  const speciesChart = {
+    labels: Object.keys(stats.speciesMap),
+    datasets: [{ data: Object.values(stats.speciesMap), backgroundColor: CHART_COLORS.slice(0, Object.keys(stats.speciesMap).length) }],
+  };
+
   const breedChart = {
     labels: Object.keys(stats.breedMap),
-    datasets: [{ data: Object.values(stats.breedMap), backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"] }],
+    datasets: [{ data: Object.values(stats.breedMap), backgroundColor: CHART_COLORS }],
   };
 
   const expenseChart = {
     labels: Object.keys(stats.expByCat).slice(0, 8),
-    datasets: [{ label: "Amount (₦)", data: Object.values(stats.expByCat).slice(0, 8), backgroundColor: ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"] }],
+    datasets: [{ label: "Amount", data: Object.values(stats.expByCat).slice(0, 8), backgroundColor: CHART_COLORS.slice(0, 8) }],
   };
 
   const genderChart = {
@@ -182,22 +228,19 @@ export default function Home() {
   return (
     <>
       {/* Header */}
-      <header className="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-8 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-8 rounded-b-3xl shadow-lg">
+      <header className="bg-gradient-to-r from-green-600 to-emerald-700 text-white px-8 py-8 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-8 rounded-b-3xl shadow-lg">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold mb-1">{businessSettings?.businessName || "Farm Dashboard"}</h1>
             <p className="text-green-50 text-lg">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
+            {!isOnline && (
+              <span className="px-3 py-1.5 bg-orange-500/90 text-white rounded-lg text-sm font-semibold">📡 Offline</span>
+            )}
           </div>
         </div>
       </header>
-
-      {!isOnline && (
-        <div className="mb-6 p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2">
-          📡 You are currently offline.
-        </div>
-      )}
 
       {loading ? (
         <Loader message="Loading dashboard..." color="green-600" />
@@ -216,20 +259,55 @@ export default function Home() {
             </div>
           </div>
 
-          {/* KPI Row 1 - Herd Overview */}
-          <h2 className="text-lg font-bold text-gray-900 mb-3">🐐 Herd Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <KPI label="Total Animals" value={fmt(stats.totalAnimals)} color="bg-blue-50 border-blue-200" icon="🐐" />
+          {/* ─── Section: Livestock by Species ─── */}
+          <SectionTitle icon="🐾" title="Livestock by Species" />
+          {Object.keys(stats.speciesMap).length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+              {Object.entries(stats.speciesBreedMap).map(([species, info]) => (
+                <motion.div key={species} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-green-300 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{getSpeciesEmoji(species)}</span>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">{species}</h3>
+                      <p className="text-xs text-gray-500">{info.total} total</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 text-xs mt-1">
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">♂ {info.male}</span>
+                    <span className="px-2 py-0.5 bg-pink-50 text-pink-700 rounded font-semibold">♀ {info.female}</span>
+                  </div>
+                  {Object.keys(info.breeds).length > 0 && (
+                    <div className="mt-2 border-t border-gray-100 pt-2">
+                      {Object.entries(info.breeds).slice(0, 3).map(([breed, count]) => (
+                        <p key={breed} className="text-xs text-gray-500 truncate">{breed}: <span className="font-semibold text-gray-700">{count}</span></p>
+                      ))}
+                      {Object.keys(info.breeds).length > 3 && <p className="text-xs text-gray-400">+{Object.keys(info.breeds).length - 3} more</p>}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <EmptySection message="No animals registered yet" className="mb-8" />
+          )}
+
+          {/* Herd Overview KPIs */}
+          <SectionTitle icon="📊" title="Herd Overview" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
+            <KPI label="Total" value={fmt(stats.totalAnimals)} color="bg-blue-50 border-blue-200" icon="🐾" />
             <KPI label="Alive" value={fmt(stats.aliveCount)} color="bg-green-50 border-green-200" icon="✅" />
             <KPI label="Dead" value={fmt(stats.deadCount)} color="bg-red-50 border-red-200" icon="💀" />
+            <KPI label="Sold" value={fmt(stats.soldCount)} color="bg-yellow-50 border-yellow-200" icon="💵" />
             <KPI label="Males" value={fmt(stats.maleCount)} color="bg-indigo-50 border-indigo-200" icon="♂️" />
             <KPI label="Females" value={fmt(stats.femaleCount)} color="bg-pink-50 border-pink-200" icon="♀️" />
-            <KPI label="Active Treatments" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="💊" />
+            <KPI label="Quarantined" value={fmt(stats.quarantinedCount)} color="bg-orange-50 border-orange-200" icon="🔒" />
+            <KPI label="On Treatment" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="💊" />
           </div>
 
-          {/* KPI Row 2 - Financial Overview */}
-          <h2 className="text-lg font-bold text-gray-900 mb-3">💰 Financial Overview</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {/* Financial Overview */}
+          <SectionTitle icon="💰" title="Financial Overview" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
             <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="📈" />
             <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="📉" />
             <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "📊" : "⚠️"} />
@@ -238,27 +316,54 @@ export default function Home() {
             <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="💀" />
           </div>
 
-          {/* KPI Row 3 - Operations */}
-          <h2 className="text-lg font-bold text-gray-900 mb-3">📋 Operations</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {/* Breeding & Operations */}
+          <SectionTitle icon="💕" title="Breeding & Operations" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+            <KPI label="Breeding Records" value={fmt(stats.totalBreeding)} color="bg-pink-50 border-pink-200" icon="💕" />
+            <KPI label="Confirmed" value={fmt(stats.confirmed)} color="bg-blue-50 border-blue-200" icon="🤰" />
+            <KPI label="Pending" value={fmt(stats.pendingBreeding)} color="bg-yellow-50 border-yellow-200" icon="⏳" />
+            <KPI label="Delivered" value={fmt(stats.delivered)} color="bg-green-50 border-green-200" icon="🐣" />
+            <KPI label="Kids Born" value={fmt(stats.totalKids)} color="bg-emerald-50 border-emerald-200" icon="🎉" />
+            <KPI label="Total Deaths" value={fmt(stats.totalDeaths)} color="bg-red-50 border-red-200" icon="🪦" />
+          </div>
+
+          {/* Inventory KPIs */}
+          <SectionTitle icon="📦" title="Inventory" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
             <KPI label="Inventory Items" value={fmt(stats.totalItems)} color="bg-indigo-50 border-indigo-200" icon="📦" />
             <KPI label="Low Stock" value={fmt(stats.lowStock.length)} color={stats.lowStock.length > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"} icon="⚠️" />
             <KPI label="Inventory Value" value={fmtMoney(stats.inventoryValue, currency)} color="bg-purple-50 border-purple-200" icon="🏷️" />
-            <KPI label="Breeding Records" value={fmt(stats.totalBreeding)} color="bg-pink-50 border-pink-200" icon="💕" />
-            <KPI label="Kids Born" value={fmt(stats.totalKids)} color="bg-green-50 border-green-200" icon="🐣" />
-            <KPI label="Confirmed Pregnant" value={fmt(stats.confirmed)} color="bg-blue-50 border-blue-200" icon="🤰" />
+            <KPI label="Recovered" value={fmt(stats.recovered)} color="bg-teal-50 border-teal-200" icon="✅" />
           </div>
 
+          {/* Average Weight by Species */}
+          {Object.keys(stats.weightBySpecies).length > 0 && (
+            <>
+              <SectionTitle icon="⚖️" title="Average Weight by Species" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8">
+                {Object.entries(stats.weightBySpecies).map(([sp, w]) => (
+                  <KPI key={sp} label={sp} value={`${w.avg} kg`} color="bg-purple-50 border-purple-200" icon={getSpeciesEmoji(sp)} />
+                ))}
+              </div>
+            </>
+          )}
+
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <SectionTitle icon="📈" title="Visual Analytics" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <ChartCard title="Species Distribution">
+              {Object.keys(stats.speciesMap).length > 0 ? (
+                <Doughnut data={speciesChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } }} />
+              ) : <NoData />}
+            </ChartCard>
             <ChartCard title="Breed Distribution">
               {Object.keys(stats.breedMap).length > 0 ? (
-                <Doughnut data={breedChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } } }} />
+                <Doughnut data={breedChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } }} />
               ) : <NoData />}
             </ChartCard>
             <ChartCard title="Gender Split">
               {(stats.maleCount + stats.femaleCount) > 0 ? (
-                <Pie data={genderChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12 } } } }} />
+                <Pie data={genderChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } }} />
               ) : <NoData />}
             </ChartCard>
             <ChartCard title="Expenses by Category">
@@ -268,34 +373,44 @@ export default function Home() {
             </ChartCard>
           </div>
 
-          {/* Lists Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Recent Health Records */}
-            <ListCard title="Recent Health Records" icon="🏥" items={
-              stats.recentTreatments.slice(0, 5).map(h => ({
-                label: h.animalTagId || h.animal?.tagId || "Unknown",
-                meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
-                emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : "💊",
+          {/* Activity Feeds */}
+          <SectionTitle icon="📋" title="Recent Activity" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Recent Breeding */}
+            <ListCard title="Breeding Updates" icon="💕" items={
+              stats.recentBreeding.slice(0, 6).map(b => ({
+                label: `${b.doe?.tagId || b.doe?.name || "?"} × ${b.buck?.tagId || b.buck?.name || "?"}`,
+                meta: `${b.pregnancyStatus || "—"}${b.kidsAlive > 0 ? ` • ${b.kidsAlive} kids` : ""}${b.matingDate ? ` • ${new Date(b.matingDate).toLocaleDateString()}` : ""}`,
+                emoji: b.pregnancyStatus === "Delivered" ? "🐣" : b.pregnancyStatus === "Confirmed" ? "🤰" : b.pregnancyStatus === "Not Pregnant" ? "❌" : "⏳",
               }))
-            } emptyText="No recent health records" link="/manage/health-records" />
+            } emptyText="No breeding records" link="/manage/breeding" />
+
+            {/* Recent Health Records */}
+            <ListCard title="Health Records" icon="🏥" items={
+              stats.recentTreatments.slice(0, 6).map(h => ({
+                label: h.animalTagId || h.animal?.tagId || h.animal?.name || "Unknown",
+                meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
+                emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : h.recoveryStatus === "Deteriorating" ? "📉" : "💊",
+              }))
+            } emptyText="No health records" link="/manage/health-records" />
 
             {/* Low Stock Alerts */}
             <ListCard title="Low Stock Alerts" icon="⚠️" items={
-              stats.lowStock.slice(0, 5).map(i => ({
-                label: i.item,
-                meta: `${i.quantity} ${i.unit || "units"} remaining (min: ${i.minStock})`,
-                emoji: "📦",
+              stats.lowStock.slice(0, 6).map(i => ({
+                label: i.item || i.name,
+                meta: `${i.quantity} ${i.unit || "units"} remaining (min: ${i.minStock || 10})`,
+                emoji: i.quantity <= 0 ? "🚨" : "📦",
               }))
-            } emptyText="All stock levels are healthy" link="/manage/inventory" />
+            } emptyText="All stock levels are healthy ✅" link="/manage/inventory" />
 
-            {/* Recent Breeding */}
-            <ListCard title="Breeding Updates" icon="💕" items={
-              stats.recentBreeding.slice(0, 5).map(b => ({
-                label: `${b.doe?.tagId || b.doeTagId || "?"} × ${b.buck?.tagId || b.buckTagId || "?"}`,
-                meta: `${b.pregnancyStatus || "—"} ${b.kidsAlive > 0 ? `• ${b.kidsAlive} kids` : ""}`,
-                emoji: b.pregnancyStatus === "Delivered" ? "🐣" : b.pregnancyStatus === "Confirmed" ? "🤰" : "⏳",
+            {/* Recent Mortality */}
+            <ListCard title="Recent Mortality" icon="🪦" items={
+              stats.recentMortality.slice(0, 6).map(m => ({
+                label: m.animal?.tagId || m.animalTagId || "Unknown",
+                meta: `${m.causeOfDeath || "Unknown cause"}${m.dateOfDeath ? ` • ${new Date(m.dateOfDeath).toLocaleDateString()}` : ""}`,
+                emoji: "💀",
               }))
-            } emptyText="No breeding records" link="/manage/breeding" />
+            } emptyText="No mortality records" link="/manage/mortality" />
           </div>
         </>
       )}
@@ -303,15 +418,31 @@ export default function Home() {
   );
 }
 
+function SectionTitle({ icon, title }) {
+  return (
+    <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+      <span>{icon}</span>{title}
+    </h2>
+  );
+}
+
+function EmptySection({ message, className = "" }) {
+  return (
+    <div className={`bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 ${className}`}>
+      {message}
+    </div>
+  );
+}
+
 function KPI({ label, value, color, icon }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className={`${color} border-2 p-4 rounded-xl shadow-sm hover:shadow-md transition-all`}>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-lg">{icon}</span>
+      className={`${color} border-2 p-3 rounded-xl shadow-sm hover:shadow-md transition-all`}>
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <span className="text-base">{icon}</span>
         <span className="text-xs font-semibold text-gray-600 truncate">{label}</span>
       </div>
-      <div className="text-xl font-black text-gray-900 truncate">{value}</div>
+      <div className="text-lg font-black text-gray-900 truncate">{value}</div>
     </motion.div>
   );
 }
@@ -319,8 +450,8 @@ function KPI({ label, value, color, icon }) {
 function ChartCard({ title, children }) {
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-100 bg-gray-50"><h3 className="font-bold text-gray-800">{title}</h3></div>
-      <div className="p-5 h-64">{children}</div>
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50"><h3 className="font-bold text-gray-800 text-sm">{title}</h3></div>
+      <div className="p-4 h-56">{children}</div>
     </div>
   );
 }
@@ -331,21 +462,21 @@ function NoData() {
 
 function ListCard({ title, icon, items, emptyText, link }) {
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-gray-800 flex items-center gap-2"><span>{icon}</span>{title}</h3>
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2"><span>{icon}</span>{title}</h3>
         {link && <Link href={link} className="text-xs text-green-600 font-semibold hover:underline">View All →</Link>}
       </div>
-      <ul className="space-y-2">
+      <ul className="space-y-1.5">
         {items.length > 0 ? items.map((i, idx) => (
-          <li key={idx} className="flex items-start gap-3 p-2 rounded-lg bg-gray-50 hover:bg-green-50 transition-all">
-            <span className="text-lg flex-shrink-0">{i.emoji}</span>
+          <li key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50 hover:bg-green-50 transition-all">
+            <span className="text-sm flex-shrink-0 mt-0.5">{i.emoji}</span>
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-gray-900 text-sm truncate">{i.label}</div>
+              <div className="font-semibold text-gray-900 text-xs truncate">{i.label}</div>
               <div className="text-xs text-gray-500 truncate">{i.meta}</div>
             </div>
           </li>
-        )) : <li className="text-gray-400 text-sm text-center py-4">{emptyText}</li>}
+        )) : <li className="text-gray-400 text-xs text-center py-4">{emptyText}</li>}
       </ul>
     </div>
   );

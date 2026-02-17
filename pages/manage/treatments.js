@@ -8,6 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import dynamic from "next/dynamic";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
@@ -138,13 +139,13 @@ export default function Treatments() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/treatment", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTreatments(Array.isArray(data) ? data : []);
-      }
+      const data = await getCachedData("api/treatment", async () => {
+        const res = await fetch("/api/treatment", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return res.ok ? await res.json() : [];
+      }, 3 * 60 * 1000);
+      setTreatments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch treatments:", err);
     } finally {

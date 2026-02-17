@@ -6,7 +6,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const users = await User.find().select("-password -pin").sort({ createdAt: -1 });
+      const users = await User.find().select("-password -pin").sort({ createdAt: -1 }).lean();
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ error: error.message });

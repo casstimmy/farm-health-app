@@ -15,7 +15,8 @@ async function handler(req, res) {
     try {
       const record = await WeightRecord.findById(id)
         .populate("animal")
-        .populate("location");
+        .populate("location")
+        .lean();
       if (!record) return res.status(404).json({ error: "Record not found" });
       res.status(200).json(record);
     } catch (error) {

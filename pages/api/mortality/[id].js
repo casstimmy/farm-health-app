@@ -16,7 +16,7 @@ async function handler(req, res) {
       const record = await MortalityRecord.findById(id).populate(
         "animal",
         "tagId name species breed gender"
-      );
+      ).lean();
       if (!record) {
         return res.status(404).json({ error: "Mortality record not found" });
       }

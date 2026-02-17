@@ -18,6 +18,11 @@ export function AnimalDataProvider({ children }) {
   const fetchPromiseRef = useRef(null);
   const isMountedRef = useRef(true);
   const hasLoadedOnce = useRef(false);
+  // Use refs for values accessed inside fetchAnimals to avoid dependency instability
+  const animalsRef = useRef(animals);
+  const lastFetchedRef = useRef(lastFetched);
+  animalsRef.current = animals;
+  lastFetchedRef.current = lastFetched;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -29,6 +34,7 @@ export function AnimalDataProvider({ children }) {
    * - De-duplicates concurrent calls
    * - 10-minute stale threshold
    * - Only shows loading spinner on first load (prevents flickering)
+   * - Stable reference: does NOT depend on animals/lastFetched (uses refs)
    */
   const fetchAnimals = useCallback(async (force = false) => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -36,8 +42,8 @@ export function AnimalDataProvider({ children }) {
 
     // If data is fresh (under 10 minutes) and not forced, return cached
     const STALE_MS = 10 * 60 * 1000;
-    if (!force && lastFetched && (Date.now() - lastFetched < STALE_MS) && animals.length > 0) {
-      return animals;
+    if (!force && lastFetchedRef.current && (Date.now() - lastFetchedRef.current < STALE_MS) && animalsRef.current.length > 0) {
+      return animalsRef.current;
     }
 
     // De-duplicate concurrent requests
@@ -64,7 +70,7 @@ export function AnimalDataProvider({ children }) {
         return result;
       } catch (err) {
         if (isMountedRef.current) setError(err.message);
-        return animals; // Return stale data on error
+        return animalsRef.current; // Return stale data on error
       } finally {
         if (isMountedRef.current) setLoading(false);
         fetchPromiseRef.current = null;
@@ -73,7 +79,7 @@ export function AnimalDataProvider({ children }) {
 
     fetchPromiseRef.current = promise;
     return promise;
-  }, [animals, lastFetched]);
+  }, []); // Stable: no dependencies — uses refs internally
 
   /**
    * Update a single animal in the cache (no re-fetch needed)
@@ -104,9 +110,11 @@ export function AnimalDataProvider({ children }) {
   /**
    * Force refresh — re-downloads everything from DB
    * Use sparingly: after bulk operations, seed, etc.
+   * Stable reference: fetchAnimals is now stable (no deps)
    */
   const forceRefresh = useCallback(() => {
     setLastFetched(null);
+    lastFetchedRef.current = null;
     return fetchAnimals(true);
   }, [fetchAnimals]);
 

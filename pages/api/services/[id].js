@@ -8,7 +8,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const service = await Service.findById(id);
+      const service = await Service.findById(id).lean();
       if (!service) return res.status(404).json({ error: "Service not found" });
       res.status(200).json(service);
     } catch (error) {

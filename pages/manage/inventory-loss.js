@@ -10,6 +10,7 @@ import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const LOSS_TYPES = ["Wasted", "Damaged", "Lost", "Expired"];
 
@@ -54,13 +55,13 @@ export default function InventoryLossPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/inventory-loss", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRecords(Array.isArray(data) ? data : []);
-      }
+      const data = await getCachedData("api/inventory-loss", async () => {
+        const res = await fetch("/api/inventory-loss", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return res.ok ? await res.json() : [];
+      }, 3 * 60 * 1000);
+      setRecords(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch loss records:", err);
     } finally {

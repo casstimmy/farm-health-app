@@ -15,7 +15,8 @@ async function handler(req, res) {
       const expenses = await Finance.find({ type: "Expense" })
         .sort({ date: -1 })
         .limit(50)
-        .populate("location");
+        .populate("location")
+        .lean();
       res.status(200).json(expenses);
     } catch (error) {
       res.status(500).json({ error: error.message });

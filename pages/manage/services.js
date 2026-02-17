@@ -9,6 +9,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const SERVICE_CATEGORIES = [
   "Veterinary Services",
@@ -69,11 +70,13 @@ export default function ManageServices() {
   const fetchServices = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/services", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch services");
-      const data = await res.json();
+      const data = await getCachedData("api/services", async () => {
+        const res = await fetch("/api/services", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch services");
+        return await res.json();
+      }, 3 * 60 * 1000);
       setServices(data);
     } catch (err) {
       setError(err.message);

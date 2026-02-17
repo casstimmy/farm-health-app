@@ -11,7 +11,8 @@ async function handler(req, res) {
       const record = await HealthRecord.findById(id)
         .populate("animal", "tagId name species breed gender currentWeight")
         .populate("treatmentA.medication", "item unit price")
-        .populate("treatmentB.medication", "item unit price");
+        .populate("treatmentB.medication", "item unit price")
+        .lean();
 
       if (!record) return res.status(404).json({ error: "Record not found" });
       res.status(200).json(record);

@@ -15,7 +15,8 @@ async function handler(req, res) {
     try {
       const record = await BreedingRecord.findById(id)
         .populate("doe", "tagId name species breed")
-        .populate("buck", "tagId name species breed");
+        .populate("buck", "tagId name species breed")
+        .lean();
       if (!record) {
         return res.status(404).json({ error: "Breeding record not found" });
       }

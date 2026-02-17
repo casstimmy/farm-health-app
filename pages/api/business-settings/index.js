@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      let settings = await BusinessSettings.findOne().populate("owner");
+      let settings = await BusinessSettings.findOne().populate("owner").lean();
       if (!settings) {
         settings = new BusinessSettings({
           businessName: "My Farm",

@@ -12,7 +12,7 @@ async function handler(req, res) {
       if (category && category !== "all") filter.category = category;
       if (showOnSite === "true") filter.showOnSite = true;
 
-      const services = await Service.find(filter).sort({ createdAt: -1 });
+      const services = await Service.find(filter).sort({ createdAt: -1 }).lean();
       res.status(200).json(services);
     } catch (error) {
       res.status(500).json({ error: error.message });

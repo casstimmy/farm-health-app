@@ -4,6 +4,7 @@ import { FaPlus, FaEdit, FaCheck, FaTimes, FaTrash, FaSpinner } from "react-icon
 import PageHeader from "@/components/shared/PageHeader";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
+import { getCachedData, invalidateCache } from "@/utils/cache";
 
 export default function InventoryCategories() {
   const { user } = useRole();
@@ -26,10 +27,12 @@ export default function InventoryCategories() {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/inventory-categories", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await getCachedData("api/inventory-categories", async () => {
+        const res = await fetch("/api/inventory-categories", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await res.json();
+      }, 3 * 60 * 1000);
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching categories:", error);

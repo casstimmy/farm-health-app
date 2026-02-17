@@ -11,7 +11,8 @@ async function handler(req, res) {
       const query = animalId ? { animal: animalId } : {};
       const records = await VaccinationRecord.find(query)
         .sort({ vaccinationDate: -1 })
-        .populate("animal", "tagId name species breed");
+        .populate("animal", "tagId name species breed")
+        .lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

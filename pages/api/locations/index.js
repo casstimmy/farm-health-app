@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const locations = await Location.find({ isActive: true }).sort({ name: 1 });
+      const locations = await Location.find({ isActive: true }).sort({ name: 1 }).lean();
       return res.status(200).json(locations);
     } catch (error) {
       console.error("Error fetching locations:", error);
