@@ -17,15 +17,18 @@ const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Automatic Feeder", "B
 
 const initialFormState = {
   date: new Date().toISOString().split("T")[0],
+  feedingMethod: "",
+  location: "",
+  notes: "",
+};
+
+const emptyFeedItem = {
   feedCategory: "",
   inventoryItem: "",
   quantityOffered: "",
   quantityConsumed: "",
   unitCost: "",
   totalCost: "",
-  feedingMethod: "",
-  location: "",
-  notes: "",
 };
 
 export default function Feeding() {
@@ -46,6 +49,7 @@ export default function Feeding() {
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
   const [formData, setFormData] = useState({ ...initialFormState });
+  const [feedItems, setFeedItems] = useState([{ ...emptyFeedItem }]);
   const [feedInventory, setFeedInventory] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
@@ -66,9 +70,9 @@ export default function Feeding() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Animals come from global context, fetch the rest in parallel
+      // Force-refresh animals from global context and fetch the rest in parallel
       const [animalsData, recordsRes, invRes, locRes] = await Promise.all([
-        fetchAnimals(),
+        fetchAnimals(true),
         fetch("/api/feeding", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
@@ -81,11 +85,13 @@ export default function Feeding() {
       if (recordsRes.ok) {
         const data = await recordsRes.json();
         setRecords(Array.isArray(data) ? data : []);
+      } else {
+        setRecords([]);
       }
       if (invRes.ok) {
         const data = await invRes.json();
         const feeds = (Array.isArray(data) ? data : []).filter(
-          (item) => (item.categoryName || item.category || "").toLowerCase() === "feed"
+          (item) => (item.categoryName || item.category || "").toLowerCase().includes("feed")
         );
         setFeedInventory(feeds);
       }
@@ -94,6 +100,7 @@ export default function Feeding() {
         setLocations(Array.isArray(data) ? data : []);
       }
     } catch (err) {
+      console.error("Feeding fetchAll error:", err);
       setError("Failed to load data");
     } finally {
       setLoading(false);
@@ -117,27 +124,42 @@ export default function Feeding() {
     setGroupSelectAll(!groupSelectAll);
   };
 
-  const handleInventorySelect = (itemId) => {
+  const handleInventorySelect = (itemId, feedIdx = 0) => {
     const invItem = feedInventory.find((i) => i._id === itemId);
     const uc = invItem ? (invItem.costPrice || invItem.price || 0) : 0;
-    const qty = parseFloat(formData.quantityConsumed) || 0;
-    setFormData((prev) => ({
-      ...prev,
-      inventoryItem: itemId,
-      feedCategory: invItem ? invItem.item : prev.feedCategory,
-      unitCost: uc,
-      totalCost: (uc * qty).toFixed(2),
-    }));
+    setFeedItems(prev => {
+      const updated = [...prev];
+      const qty = parseFloat(updated[feedIdx].quantityConsumed) || 0;
+      updated[feedIdx] = {
+        ...updated[feedIdx],
+        inventoryItem: itemId,
+        feedCategory: invItem ? invItem.item : updated[feedIdx].feedCategory,
+        unitCost: uc,
+        totalCost: (uc * qty).toFixed(2),
+      };
+      return updated;
+    });
   };
 
-  const recalcTotal = (field, value) => {
-    const uc = field === "unitCost" ? parseFloat(value) || 0 : parseFloat(formData.unitCost) || 0;
-    const qty = field === "quantityConsumed" ? parseFloat(value) || 0 : parseFloat(formData.quantityConsumed) || 0;
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-      totalCost: (uc * qty).toFixed(2),
-    }));
+  const recalcTotal = (field, value, feedIdx = 0) => {
+    setFeedItems(prev => {
+      const updated = [...prev];
+      const item = { ...updated[feedIdx], [field]: value };
+      const uc = field === "unitCost" ? parseFloat(value) || 0 : parseFloat(item.unitCost) || 0;
+      const qty = field === "quantityConsumed" ? parseFloat(value) || 0 : parseFloat(item.quantityConsumed) || 0;
+      item.totalCost = (uc * qty).toFixed(2);
+      updated[feedIdx] = item;
+      return updated;
+    });
+  };
+
+  const addFeedItem = () => {
+    setFeedItems(prev => [...prev, { ...emptyFeedItem }]);
+  };
+
+  const removeFeedItem = (idx) => {
+    if (feedItems.length <= 1) return;
+    setFeedItems(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleEdit = (record) => {
@@ -146,16 +168,18 @@ export default function Feeding() {
     setSelectedAnimalId(record.animal?._id || record.animal || "");
     setFormData({
       date: record.date ? new Date(record.date).toISOString().split("T")[0] : "",
+      feedingMethod: record.feedingMethod || "",
+      location: record.location?._id || record.location || "",
+      notes: record.notes || "",
+    });
+    setFeedItems([{
       feedCategory: record.feedTypeName || record.feedCategory || "",
       inventoryItem: record.inventoryItem || "",
       quantityOffered: record.quantityOffered || "",
       quantityConsumed: record.quantityConsumed || "",
       unitCost: record.unitCost || "",
       totalCost: record.totalCost || "",
-      feedingMethod: record.feedingMethod || "",
-      location: record.location?._id || record.location || "",
-      notes: record.notes || "",
-    });
+    }]);
     setShowForm(true);
   };
 
@@ -164,20 +188,21 @@ export default function Feeding() {
     setError("");
 
     if (editingId) {
-      // Edit existing record
+      // Edit existing record (single item)
       setFormLoading(true);
       try {
         const token = localStorage.getItem("token");
+        const fi = feedItems[0] || {};
         const res = await fetch(`/api/feeding/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            feedTypeName: formData.feedCategory.trim(),
-            inventoryItem: formData.inventoryItem || undefined,
-            quantityOffered: parseFloat(formData.quantityOffered) || 0,
-            quantityConsumed: parseFloat(formData.quantityConsumed) || 0,
-            unitCost: parseFloat(formData.unitCost) || 0,
-            totalCost: parseFloat(formData.totalCost) || 0,
+            feedTypeName: fi.feedCategory?.trim() || "",
+            inventoryItem: fi.inventoryItem || undefined,
+            quantityOffered: parseFloat(fi.quantityOffered) || 0,
+            quantityConsumed: parseFloat(fi.quantityConsumed) || 0,
+            unitCost: parseFloat(fi.unitCost) || 0,
+            totalCost: parseFloat(fi.totalCost) || 0,
             date: formData.date ? new Date(formData.date) : new Date(),
             feedingMethod: formData.feedingMethod || "",
             location: formData.location || undefined,
@@ -189,6 +214,7 @@ export default function Feeding() {
         setEditingId(null);
         setShowForm(false);
         setFormData({ ...initialFormState });
+        setFeedItems([{ ...emptyFeedItem }]);
         fetchAll();
         setTimeout(() => setSuccess(""), 3000);
       } catch (err) {
@@ -205,72 +231,80 @@ export default function Feeding() {
       setError("Please select at least one animal.");
       return;
     }
-    if (!formData.feedCategory.trim()) {
-      setError("Feed category is required.");
+    // Validate that at least one feed item has a category
+    const validFeedItems = feedItems.filter(fi => fi.feedCategory?.trim());
+    if (validFeedItems.length === 0) {
+      setError("At least one feed item with a category is required.");
       return;
     }
 
     setFormLoading(true);
     try {
       const token = localStorage.getItem("token");
-      let totalQtyOffered = parseFloat(formData.quantityOffered) || 0;
-      let totalQtyConsumed = parseFloat(formData.quantityConsumed) || 0;
-      let totalUC = parseFloat(formData.unitCost) || 0;
       const count = targetIds.length;
-      let perAnimalOffered = totalQtyOffered;
-      let perAnimalConsumed = totalQtyConsumed;
+      const results = [];
 
-      if (feedingMode === "group" && count > 1 && distributionMethod === "equal") {
-        perAnimalOffered = +(totalQtyOffered / count).toFixed(4);
-        perAnimalConsumed = +(totalQtyConsumed / count).toFixed(4);
+      // For each feed item, create a record per animal
+      for (const fi of validFeedItems) {
+        let totalQtyOffered = parseFloat(fi.quantityOffered) || 0;
+        let totalQtyConsumed = parseFloat(fi.quantityConsumed) || 0;
+        let totalUC = parseFloat(fi.unitCost) || 0;
+        let perAnimalOffered = totalQtyOffered;
+        let perAnimalConsumed = totalQtyConsumed;
+
+        if (feedingMode === "group" && count > 1 && distributionMethod === "equal") {
+          perAnimalOffered = +(totalQtyOffered / count).toFixed(4);
+          perAnimalConsumed = +(totalQtyConsumed / count).toFixed(4);
+        }
+
+        let totalWeight = 0;
+        if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
+          totalWeight = targetIds.reduce((sum, id) => {
+            const animal = aliveAnimals.find((a) => a._id === id);
+            return sum + (animal?.currentWeight || 1);
+          }, 0);
+        }
+
+        const itemResults = await Promise.all(
+          targetIds.map(async (animalId) => {
+            let qtyOff = perAnimalOffered;
+            let qtyCon = perAnimalConsumed;
+
+            if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
+              const animal = aliveAnimals.find((a) => a._id === animalId);
+              const weight = animal?.currentWeight || 1;
+              const ratio = weight / totalWeight;
+              qtyOff = +(totalQtyOffered * ratio).toFixed(4);
+              qtyCon = +(totalQtyConsumed * ratio).toFixed(4);
+            }
+
+            const perCost = +(totalUC * qtyCon).toFixed(2);
+            const payload = {
+              animalId,
+              feedingData: {
+                date: formData.date ? new Date(formData.date) : new Date(),
+                feedCategory: fi.feedCategory.trim(),
+                inventoryItem: fi.inventoryItem || undefined,
+                quantityOffered: qtyOff,
+                quantityConsumed: qtyCon,
+                unitCost: totalUC,
+                totalCost: perCost,
+                feedingMethod: formData.feedingMethod || undefined,
+                location: formData.location || undefined,
+                notes: formData.notes?.trim() || undefined,
+              },
+            };
+
+            const res = await fetch("/api/feeding", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify(payload),
+            });
+            return res.ok;
+          })
+        );
+        results.push(...itemResults);
       }
-
-      let totalWeight = 0;
-      if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
-        totalWeight = targetIds.reduce((sum, id) => {
-          const animal = aliveAnimals.find((a) => a._id === id);
-          return sum + (animal?.currentWeight || 1);
-        }, 0);
-      }
-
-      const results = await Promise.all(
-        targetIds.map(async (animalId) => {
-          let qtyOff = perAnimalOffered;
-          let qtyCon = perAnimalConsumed;
-
-          if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
-            const animal = aliveAnimals.find((a) => a._id === animalId);
-            const weight = animal?.currentWeight || 1;
-            const ratio = weight / totalWeight;
-            qtyOff = +(totalQtyOffered * ratio).toFixed(4);
-            qtyCon = +(totalQtyConsumed * ratio).toFixed(4);
-          }
-
-          const perCost = +(totalUC * qtyCon).toFixed(2);
-          const payload = {
-            animalId,
-            feedingData: {
-              date: formData.date ? new Date(formData.date) : new Date(),
-              feedCategory: formData.feedCategory.trim(),
-              inventoryItem: formData.inventoryItem || undefined,
-              quantityOffered: qtyOff,
-              quantityConsumed: qtyCon,
-              unitCost: totalUC,
-              totalCost: perCost,
-              feedingMethod: formData.feedingMethod || undefined,
-              location: formData.location || undefined,
-              notes: formData.notes?.trim() || undefined,
-            },
-          };
-
-          const res = await fetch("/api/feeding", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify(payload),
-          });
-          return res.ok;
-        })
-      );
 
       const successCount = results.filter(Boolean).length;
       const failCount = results.length - successCount;
@@ -278,6 +312,7 @@ export default function Feeding() {
       if (failCount > 0) setError(`${failCount} of ${results.length} records failed to save.`);
       setSuccess(`${successCount} feeding record${successCount > 1 ? "s" : ""} saved!`);
       setFormData({ ...initialFormState });
+      setFeedItems([{ ...emptyFeedItem }]);
       setShowForm(false);
       setSelectedGroupIds([]);
       setGroupSelectAll(false);
@@ -338,7 +373,7 @@ export default function Feeding() {
         icon="🌾"
         actions={
           <button
-            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState }); }}
+            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState }); setFeedItems([{ ...emptyFeedItem }]); }}
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
           >
             {showForm ? <FaTimes /> : <FaPlus />}
@@ -457,58 +492,93 @@ export default function Feeding() {
               )}
             </div>
 
-            {/* Feed Details */}
+            {/* Feed Details - Multiple Items */}
             <form onSubmit={handleSubmit}>
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">🌾 Feed Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="label">Date</label>
-                    <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="input-field" />
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items</h4>
+                  {!editingId && (
+                    <button type="button" onClick={addFeedItem} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                      <FaPlus size={10} /> Add Item
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {/* Date and common fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="label">Date</label>
+                      <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="input-field" />
+                    </div>
+                    <div>
+                      <label className="label">Feeding Method</label>
+                      <select value={formData.feedingMethod} onChange={(e) => setFormData({ ...formData, feedingMethod: e.target.value })} className="input-field">
+                        <option value="">-- Select --</option>
+                        {FEEDING_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label">Location</label>
+                      <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field">
+                        <option value="">-- Select Location --</option>
+                        {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="label">Feed Inventory Item</label>
-                    <select value={formData.inventoryItem} onChange={(e) => handleInventorySelect(e.target.value)} className="input-field">
-                      <option value="">-- Select Feed Item --</option>
-                      {feedInventory.map((item) => (
-                        <option key={item._id} value={item._id}>{item.item} (Stock: {item.quantity})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Feed Category *</label>
-                    <input type="text" value={formData.feedCategory} onChange={(e) => setFormData({ ...formData, feedCategory: e.target.value })} placeholder="Hay, Grain, Supplement..." className="input-field" required />
-                  </div>
-                  <div>
-                    <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
-                    <input type="number" step="0.01" min="0" value={formData.quantityOffered} onChange={(e) => setFormData({ ...formData, quantityOffered: e.target.value })} placeholder="e.g., 10" className="input-field" />
-                  </div>
-                  <div>
-                    <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
-                    <input type="number" step="0.01" min="0" value={formData.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value)} placeholder="e.g., 8" className="input-field" />
-                  </div>
-                  <div>
-                    <label className="label">Unit Cost</label>
-                    <input type="number" step="0.01" min="0" value={formData.unitCost} onChange={(e) => recalcTotal("unitCost", e.target.value)} placeholder="Auto from inventory" className="input-field" />
-                  </div>
-                  <div>
-                    <label className="label">Total Cost</label>
-                    <input type="number" step="0.01" value={formData.totalCost} readOnly className="input-field bg-gray-50" />
-                  </div>
-                  <div>
-                    <label className="label">Feeding Method</label>
-                    <select value={formData.feedingMethod} onChange={(e) => setFormData({ ...formData, feedingMethod: e.target.value })} className="input-field">
-                      <option value="">-- Select --</option>
-                      {FEEDING_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Location</label>
-                    <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field">
-                      <option value="">-- Select Location --</option>
-                      {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
-                    </select>
-                  </div>
+
+                  {/* Feed items list */}
+                  {feedItems.map((fi, idx) => (
+                    <div key={idx} className={`bg-white border ${feedItems.length > 1 ? "border-green-300" : "border-gray-200"} rounded-lg p-4 ${feedItems.length > 1 ? "relative" : ""}`}>
+                      {feedItems.length > 1 && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-green-700">Feed Item #{idx + 1}</span>
+                          <button type="button" onClick={() => removeFeedItem(idx)} className="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1">
+                            <FaTimes size={10} /> Remove
+                          </button>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label">Feed Inventory Item</label>
+                          <select value={fi.inventoryItem} onChange={(e) => handleInventorySelect(e.target.value, idx)} className="input-field">
+                            <option value="">-- Select Feed Item --</option>
+                            {feedInventory.map((item) => (
+                              <option key={item._id} value={item._id}>{item.item} (Stock: {item.quantity})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label">Feed Category *</label>
+                          <input type="text" value={fi.feedCategory} onChange={(e) => {
+                            const updated = [...feedItems];
+                            updated[idx] = { ...updated[idx], feedCategory: e.target.value };
+                            setFeedItems(updated);
+                          }} placeholder="Hay, Grain, Supplement..." className="input-field" required />
+                        </div>
+                        <div>
+                          <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                          <input type="number" step="0.01" min="0" value={fi.quantityOffered} onChange={(e) => {
+                            const updated = [...feedItems];
+                            updated[idx] = { ...updated[idx], quantityOffered: e.target.value };
+                            setFeedItems(updated);
+                          }} placeholder="e.g., 10" className="input-field" />
+                        </div>
+                        <div>
+                          <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                          <input type="number" step="0.01" min="0" value={fi.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value, idx)} placeholder="e.g., 8" className="input-field" />
+                        </div>
+                        <div>
+                          <label className="label">Unit Cost</label>
+                          <input type="number" step="0.01" min="0" value={fi.unitCost} onChange={(e) => recalcTotal("unitCost", e.target.value, idx)} placeholder="Auto from inventory" className="input-field" />
+                        </div>
+                        <div>
+                          <label className="label">Total Cost</label>
+                          <input type="number" step="0.01" value={fi.totalCost} readOnly className="input-field bg-gray-50" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -521,9 +591,9 @@ export default function Feeding() {
               {/* Group summary */}
               {feedingMode === "group" && !editingId && selectedGroupIds.length > 1 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 mt-4">
-                  <strong>Group Summary:</strong> {selectedGroupIds.length} animals selected.{" "}
+                  <strong>Group Summary:</strong> {selectedGroupIds.length} animals selected, {feedItems.filter(fi => fi.feedCategory).length} feed item(s).{" "}
                   {distributionMethod === "equal"
-                    ? `Each gets ${((parseFloat(formData.quantityConsumed) || 0) / selectedGroupIds.length).toFixed(2)} units.`
+                    ? `Each animal gets ${((feedItems.reduce((sum, fi) => sum + (parseFloat(fi.quantityConsumed) || 0), 0)) / selectedGroupIds.length).toFixed(2)} total units.`
                     : "Feed distributed proportionally by body weight."}
                 </div>
               )}

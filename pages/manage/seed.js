@@ -53,7 +53,7 @@ export default function SeedDatabase() {
   }
 
   const handleSeed = async () => {
-    if (!confirm("This will insert sample data into your database. Existing data with the same IDs will be skipped. Continue?")) {
+    if (!confirm("⚠️ This will DELETE ALL existing data and re-seed with fresh sample data. This cannot be undone. Continue?")) {
       return;
     }
 

@@ -4,8 +4,10 @@ import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
 import Loader from "../Loader";
+import { useAnimalData } from "@/context/AnimalDataContext";
 
 export default function AddAnimalForm({ onSuccess, animal }) {
+    const { animals: allAnimals, addAnimalToCache } = useAnimalData();
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     // Fetch all users for the Recorded By dropdown
@@ -33,6 +35,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
   const [locations, setLocations] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [uploadingImage, setUploadingImage] = useState(false);
   const [images, setImages] = useState([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -106,9 +109,42 @@ export default function AddAnimalForm({ onSuccess, animal }) {
     }
   };
 
+  // Filter animals for sire (Male) and dam (Female) dropdowns
+  const maleAnimals = (allAnimals || []).filter(
+    (a) => a.gender === "Male" && a.status === "Alive" && !a.isArchived && a._id !== (animal?._id || animal?.id)
+  );
+  const femaleAnimals = (allAnimals || []).filter(
+    (a) => a.gender === "Female" && a.status === "Alive" && !a.isArchived && a._id !== (animal?._id || animal?.id)
+  );
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear field-specific error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  // Handle currency input: strip commas for state, display with commas
+  const handleCurrencyChange = (e) => {
+    const { name } = e.target;
+    const raw = e.target.value.replace(/,/g, "");
+    if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
+      setFormData(prev => ({ ...prev, [name]: raw }));
+      if (fieldErrors[name]) {
+        setFieldErrors(prev => ({ ...prev, [name]: "" }));
+      }
+    }
+  };
+
+  const formatWithCommas = (value) => {
+    if (!value && value !== 0) return "";
+    const str = String(value).replace(/,/g, "");
+    if (!str || isNaN(str)) return str;
+    const parts = str.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
   };
 
   const handleImageSelect = async (e) => {
@@ -193,14 +229,21 @@ export default function AddAnimalForm({ onSuccess, animal }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.tagId) {
-      setError("Tag ID is required");
+    // Field-level validation
+    const errors = {};
+    if (!formData.tagId?.trim()) errors.tagId = "Tag ID is required";
+    if (!formData.location) errors.location = "Location is required";
+    if (!formData.species) errors.species = "Species is required";
+    if (!formData.gender) errors.gender = "Gender is required";
+    if (formData.currentWeight && isNaN(parseFloat(formData.currentWeight))) errors.currentWeight = "Must be a valid number";
+    if (formData.purchaseCost && isNaN(parseFloat(String(formData.purchaseCost).replace(/,/g, "")))) errors.purchaseCost = "Must be a valid number";
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError(Object.values(errors)[0]);
       return;
     }
-    if (!formData.location) {
-      setError("Location is required");
-      return;
-    }
+    setFieldErrors({});
 
     setLoading(true);
     setError("");
@@ -210,11 +253,11 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       const token = localStorage.getItem("token");
       const submitData = {
         ...formData,
-        currentWeight: formData.currentWeight ? parseFloat(formData.currentWeight) : 0,
-        projectedMaxWeight: formData.projectedMaxWeight ? parseFloat(formData.projectedMaxWeight) : 0,
-        purchaseCost: formData.purchaseCost ? parseFloat(formData.purchaseCost) : 0,
-        marginPercent: formData.marginPercent ? parseFloat(formData.marginPercent) : 30,
-        projectedSalesPrice: formData.projectedSalesPrice ? parseFloat(formData.projectedSalesPrice) : 0,
+        currentWeight: formData.currentWeight ? parseFloat(String(formData.currentWeight).replace(/,/g, "")) : 0,
+        projectedMaxWeight: formData.projectedMaxWeight ? parseFloat(String(formData.projectedMaxWeight).replace(/,/g, "")) : 0,
+        purchaseCost: formData.purchaseCost ? parseFloat(String(formData.purchaseCost).replace(/,/g, "")) : 0,
+        marginPercent: formData.marginPercent ? parseFloat(String(formData.marginPercent).replace(/,/g, "")) : 30,
+        projectedSalesPrice: formData.projectedSalesPrice ? parseFloat(String(formData.projectedSalesPrice).replace(/,/g, "")) : 0,
         weightDate: formData.weightDate || new Date(),
         dob: formData.dob || null,
         acquisitionDate: formData.acquisitionDate || null
@@ -243,11 +286,14 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
       if (isEdit) {
         setSuccess(`✓ ${formData.name || formData.tagId} has been updated successfully!`);
-        // keep form data (updated) and call onSuccess
         setTimeout(() => {
           if (onSuccess) onSuccess();
         }, 1000);
       } else {
+        // Add the newly created animal to cache immediately
+        if (data && data._id) {
+          addAnimalToCache(data);
+        }
         setSuccess(`✓ ${formData.name || formData.tagId} has been added successfully!`);
         setFormData({
           tagId: "",
@@ -310,9 +356,10 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               required
               value={formData.tagId}
               onChange={handleChange}
-              className="input-field"
+              className={`input-field ${fieldErrors.tagId ? "border-red-500 ring-1 ring-red-300" : ""}`}
               placeholder="e.g., BGM001"
             />
+            {fieldErrors.tagId && <p className="text-red-500 text-xs mt-1">{fieldErrors.tagId}</p>}
           </div>
 
           {/* My Notes */}
@@ -464,28 +511,38 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
           {/* Sire ID */}
           <div>
-            <label className="label">Sire ID (Father)</label>
-            <input
-              type="text"
+            <label className="label">Sire (Father)</label>
+            <select
               name="sire"
               value={formData.sire}
               onChange={handleChange}
               className="input-field"
-              placeholder="e.g., BGM001"
-            />
+            >
+              <option value="">-- Select Sire --</option>
+              {maleAnimals.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Dam ID */}
           <div>
-            <label className="label">Dam ID (Mother)</label>
-            <input
-              type="text"
+            <label className="label">Dam (Mother)</label>
+            <select
               name="dam"
               value={formData.dam}
               onChange={handleChange}
               className="input-field"
-              placeholder="e.g., BGF001"
-            />
+            >
+              <option value="">-- Select Dam --</option>
+              {femaleAnimals.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -504,7 +561,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               onChange={handleChange}
               required
               disabled={loadingLocations}
-              className="input-field"
+              className={`input-field ${fieldErrors.location ? "border-red-500 ring-1 ring-red-300" : ""}`}
             >
               <option value="">Select a location...</option>
               {loadingLocations ? (
@@ -519,6 +576,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
                 ))
               )}
             </select>
+            {fieldErrors.location && <p className="text-red-500 text-xs mt-1">{fieldErrors.location}</p>}
           </div>
 
           {/* Paddock */}
@@ -635,23 +693,25 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           <div>
             <label className="label">Purchase Cost</label>
             <input
-              type="number"
+              type="text"
               name="purchaseCost"
-              value={formData.purchaseCost}
+              value={formatWithCommas(formData.purchaseCost)}
               onChange={(e) => {
-                const pc = parseFloat(e.target.value) || 0;
-                const mp = parseFloat(formData.marginPercent) || 0;
-                setFormData((prev) => ({
-                  ...prev,
-                  purchaseCost: e.target.value,
-                  projectedSalesPrice: mp > 0 ? (pc * (1 + mp / 100)).toFixed(2) : prev.projectedSalesPrice,
-                }));
+                const raw = e.target.value.replace(/,/g, "");
+                if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
+                  const pc = parseFloat(raw) || 0;
+                  const mp = parseFloat(formData.marginPercent) || 0;
+                  setFormData((prev) => ({
+                    ...prev,
+                    purchaseCost: raw,
+                    projectedSalesPrice: mp > 0 ? (pc * (1 + mp / 100)).toFixed(2) : prev.projectedSalesPrice,
+                  }));
+                }
               }}
-              className="input-field"
-              placeholder="e.g., 15000"
-              step="0.01"
-              min="0"
+              className={`input-field ${fieldErrors.purchaseCost ? "border-red-500" : ""}`}
+              placeholder="e.g., 15,000"
             />
+            {fieldErrors.purchaseCost && <p className="text-red-500 text-xs mt-1">{fieldErrors.purchaseCost}</p>}
           </div>
           <div>
             <label className="label">Margin %</label>
@@ -661,7 +721,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               value={formData.marginPercent}
               onChange={(e) => {
                 const mp = parseFloat(e.target.value) || 0;
-                const pc = parseFloat(formData.purchaseCost) || 0;
+                const pc = parseFloat(String(formData.purchaseCost).replace(/,/g, "")) || 0;
                 setFormData((prev) => ({
                   ...prev,
                   marginPercent: e.target.value,
@@ -677,14 +737,17 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           <div>
             <label className="label">Projected Sales Price</label>
             <input
-              type="number"
+              type="text"
               name="projectedSalesPrice"
-              value={formData.projectedSalesPrice}
-              onChange={handleChange}
+              value={formatWithCommas(formData.projectedSalesPrice)}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/,/g, "");
+                if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
+                  setFormData(prev => ({ ...prev, projectedSalesPrice: raw }));
+                }
+              }}
               className="input-field"
               placeholder="Auto-calculated or enter"
-              step="0.01"
-              min="0"
             />
           </div>
         </div>

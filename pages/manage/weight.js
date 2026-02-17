@@ -16,7 +16,7 @@ export default function WeightTracking() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
-  const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
+  const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals, updateAnimalInCache } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -49,16 +49,26 @@ export default function WeightTracking() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Animals come from global context, fetch only weight records and locations
+      // Fetch animals from global context (force refresh to get latest weights) and records/locations
       const [animalsData, recordsRes, locRes] = await Promise.all([
-        fetchGlobalAnimals(),
+        fetchGlobalAnimals(true),
         fetch("/api/weight", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      setAnimals(Array.isArray(animalsData) ? animalsData : []);
-      if (recordsRes.ok) setAllRecords(await recordsRes.json() || []);
-      if (locRes.ok) setLocations(await locRes.json() || []);
+      const animalsList = Array.isArray(animalsData) ? animalsData : [];
+      setAnimals(animalsList);
+      if (recordsRes.ok) {
+        const recordsData = await recordsRes.json();
+        setAllRecords(Array.isArray(recordsData) ? recordsData : []);
+      } else {
+        setAllRecords([]);
+      }
+      if (locRes.ok) {
+        const locsData = await locRes.json();
+        setLocations(Array.isArray(locsData) ? locsData : []);
+      }
     } catch (err) {
+      console.error("Weight fetchAll error:", err);
       setError("Failed to load data");
     } finally {
       setLoading(false);
@@ -70,7 +80,10 @@ export default function WeightTracking() {
   const animalWeightSummary = useMemo(() => {
     return aliveAnimals.map((animal) => {
       const animalRecords = allRecords
-        .filter((r) => (r.animal?._id || r.animal) === animal._id)
+        .filter((r) => {
+          const recAnimalId = r.animal?._id || r.animal;
+          return String(recAnimalId) === String(animal._id);
+        })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       const currentWeight = animal.currentWeight || (animalRecords[0]?.weightKg ?? null);
       const previousWeight = animalRecords[1]?.weightKg ?? null;
@@ -94,7 +107,10 @@ export default function WeightTracking() {
 
   const historyRecords = useMemo(() => {
     if (!historyAnimalId) return [];
-    let recs = allRecords.filter((r) => (r.animal?._id || r.animal) === historyAnimalId).sort((a, b) => new Date(b.date) - new Date(a.date));
+    let recs = allRecords.filter((r) => {
+      const recAnimalId = r.animal?._id || r.animal;
+      return String(recAnimalId) === String(historyAnimalId);
+    }).sort((a, b) => new Date(b.date) - new Date(a.date));
     recs = filterByPeriod(recs, filterPeriod);
     return recs;
   }, [historyAnimalId, allRecords, filterPeriod]);
@@ -147,6 +163,8 @@ export default function WeightTracking() {
       const token = localStorage.getItem("token");
       const res = await fetch("/api/weight", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ animalId: formAnimalId, weightData: { date: formDate ? new Date(formDate) : new Date(), weightKg: Number(formWeight), location: formLocation || undefined, notes: formNotes.trim() || undefined } }) });
       if (!res.ok) throw new Error((await res.json())?.error || "Failed to save");
+      // Update animal's currentWeight in the global cache immediately
+      updateAnimalInCache(formAnimalId, { currentWeight: Number(formWeight), weightDate: formDate ? new Date(formDate) : new Date() });
       setSuccess("Weight recorded!"); setShowForm(false); resetForm(); fetchAll(); setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.message); } finally { setFormLoading(false); }
   };

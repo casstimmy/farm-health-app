@@ -28,6 +28,7 @@ async function handler(req, res) {
   await dbConnect();
 
   const results = {
+    cleared: {},
     locations: 0,
     inventoryCategories: 0,
     inventoryItems: 0,
@@ -46,6 +47,33 @@ async function handler(req, res) {
   };
 
   try {
+    // ─── CLEAR ALL OLD DATA ───
+    const collections = [
+      { model: Animal, name: "Animals" },
+      { model: Treatment, name: "Treatments" },
+      { model: FeedType, name: "FeedTypes" },
+      { model: FeedingRecord, name: "FeedingRecords" },
+      { model: WeightRecord, name: "WeightRecords" },
+      { model: VaccinationRecord, name: "VaccinationRecords" },
+      { model: BreedingRecord, name: "BreedingRecords" },
+      { model: MortalityRecord, name: "MortalityRecords" },
+      { model: HealthRecord, name: "HealthRecords" },
+      { model: Inventory, name: "Inventory" },
+      { model: InventoryCategory, name: "InventoryCategories" },
+      { model: Finance, name: "Finance" },
+      { model: Service, name: "Services" },
+      { model: Location, name: "Locations" },
+    ];
+
+    for (const { model, name } of collections) {
+      try {
+        const deleted = await model.deleteMany({});
+        results.cleared[name] = deleted.deletedCount;
+      } catch (err) {
+        results.errors.push(`Clear ${name}: ${err.message}`);
+      }
+    }
+
     // ─── 0. Locations ───
     const locationData = [
       { name: "Main Farm", description: "Primary goat farm facility", address: "KM 12 Abuja-Keffi Road", city: "Abuja", state: "FCT" },
@@ -55,11 +83,8 @@ async function handler(req, res) {
     const locationMap = {};
     for (const loc of locationData) {
       try {
-        let existing = await Location.findOne({ name: loc.name });
-        if (!existing) {
-          existing = await Location.create(loc);
-          results.locations++;
-        }
+        const existing = await Location.create(loc);
+        results.locations++;
         locationMap[loc.name] = existing._id;
       } catch (err) {
         results.errors.push(`Location ${loc.name}: ${err.message}`);
@@ -77,11 +102,8 @@ async function handler(req, res) {
     const categoryMap = {};
     for (const cat of categoryData) {
       try {
-        let existing = await InventoryCategory.findOne({ name: cat.name });
-        if (!existing) {
-          existing = await InventoryCategory.create(cat);
-          results.inventoryCategories++;
-        }
+        const existing = await InventoryCategory.create(cat);
+        results.inventoryCategories++;
         categoryMap[cat.name] = existing._id;
       } catch (err) {
         results.errors.push(`Category ${cat.name}: ${err.message}`);
@@ -123,9 +145,7 @@ async function handler(req, res) {
     const inventoryMap = {};
     for (const inv of inventoryData) {
       try {
-        let existing = await Inventory.findOne({ item: inv.item });
-        if (!existing) {
-          existing = await Inventory.create({
+        const existing = await Inventory.create({
             item: inv.item,
             quantity: inv.quantity,
             unit: inv.unit,
@@ -141,8 +161,7 @@ async function handler(req, res) {
             supplier: inv.supplier,
             dateAdded: new Date(),
           });
-          results.inventoryItems++;
-        }
+        results.inventoryItems++;
         inventoryMap[inv.item] = existing._id;
       } catch (err) {
         results.errors.push(`Inventory ${inv.item}: ${err.message}`);
@@ -163,11 +182,8 @@ async function handler(req, res) {
     const feedTypeMap = {};
     for (const ft of feedTypeData) {
       try {
-        let existing = await FeedType.findOne({ name: ft.name });
-        if (!existing) {
-          existing = await FeedType.create(ft);
-          results.feedTypes++;
-        }
+        const existing = await FeedType.create(ft);
+        results.feedTypes++;
         feedTypeMap[ft.name] = existing._id;
       } catch (err) {
         results.errors.push(`FeedType ${ft.name}: ${err.message}`);
@@ -220,15 +236,35 @@ async function handler(req, res) {
     const animalMap = {};
     for (const a of animalData) {
       try {
-        let existing = await Animal.findOne({ tagId: a.tagId });
-        if (!existing) {
-          existing = await Animal.create(a);
-          results.animals++;
-        }
+        const existing = await Animal.create(a);
+        results.animals++;
         animalMap[a.tagId] = existing._id;
       } catch (err) {
         results.errors.push(`Animal ${a.tagId}: ${err.message}`);
       }
+    }
+
+    // Set sire/dam references after all animals are created
+    try {
+      const sultan = animalMap["BGM001"];
+      if (sultan) {
+        // Set Sultan as sire for bred-on-farm animals
+        const bredAnimals = ["BGM003", "BGM004", "BGM005", "BGM006"];
+        for (const tag of bredAnimals) {
+          if (animalMap[tag]) {
+            await Animal.findByIdAndUpdate(animalMap[tag], { sire: sultan });
+          }
+        }
+        // Set dam references for some bred-on-farm animals
+        if (animalMap["BGM003"] && animalMap["BGF001"]) {
+          await Animal.findByIdAndUpdate(animalMap["BGM003"], { dam: animalMap["BGF001"] });
+        }
+        if (animalMap["BGM004"] && animalMap["BGF002"]) {
+          await Animal.findByIdAndUpdate(animalMap["BGM004"], { dam: animalMap["BGF002"] });
+        }
+      }
+    } catch (err) {
+      results.errors.push(`Sire/Dam linking: ${err.message}`);
     }
 
     // ─── 5. Health Records (from user's detailed treatment sheets) ───
@@ -295,26 +331,23 @@ async function handler(req, res) {
         const doe = animalMap[b.doeTag];
         const buck = animalMap[b.buckTag];
         if (!doe || !buck) { results.errors.push(`Breeding: doe ${b.doeTag} or buck ${b.buckTag} not found`); continue; }
-        let existing = await BreedingRecord.findOne({ breedingId: b.breedingId });
-        if (!existing) {
-          await BreedingRecord.create({
-            breedingId: b.breedingId,
-            species: b.species,
-            doe,
-            buck,
-            matingDate: b.matingDate,
-            breedingType: b.breedingType,
-            breedingCoordinator: b.breedingCoordinator,
-            pregnancyCheckDate: b.pregnancyCheckDate,
-            pregnancyStatus: b.pregnancyStatus,
-            expectedDueDate: b.expectedDueDate,
-            actualKiddingDate: b.actualKiddingDate,
-            kidsAlive: b.kidsAlive,
-            kidsDead: b.kidsDead,
-            notes: b.notes || "",
-          });
-          results.breedingRecords++;
-        }
+        await BreedingRecord.create({
+          breedingId: b.breedingId,
+          species: b.species,
+          doe,
+          buck,
+          matingDate: b.matingDate,
+          breedingType: b.breedingType,
+          breedingCoordinator: b.breedingCoordinator,
+          pregnancyCheckDate: b.pregnancyCheckDate,
+          pregnancyStatus: b.pregnancyStatus,
+          expectedDueDate: b.expectedDueDate,
+          actualKiddingDate: b.actualKiddingDate,
+          kidsAlive: b.kidsAlive,
+          kidsDead: b.kidsDead,
+          notes: b.notes || "",
+        });
+        results.breedingRecords++;
       } catch (err) {
         results.errors.push(`Breeding ${b.breedingId}: ${err.message}`);
       }
@@ -472,11 +505,8 @@ async function handler(req, res) {
 
     for (const s of serviceData) {
       try {
-        let existing = await Service.findOne({ name: s.name });
-        if (!existing) {
-          await Service.create(s);
-          results.services++;
-        }
+        await Service.create(s);
+        results.services++;
       } catch (err) {
         results.errors.push(`Service ${s.name}: ${err.message}`);
       }
@@ -487,10 +517,24 @@ async function handler(req, res) {
 
     // ─── 11. Weight Records ───
     const weightData = [
+      { animalTag: "BGF001", weightKg: 18, date: new Date("2025-06-15"), recordedBy: "Azeezat" },
+      { animalTag: "BGF001", weightKg: 20, date: new Date("2025-08-10"), recordedBy: "Azeezat" },
       { animalTag: "BGF001", weightKg: 23, date: new Date("2025-10-23"), recordedBy: "Azeezat" },
+      { animalTag: "BGF002", weightKg: 15, date: new Date("2025-06-20"), recordedBy: "Azeezat" },
+      { animalTag: "BGF002", weightKg: 18, date: new Date("2025-08-15"), recordedBy: "Azeezat" },
       { animalTag: "BGF002", weightKg: 20, date: new Date("2025-10-23"), recordedBy: "Azeezat" },
+      { animalTag: "BGM001", weightKg: 38, date: new Date("2025-06-01"), recordedBy: "Azeezat" },
+      { animalTag: "BGM001", weightKg: 42, date: new Date("2025-09-01"), recordedBy: "Azeezat" },
       { animalTag: "BGM001", weightKg: 45, date: new Date("2025-11-01"), recordedBy: "Azeezat" },
+      { animalTag: "SGF001", weightKg: 18, date: new Date("2025-07-10"), recordedBy: "Azeezat" },
+      { animalTag: "SGF001", weightKg: 21, date: new Date("2025-09-05"), recordedBy: "Azeezat" },
       { animalTag: "SGF001", weightKg: 23, date: new Date("2025-10-18"), recordedBy: "Azeezat" },
+      { animalTag: "BGM002", weightKg: 28, date: new Date("2025-07-15"), recordedBy: "Azeezat" },
+      { animalTag: "BGM002", weightKg: 32, date: new Date("2025-09-20"), recordedBy: "Azeezat" },
+      { animalTag: "BGM002", weightKg: 35, date: new Date("2025-11-10"), recordedBy: "Azeezat" },
+      { animalTag: "BGF003", weightKg: 17, date: new Date("2025-07-01"), recordedBy: "Azeezat" },
+      { animalTag: "BGF003", weightKg: 20, date: new Date("2025-09-15"), recordedBy: "Azeezat" },
+      { animalTag: "BGF003", weightKg: 22, date: new Date("2025-11-20"), recordedBy: "Azeezat" },
     ];
 
     for (const w of weightData) {
@@ -504,7 +548,43 @@ async function handler(req, res) {
       }
     }
 
-    // ─── 12. Vaccination Records ───
+    // ─── 12. Feeding Records ───
+    const feedingData = [
+      { animalTag: "BGF001", feedTypeName: "Beans Chaff", quantityOffered: 2, quantityConsumed: 1.8, unitCost: 200, totalCost: 360, date: new Date("2025-10-23"), feedingMethod: "Trough", notes: "Morning feed" },
+      { animalTag: "BGF001", feedTypeName: "Groundnut Hay", quantityOffered: 3, quantityConsumed: 2.5, unitCost: 150, totalCost: 375, date: new Date("2025-10-24"), feedingMethod: "Trough" },
+      { animalTag: "BGF002", feedTypeName: "Wheat Offal", quantityOffered: 2, quantityConsumed: 2, unitCost: 180, totalCost: 360, date: new Date("2025-10-23"), feedingMethod: "Trough" },
+      { animalTag: "BGM001", feedTypeName: "Beans Chaff", quantityOffered: 4, quantityConsumed: 3.5, unitCost: 200, totalCost: 700, date: new Date("2025-11-01"), feedingMethod: "Trough" },
+      { animalTag: "BGM001", feedTypeName: "Guinea Corn", quantityOffered: 2, quantityConsumed: 2, unitCost: 250, totalCost: 500, date: new Date("2025-11-02"), feedingMethod: "Hand-fed" },
+      { animalTag: "SGF001", feedTypeName: "Groundnut Hay", quantityOffered: 2, quantityConsumed: 1.5, unitCost: 150, totalCost: 225, date: new Date("2025-10-18"), feedingMethod: "Grazing" },
+      { animalTag: "BGM002", feedTypeName: "Beans Chaff", quantityOffered: 3, quantityConsumed: 2.8, unitCost: 200, totalCost: 560, date: new Date("2025-11-10"), feedingMethod: "Trough" },
+      { animalTag: "BGF003", feedTypeName: "Wheat Offal", quantityOffered: 2, quantityConsumed: 1.5, unitCost: 180, totalCost: 270, date: new Date("2025-11-20"), feedingMethod: "Trough" },
+    ];
+
+    for (const fd of feedingData) {
+      try {
+        const animalId = animalMap[fd.animalTag];
+        if (!animalId) { results.errors.push(`Feeding: Animal ${fd.animalTag} not found`); continue; }
+        // Find matching inventory item
+        const invId = inventoryMap[fd.feedTypeName] || null;
+        await FeedingRecord.create({
+          animal: animalId,
+          feedTypeName: fd.feedTypeName,
+          inventoryItem: invId,
+          quantityOffered: fd.quantityOffered,
+          quantityConsumed: fd.quantityConsumed,
+          unitCost: fd.unitCost,
+          totalCost: fd.totalCost,
+          date: fd.date,
+          feedingMethod: fd.feedingMethod,
+          notes: fd.notes || "",
+        });
+        results.feedingRecords++;
+      } catch (err) {
+        results.errors.push(`Feeding for ${fd.animalTag}: ${err.message}`);
+      }
+    }
+
+    // ─── 13. Vaccination Records ───
     const vaccinationData = [
       { animalTag: "BGM001", vaccineName: "PPR Vaccine", dosage: "1ml", method: "Subcutaneous", vaccinationDate: new Date("2024-11-13"), administeredBy: "Azeezat", nextDueDate: new Date("2025-11-13") },
     ];
