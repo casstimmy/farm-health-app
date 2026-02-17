@@ -17,6 +17,9 @@ export default function Reports() {
   const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadStages, setLoadStages] = useState([]);
+  const [applyingFilters, setApplyingFilters] = useState(false);
+  const [filterStages, setFilterStages] = useState([]);
   const [locations, setLocations] = useState([]);
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
@@ -35,41 +38,117 @@ export default function Reports() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      const stageDefs = [
+        { key: "finance", label: "Finance" },
+        { key: "animals", label: "Animals" },
+        { key: "treatments", label: "Treatments" },
+        { key: "mortalities", label: "Mortality" },
+        { key: "breedings", label: "Breeding" },
+        { key: "inventory", label: "Inventory" },
+        { key: "losses", label: "Inventory Losses" },
+        { key: "feedings", label: "Feeding" },
+        { key: "locations", label: "Locations" },
+      ];
+      setLoadStages(stageDefs.map((s) => ({ ...s, status: "pending" })));
+
+      const setStage = (key, status) => {
+        setLoadStages((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
+      };
+
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
+      const sources = [
+        { key: "finance", run: async () => (await fetch("/api/finance", { headers })).json() },
+        { key: "animals", run: async () => fetchGlobalAnimals() },
+        { key: "treatments", run: async () => (await fetch("/api/treatment", { headers })).json() },
+        { key: "mortalities", run: async () => (await fetch("/api/mortality", { headers })).json() },
+        { key: "breedings", run: async () => (await fetch("/api/breeding", { headers })).json() },
+        { key: "inventory", run: async () => (await fetch("/api/inventory", { headers })).json() },
+        { key: "losses", run: async () => (await fetch("/api/inventory-loss", { headers })).json() },
+        { key: "feedings", run: async () => (await fetch("/api/feeding", { headers })).json() },
+        { key: "locations", run: async () => (await fetch("/api/locations", { headers })).json() },
+      ];
 
-      const [financeRes, animalsData, treatmentRes, mortalityRes, breedingRes, inventoryRes, lossRes, feedingRes, locRes] = await Promise.all([
-        fetch("/api/finance", { headers }),
-        fetchGlobalAnimals(),
-        fetch("/api/treatment", { headers }),
-        fetch("/api/mortality", { headers }),
-        fetch("/api/breeding", { headers }),
-        fetch("/api/inventory", { headers }),
-        fetch("/api/inventory-loss", { headers }),
-        fetch("/api/feeding", { headers }),
-        fetch("/api/locations", { headers }),
-      ]);
+      const results = {};
+      const batchSize = 3;
 
-      setRawFinance(financeRes.ok ? await financeRes.json() : []);
-      setRawAnimals(Array.isArray(animalsData) ? animalsData : []);
-      setRawTreatments(treatmentRes.ok ? await treatmentRes.json() : []);
-      setRawMortalities(mortalityRes.ok ? await mortalityRes.json() : []);
-      setRawBreedings(breedingRes.ok ? await breedingRes.json() : []);
-      setRawInventory(inventoryRes.ok ? await inventoryRes.json() : []);
-      setRawLosses(lossRes.ok ? await lossRes.json() : []);
-      setRawFeedings(feedingRes.ok ? await feedingRes.json() : []);
-      setLocations(locRes.ok ? await locRes.json() : []);
+      for (let i = 0; i < sources.length; i += batchSize) {
+        const batch = sources.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (src) => {
+            setStage(src.key, "loading");
+            try {
+              const data = await src.run();
+              setStage(src.key, "done");
+              return { ok: true, key: src.key, data };
+            } catch (error) {
+              setStage(src.key, "failed");
+              return { ok: false, key: src.key, data: [] };
+            }
+          })
+        );
+
+        batchResults.forEach((r) => {
+          results[r.key] = r.data;
+        });
+      }
+
+      setRawFinance(Array.isArray(results.finance) ? results.finance : []);
+      setRawAnimals(Array.isArray(results.animals) ? results.animals : []);
+      setRawTreatments(Array.isArray(results.treatments) ? results.treatments : []);
+      setRawMortalities(Array.isArray(results.mortalities) ? results.mortalities : []);
+      setRawBreedings(Array.isArray(results.breedings) ? results.breedings : []);
+      setRawInventory(Array.isArray(results.inventory) ? results.inventory : []);
+      setRawLosses(Array.isArray(results.losses) ? results.losses : []);
+      setRawFeedings(Array.isArray(results.feedings) ? results.feedings : []);
+      setLocations(Array.isArray(results.locations) ? results.locations : []);
     } catch (err) {
       console.error("Failed to fetch report data:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (loading) return;
+
+    const steps = [
+      { key: "finance", label: "Finance" },
+      { key: "animals", label: "Animals" },
+      { key: "treatments", label: "Treatments" },
+      { key: "mortalities", label: "Mortality" },
+      { key: "inventory", label: "Inventory" },
+      { key: "feedings", label: "Feeding" },
+    ];
+
+    setApplyingFilters(true);
+    setFilterStages(steps.map((s) => ({ ...s, status: "pending" })));
+    let cancelled = false;
+
+    const run = async () => {
+      for (const step of steps) {
+        if (cancelled) return;
+        setFilterStages((prev) => prev.map((s) => (s.key === step.key ? { ...s, status: "loading" } : s)));
+        await new Promise((resolve) => setTimeout(resolve, 70));
+        if (cancelled) return;
+        setFilterStages((prev) => prev.map((s) => (s.key === step.key ? { ...s, status: "done" } : s)));
+      }
+      if (!cancelled) {
+        setApplyingFilters(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, filterPeriod, filterLocation]);
 
   // Compute filtered data based on period and location
   const data = useMemo(() => {
@@ -160,9 +239,38 @@ export default function Reports() {
       />
 
       {loading ? (
-        <Loader message="Loading report data..." color="yellow-600" />
+        <div className="space-y-4">
+          <Loader message="Loading report data..." color="yellow-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-sm font-semibold text-gray-700 mb-2">Fetching report sources (batched)</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+              {loadStages.map((stage) => (
+                <div key={stage.key} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50 border border-gray-100">
+                  <span>{stage.status === "done" ? "OK" : stage.status === "failed" ? "X" : stage.status === "loading" ? "..." : "-"}</span>
+                  <span className="text-gray-700">{stage.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
         <>
+          {applyingFilters && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Applying filters ({filterPeriod}, {filterLocation === "all" ? "all locations" : "selected location"})
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                {filterStages.map((stage) => (
+                  <div key={stage.key} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50 border border-gray-100">
+                    <span>{stage.status === "done" ? "OK" : stage.status === "loading" ? "..." : "-"}</span>
+                    <span className="text-gray-700">{stage.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Top-Level Financial Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[

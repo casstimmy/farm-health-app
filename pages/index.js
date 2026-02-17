@@ -40,6 +40,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dashboardReady, setDashboardReady] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [loadStages, setLoadStages] = useState([]);
   const [user, setUser] = useState(null);
   const [data, setData] = useState({ animals: [], inventory: [], treatments: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
   const [isOnline, setIsOnline] = useState(true);
@@ -58,8 +59,25 @@ export default function Home() {
         setLoading(true);
         setLoadError("");
         const headers = { Authorization: `Bearer ${token}` };
+        const sources = [
+          { key: "animals", label: "Animals", endpoint: "/api/animals" },
+          { key: "inventory", label: "Inventory", endpoint: "/api/inventory" },
+          { key: "treatments", label: "Treatments", endpoint: "/api/treatment" },
+          { key: "finance", label: "Finance", endpoint: "/api/finance" },
+          { key: "mortality", label: "Mortality", endpoint: "/api/mortality" },
+          { key: "breeding", label: "Breeding", endpoint: "/api/breeding" },
+          { key: "healthRecords", label: "Health Records", endpoint: "/api/health-records" },
+          { key: "feeding", label: "Feeding", endpoint: "/api/feeding" },
+        ];
+        setLoadStages(sources.map((s) => ({ key: s.key, label: s.label, status: "pending" })));
+
+        const updateStage = (key, status) => {
+          setLoadStages((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
+        };
+
         const fetchApi = async (name, endpoint) => {
           try {
+            updateStage(name, "loading");
             const payload = await getCachedData(
               `api/home/${name}`,
               async () => {
@@ -72,23 +90,34 @@ export default function Home() {
               },
               60 * 1000
             );
+            updateStage(name, "done");
             return { ok: true, data: payload };
           } catch (error) {
+            updateStage(name, "failed");
             return { ok: false, data: [] };
           }
         };
-        
-        // Fetch all data directly in parallel — simple and reliable
-        const [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding] = await Promise.all([
-          fetchApi("animals", "/api/animals"),
-          fetchApi("inventory", "/api/inventory"),
-          fetchApi("treatment", "/api/treatment"),
-          fetchApi("finance", "/api/finance"),
-          fetchApi("mortality", "/api/mortality"),
-          fetchApi("breeding", "/api/breeding"),
-          fetchApi("health-records", "/api/health-records"),
-          fetchApi("feeding", "/api/feeding"),
-        ]);
+
+        const results = {};
+        const batchSize = 2;
+        for (let i = 0; i < sources.length; i += batchSize) {
+          const batch = sources.slice(i, i + batchSize);
+          const batchResults = await Promise.all(
+            batch.map((src) => fetchApi(src.key, src.endpoint))
+          );
+          batch.forEach((src, idx) => {
+            results[src.key] = batchResults[idx];
+          });
+        }
+
+        const animals = results.animals || { ok: false, data: [] };
+        const inventory = results.inventory || { ok: false, data: [] };
+        const treatments = results.treatments || { ok: false, data: [] };
+        const finance = results.finance || { ok: false, data: [] };
+        const mortality = results.mortality || { ok: false, data: [] };
+        const breeding = results.breeding || { ok: false, data: [] };
+        const healthRecords = results.healthRecords || { ok: false, data: [] };
+        const feeding = results.feeding || { ok: false, data: [] };
         
         const successCount = [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding].filter((item) => item.ok).length;
         const minimumMajorityReady = successCount >= 5 && animals.ok && inventory.ok;
@@ -111,7 +140,7 @@ export default function Home() {
           invalidateCache("api/home/finance");
           invalidateCache("api/home/mortality");
           invalidateCache("api/home/breeding");
-          invalidateCache("api/home/health-records");
+          invalidateCache("api/home/healthRecords");
           invalidateCache("api/home/feeding");
           setDashboardReady(false);
           setLoadError("Dashboard is waiting on required data. Check connection and retry.");
@@ -286,7 +315,24 @@ export default function Home() {
       </header>
 
       {loading ? (
-        <Loader message="Loading dashboard..." color="green-600" />
+        <div className="space-y-4">
+          <Loader message="Loading dashboard..." color="green-600" />
+          {loadStages.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Fetching data (batched)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                {loadStages.map((stage) => (
+                  <div key={stage.key} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50 border border-gray-100">
+                    <span>
+                      {stage.status === "done" ? "OK" : stage.status === "failed" ? "X" : stage.status === "loading" ? "..." : "-"}
+                    </span>
+                    <span className="text-gray-700">{stage.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : !dashboardReady ? (
         <div className="bg-white rounded-xl border border-red-200 p-6">
           <h2 className="text-lg font-bold text-red-700 mb-2">Dashboard not ready</h2>
