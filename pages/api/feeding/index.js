@@ -70,23 +70,40 @@ async function handler(req, res) {
     }
   } else if (req.method === "GET") {
     try {
-      const { animalId } = req.query;
+      const { animalId, compact } = req.query;
+      const isCompact = compact === "true" || compact === "1";
 
       if (animalId) {
         const records = await FeedingRecord.find({ animal: animalId })
           .sort({ date: -1 })
-          .populate("feedItems.inventoryItem")
+          .populate("feedItems.inventoryItem", "item unit")
           .lean();
         return res.status(200).json(records);
       }
 
       // Return all feeding records if no animalId
-      const records = await FeedingRecord.find()
-        .sort({ date: -1 })
-        .populate("animal")
-        .populate("feedItems.inventoryItem")
-        .populate("location")
-        .lean();
+      let query = FeedingRecord.find().sort({ date: -1 });
+      if (isCompact) {
+        query = query
+          .select({
+            animal: 1,
+            date: 1,
+            totalFeedCost: 1,
+            totalQuantityOffered: 1,
+            totalQuantityConsumed: 1,
+            feedingMethod: 1,
+            location: 1,
+          })
+          .populate("animal", "tagId name")
+          .populate("location", "name");
+      } else {
+        query = query
+          .populate("animal")
+          .populate("feedItems.inventoryItem")
+          .populate("location");
+      }
+
+      const records = await query.lean();
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

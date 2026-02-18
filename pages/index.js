@@ -42,7 +42,7 @@ export default function Home() {
   const [loadError, setLoadError] = useState("");
   const [loadStages, setLoadStages] = useState([]);
   const [user, setUser] = useState(null);
-  const [data, setData] = useState({ animals: [], inventory: [], treatments: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
+  const [data, setData] = useState({ animals: [], inventory: [], finance: [], mortality: [], breeding: [], healthRecords: [], feeding: [] });
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -60,14 +60,13 @@ export default function Home() {
         setLoadError("");
         const headers = { Authorization: `Bearer ${token}` };
         const sources = [
-          { key: "animals", label: "Animals", endpoint: "/api/animals" },
+          { key: "animals", label: "Animals", endpoint: "/api/animals?compact=true" },
           { key: "inventory", label: "Inventory", endpoint: "/api/inventory" },
-          { key: "treatments", label: "Treatments", endpoint: "/api/treatment" },
           { key: "finance", label: "Finance", endpoint: "/api/finance" },
           { key: "mortality", label: "Mortality", endpoint: "/api/mortality" },
           { key: "breeding", label: "Breeding", endpoint: "/api/breeding" },
           { key: "healthRecords", label: "Health Records", endpoint: "/api/health-records" },
-          { key: "feeding", label: "Feeding", endpoint: "/api/feeding" },
+          { key: "feeding", label: "Feeding", endpoint: "/api/feeding?compact=true" },
         ];
         setLoadStages(sources.map((s) => ({ key: s.key, label: s.label, status: "pending" })));
 
@@ -112,20 +111,18 @@ export default function Home() {
 
         const animals = results.animals || { ok: false, data: [] };
         const inventory = results.inventory || { ok: false, data: [] };
-        const treatments = results.treatments || { ok: false, data: [] };
         const finance = results.finance || { ok: false, data: [] };
         const mortality = results.mortality || { ok: false, data: [] };
         const breeding = results.breeding || { ok: false, data: [] };
         const healthRecords = results.healthRecords || { ok: false, data: [] };
         const feeding = results.feeding || { ok: false, data: [] };
         
-        const successCount = [animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding].filter((item) => item.ok).length;
-        const minimumMajorityReady = successCount >= 5 && animals.ok && inventory.ok;
+        const successCount = [animals, inventory, finance, mortality, breeding, healthRecords, feeding].filter((item) => item.ok).length;
+        const minimumMajorityReady = successCount >= 4 && animals.ok && inventory.ok;
 
         setData({
           animals: animals.data,
           inventory: inventory.data,
-          treatments: treatments.data,
           finance: finance.data,
           mortality: mortality.data,
           breeding: breeding.data,
@@ -136,7 +133,6 @@ export default function Home() {
         if (!minimumMajorityReady) {
           invalidateCache("api/home/animals");
           invalidateCache("api/home/inventory");
-          invalidateCache("api/home/treatment");
           invalidateCache("api/home/finance");
           invalidateCache("api/home/mortality");
           invalidateCache("api/home/breeding");
@@ -170,7 +166,7 @@ export default function Home() {
 
   // ─── Computed Stats ───
   const stats = useMemo(() => {
-    const { animals, inventory, treatments, finance, mortality, breeding, healthRecords, feeding } = data;
+    const { animals, inventory, finance, mortality, breeding, healthRecords, feeding } = data;
     const alive = animals.filter(a => a.status === "Alive");
     const totalAnimals = animals.length;
     const aliveCount = alive.length;

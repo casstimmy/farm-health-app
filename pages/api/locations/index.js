@@ -1,8 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import Location from "@/models/Location";
-import { requireAuth } from "@/utils/middleware";
+import { withAuth } from "@/utils/middleware";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
@@ -47,3 +47,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: "Method not allowed" });
 }
+
+export default withAuth(handler);

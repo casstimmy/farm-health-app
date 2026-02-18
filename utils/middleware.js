@@ -41,3 +41,6 @@ export function withRBACAuth(allowedRoles = []) {
     };
   };
 }
+
+// Backward-compatible alias used by older API routes
+export const requireAuth = withAuth;

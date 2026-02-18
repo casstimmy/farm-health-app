@@ -12,10 +12,11 @@ export default function ManageAnimals() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSuccess = () => {
     setShowModal(false);
-    // AddAnimalForm already adds the new animal to the global cache via addAnimalToCache
+    setRefreshKey((k) => k + 1);
   };
 
   return (
@@ -64,7 +65,11 @@ export default function ManageAnimals() {
       {/* Animals List */}
       <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">All Animals</h2>
-        <AnimalsList searchTerm={searchTerm} filterStatus={filterStatus} />
+        <AnimalsList
+          searchTerm={searchTerm}
+          filterStatus={filterStatus}
+          refreshKey={refreshKey}
+        />
       </div>
     </motion.div>
   );

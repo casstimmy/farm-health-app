@@ -60,10 +60,10 @@ export function useRole(allowedRoles = []) {
  */
 export const menuItemVisibility = {
   // SuperAdmin: Full access to everything
-  SuperAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'roles', 'transactions', 'reports', 'locations', 'business-setup'],
+  SuperAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'roles', 'transactions', 'reports', 'locations', 'business-setup', 'customers', 'orders'],
   
   // Manager: Can manage animals, operations, transactions, and view reports
-  Manager: ['animals', 'operations', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations'],
+  Manager: ['animals', 'operations', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders'],
   
   // Attendant: Can only view animals and record operations
   Attendant: ['animals', 'operations', 'health-records', 'treatments', 'inventory', 'feeding', 'weight'],

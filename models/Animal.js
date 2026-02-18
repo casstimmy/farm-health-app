@@ -62,5 +62,8 @@ const AnimalSchema = new mongoose.Schema(
 AnimalSchema.index({ species: 1, status: 1 });
 AnimalSchema.index({ location: 1 });
 AnimalSchema.index({ createdAt: -1 });
+AnimalSchema.index({ isArchived: 1, createdAt: -1 });
+AnimalSchema.index({ name: 1 });
+AnimalSchema.index({ breed: 1 });
 
 export default mongoose.models.Animal || mongoose.model("Animal", AnimalSchema);
