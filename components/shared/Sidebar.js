@@ -160,6 +160,7 @@ export default function Sidebar() {
       submenu: [
         { href: "/manage/locations", label: "📍 Locations", icon: null, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/business-setup", label: "🏢 Business Setup", icon: null, roles: ['SuperAdmin', 'Manager'] },
+        { href: "/manage/blog", label: "Blog Management", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Manager'] },
         { href: "/manage/seed", label: "🌱 Seed Database", icon: null, roles: ['SuperAdmin'] },
       ],
     },
@@ -268,3 +269,4 @@ export default function Sidebar() {
     </>
   );
 }
+

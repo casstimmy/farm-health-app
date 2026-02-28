@@ -12,7 +12,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
-import { getCachedData, invalidateCache } from "@/utils/cache";
+import { invalidateCache } from "@/utils/cache";
 
 // Lazy-load Chart.js to reduce bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -65,14 +65,8 @@ export default function Transactions() {
     try {
       const token = localStorage.getItem("token");
       const [finData, locData] = await Promise.all([
-        getCachedData("api/finance", async () => {
-          const res = await fetch("/api/finance", { headers: { Authorization: `Bearer ${token}` } });
-          return res.ok ? await res.json() : [];
-        }, 3 * 60 * 1000),
-        getCachedData("api/locations", async () => {
-          const res = await fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } });
-          return res.ok ? await res.json() : [];
-        }, 3 * 60 * 1000),
+        fetch("/api/finance", { headers: { Authorization: `Bearer ${token}` } }).then((r) => (r.ok ? r.json() : [])),
+        fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }).then((r) => (r.ok ? r.json() : [])),
       ]);
       setAllFinance(finData);
       setLocations(locData || []);

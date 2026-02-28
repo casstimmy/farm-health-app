@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
+import mongoose from "mongoose";
 import { withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
@@ -8,10 +9,9 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const order = await Order.findById(id)
-        .populate("customer", "name phone email")
-        .populate("location", "name")
-        .lean();
+      const order = await mongoose.connection
+        .collection("orders")
+        .findOne({ _id: new mongoose.Types.ObjectId(id) });
       if (!order) return res.status(404).json({ error: "Order not found" });
       return res.status(200).json(order);
     } catch (error) {
@@ -22,24 +22,17 @@ async function handler(req, res) {
   if (req.method === "PUT") {
     try {
       const payload = req.body || {};
-      const order = await Order.findByIdAndUpdate(
-        id,
-        {
-          customer: payload.customer || null,
-          location: payload.location || null,
-          orderDate: payload.orderDate || new Date(),
-          dueDate: payload.dueDate || null,
-          status: payload.status || "Pending",
-          paymentStatus: payload.paymentStatus || "Unpaid",
-          items: Array.isArray(payload.items) ? payload.items : [],
-          total: Number(payload.total || 0),
-          amountPaid: Number(payload.amountPaid || 0),
-          notes: payload.notes || "",
-        },
-        { new: true, runValidators: true }
+      const updateDoc = {
+        ...payload,
+        updatedAt: new Date(),
+      };
+      const result = await mongoose.connection.collection("orders").findOneAndUpdate(
+        { _id: new mongoose.Types.ObjectId(id) },
+        { $set: updateDoc },
+        { returnDocument: "after" }
       );
-      if (!order) return res.status(404).json({ error: "Order not found" });
-      return res.status(200).json(order);
+      if (!result.value) return res.status(404).json({ error: "Order not found" });
+      return res.status(200).json(result.value);
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
@@ -47,8 +40,10 @@ async function handler(req, res) {
 
   if (req.method === "DELETE") {
     try {
-      const order = await Order.findByIdAndDelete(id);
-      if (!order) return res.status(404).json({ error: "Order not found" });
+      const result = await mongoose.connection.collection("orders").deleteOne({
+        _id: new mongoose.Types.ObjectId(id),
+      });
+      if (!result.deletedCount) return res.status(404).json({ error: "Order not found" });
       return res.status(200).json({ message: "Order deleted" });
     } catch (error) {
       return res.status(500).json({ error: error.message });

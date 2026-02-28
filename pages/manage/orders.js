@@ -68,7 +68,9 @@ export default function OrdersPage() {
 
   const orderTotal = useMemo(() => {
     return (form.items || []).reduce((sum, item) => {
-      return sum + Number(item.quantity || 0) * Number(item.unitPrice || 0);
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.unitPrice ?? item.price ?? 0);
+      return sum + qty * price;
     }, 0);
   }, [form.items]);
 
@@ -143,6 +145,16 @@ export default function OrdersPage() {
       notes: order.notes || "",
       items: Array.isArray(order.items) && order.items.length ? order.items : [emptyItem],
     });
+    if (Array.isArray(order.items) && order.items.length) {
+      setForm((prev) => ({
+        ...prev,
+        items: order.items.map((item) => ({
+          description: item.description || item.name || "",
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice ?? item.price ?? 0,
+        })),
+      }));
+    }
   };
 
   const handleDelete = async (id) => {
@@ -230,11 +242,11 @@ export default function OrdersPage() {
             {orders.map((order) => (
               <tr key={order._id}>
                 <td className="px-4 py-3 text-sm font-semibold">{order.orderNumber}</td>
-                <td className="px-4 py-3 text-sm">{order.customer?.name || "Walk-in"}</td>
+                <td className="px-4 py-3 text-sm">{order.customer?.name || order.customerName || "Walk-in"}</td>
                 <td className="px-4 py-3 text-sm">{order.status}</td>
                 <td className="px-4 py-3 text-sm">{order.paymentStatus}</td>
                 <td className="px-4 py-3 text-sm text-right">{formatCurrency(order.total || 0, businessSettings.currency)}</td>
-                <td className="px-4 py-3 text-sm text-right">{formatCurrency(order.balance || 0, businessSettings.currency)}</td>
+                <td className="px-4 py-3 text-sm text-right">{formatCurrency(order.balance ?? ((order.total || 0) - (order.amountPaid || 0)), businessSettings.currency)}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex items-center justify-center gap-2">
                     <button onClick={() => handleEdit(order)} className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>

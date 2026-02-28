@@ -9,6 +9,7 @@ import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
 import Modal from "@/components/shared/Modal";
 import { getCachedData, invalidateCache } from "@/utils/cache";
+import Link from "next/link";
 
 export default function ManageInventory() {
   const { businessSettings } = useContext(BusinessContext);
@@ -87,12 +88,10 @@ export default function ManageInventory() {
   const fetchInventory = async () => {
     try {
       const token = localStorage.getItem("token");
-      const data = await getCachedData("api/inventory", async () => {
-        const res = await fetch("/api/inventory", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        return await res.json();
-      }, 3 * 60 * 1000);
+      const res = await fetch("/api/inventory", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
       setInventory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching inventory:", error);
@@ -254,6 +253,7 @@ export default function ManageInventory() {
         });
         setTimeout(() => {
           setShowForm(false);
+          invalidateCache("api/inventory");
           fetchInventory();
         }, 1000);
       } else {
@@ -321,6 +321,7 @@ export default function ManageInventory() {
         setEditingId(null);
         setEditValue("");
         setTimeout(() => setSuccess(""), 2000);
+        invalidateCache("api/inventory");
         fetchInventory();
       } else {
         setError("Failed to update item");
@@ -341,6 +342,7 @@ export default function ManageInventory() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ showOnSite: !item.showOnSite }),
       });
+      invalidateCache("api/inventory");
       fetchInventory();
     } catch (err) {
       console.error("Toggle showOnSite failed:", err);
@@ -370,6 +372,7 @@ export default function ManageInventory() {
       if (res.ok) {
         setSuccess("✓ Item deleted successfully!");
         setTimeout(() => setSuccess(""), 2000);
+        invalidateCache("api/inventory");
         fetchInventory();
       } else {
         const data = await res.json();
@@ -429,6 +432,7 @@ export default function ManageInventory() {
       if (res.ok) {
         setShowImportModal(false);
         setImportText("");
+        invalidateCache("api/inventory");
         fetchInventory();
       } else {
         const data = await res.json();
@@ -1080,12 +1084,12 @@ export default function ManageInventory() {
         >
           <FaUpload /> Bulk Import Medications
         </button>
-        <a
+        <Link
           href="/manage/inventory-categories"
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-semibold border"
         >
           Manage Categories
-        </a>
+        </Link>
       </div>
       <FilterBar
         searchPlaceholder="Search by item name..."

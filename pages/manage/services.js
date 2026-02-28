@@ -9,7 +9,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
-import { getCachedData, invalidateCache } from "@/utils/cache";
+import { invalidateCache } from "@/utils/cache";
 
 const SERVICE_CATEGORIES = [
   "Veterinary Services",
@@ -70,13 +70,11 @@ export default function ManageServices() {
   const fetchServices = async () => {
     try {
       const token = localStorage.getItem("token");
-      const data = await getCachedData("api/services", async () => {
-        const res = await fetch("/api/services", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error("Failed to fetch services");
-        return await res.json();
-      }, 3 * 60 * 1000);
+      const res = await fetch("/api/services", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch services");
+      const data = await res.json();
       setServices(data);
     } catch (err) {
       setError(err.message);
@@ -109,6 +107,7 @@ export default function ManageServices() {
         throw new Error(errData.error || "Failed to save service");
       }
       setSuccess(editingId ? "Service updated!" : "Service added!");
+      invalidateCache("api/services");
       setForm({ ...emptyForm });
       setEditingId(null);
       setShowForm(false);
@@ -150,6 +149,7 @@ export default function ManageServices() {
         throw new Error(errData.error || "Failed to delete");
       }
       setSuccess("Service deleted!");
+      invalidateCache("api/services");
       fetchServices();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -171,6 +171,7 @@ export default function ManageServices() {
         body: JSON.stringify({ showOnSite: !service.showOnSite }),
       });
       if (!res.ok) throw new Error("Failed to update");
+      invalidateCache("api/services");
       fetchServices();
     } catch (err) {
       setError(err.message);
@@ -189,6 +190,7 @@ export default function ManageServices() {
         body: JSON.stringify({ isActive: !service.isActive }),
       });
       if (!res.ok) throw new Error("Failed to update");
+      invalidateCache("api/services");
       fetchServices();
     } catch (err) {
       setError(err.message);

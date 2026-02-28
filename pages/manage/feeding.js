@@ -65,16 +65,19 @@ export default function Feeding() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     fetchAll();
+    const onFocus = () => fetchAll();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [router]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      // Animals from global context (cached); fetch the rest in parallel
+      // Animals from global context (cached); fetch the rest in parallel (compact feeding for speed)
       const [animalsData, recordsRes, invRes, locRes] = await Promise.all([
         fetchAnimals(),
-        fetch("/api/feeding", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/feeding?compact=true", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/inventory", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } }),
       ]);

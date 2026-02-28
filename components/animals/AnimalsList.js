@@ -348,16 +348,22 @@ export default function AnimalsList({
                       <Link href={`/manage/animals/${animal._id}`} className="px-2 py-1 border border-gray-400 rounded text-xs inline-block">Adv</Link>
                     </td>
                     <td className="px-4 py-3">
-                      {animal.images?.length > 0 ? (
+                      <div
+                        className="flex items-center gap-1 cursor-pointer"
+                        onClick={() => handleImageClick(animal)}
+                        title="Click to view images"
+                      >
                         <img
-                          src={animal.images[0].thumb || animal.images[0].full}
-                          alt="Animal"
-                          className="w-12 h-12 object-cover rounded-lg border cursor-pointer"
-                          onClick={() => handleImageClick(animal)}
+                          src={animal.images?.[0]?.thumb || animal.images?.[0]?.full || "/Image1.png"}
+                          alt="Animal image 1"
+                          className="w-10 h-10 object-cover rounded-lg border"
                         />
-                      ) : (
-                        <button onClick={() => handleImageClick(animal)} className="text-blue-600 text-xs">No image</button>
-                      )}
+                        <img
+                          src={animal.images?.[1]?.thumb || animal.images?.[1]?.full || "/Image2.png"}
+                          alt="Animal image 2"
+                          className="w-10 h-10 object-cover rounded-lg border"
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold">
                       {isEditing ? (
@@ -406,6 +412,7 @@ export default function AnimalsList({
         <ImageViewer
           images={modalImages}
           animalName={modalAnimal?.name || modalAnimal?.tagId || "Animal"}
+          animalInfo={modalAnimal}
           onDeleteImage={(imageIndex) => handleDeleteImage(modalAnimal._id, imageIndex)}
           onAddImage={(e) => handleAddImage(modalAnimal._id, e)}
           isUploading={uploadingImages}

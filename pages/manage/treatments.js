@@ -157,11 +157,15 @@ export default function Treatments() {
     (treatment) =>
       (searchTerm === "" ||
         treatment.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        treatment.animalName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterType === "all" || treatment.type === filterType)
+        treatment.medicationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        treatment.symptoms?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        treatment.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        treatment.animal?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        treatment.animal?.tagId?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterType === "all" || treatment.type === filterType || treatment.recoveryStatus === filterType)
   );
 
-  const treatmentTypes = [...new Set(treatments.map((t) => t.type))];
+  const treatmentTypes = [...new Set(treatments.map((t) => t.type || t.recoveryStatus).filter(Boolean))];
 
   return (
     <div className="space-y-8">
@@ -178,7 +182,7 @@ export default function Treatments() {
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1">
           <FilterBar
-            searchPlaceholder="Search by animal name or treatment type..."
+            searchPlaceholder="Search by animal, diagnosis, medication, or type..."
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             filterOptions={[
@@ -208,7 +212,13 @@ export default function Treatments() {
               <p className="text-gray-600 text-sm mt-1">Fill in the treatment details below</p>
             </div>
             <div className="p-6 max-h-[calc(90vh-150px)] overflow-y-auto">
-              <TreatmentForm onSubmit={handleFormSubmit} loading={formLoading} initialData={editTreatmentData} onClose={() => { setShowForm(false); setEditTreatmentData(null); }} />
+              <TreatmentForm
+                key={editTreatmentData?._id || "new-treatment"}
+                onSubmit={handleFormSubmit}
+                loading={formLoading}
+                initialData={editTreatmentData}
+                onClose={() => { setShowForm(false); setEditTreatmentData(null); }}
+              />
             </div>
           </div>
         </div>
@@ -221,7 +231,7 @@ export default function Treatments() {
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center border border-gray-200">
           <div className="text-5xl mb-4">📋</div>
           <p className="text-gray-600 text-lg font-medium">No treatments found</p>
-          <p className="text-gray-500 text-sm mt-2">Click the "+" button to add your first treatment record</p>
+          <p className="text-gray-500 text-sm mt-2">Click the + button to add your first treatment record</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
@@ -318,7 +328,7 @@ export default function Treatments() {
                       {/* Type */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.type || "-")}</td>
                       {/* Medication */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="medication" value={editableTreatment.medication || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.medication || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="medicationName" value={editableTreatment.medicationName || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.medicationName || "-")}</td>
                       {/* Dosage */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.dosage || "-")}</td>
                       {/* Route */}

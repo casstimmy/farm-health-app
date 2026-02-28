@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
+import mongoose from "mongoose";
 import { withRBACAuth } from "@/utils/middleware";
 
 function buildOrderNumber() {
@@ -20,15 +21,21 @@ async function handler(req, res) {
       const query = {};
 
       if (status !== "all") query.status = status;
-      if (location !== "all") query.location = location;
-      if (customer) query.customer = customer;
-      if (q) query.orderNumber = { $regex: q, $options: "i" };
+      if (location !== "all") query.location = /^[0-9a-fA-F]{24}$/.test(String(location)) ? new mongoose.Types.ObjectId(String(location)) : location;
+      if (customer) query.customer = /^[0-9a-fA-F]{24}$/.test(String(customer)) ? new mongoose.Types.ObjectId(String(customer)) : customer;
+      if (q) {
+        query.$or = [
+          { orderNumber: { $regex: q, $options: "i" } },
+          { customerName: { $regex: q, $options: "i" } },
+          { customerEmail: { $regex: q, $options: "i" } },
+        ];
+      }
 
-      const orders = await Order.find(query)
-        .sort({ orderDate: -1 })
-        .populate("customer", "name phone")
-        .populate("location", "name")
-        .lean();
+      const orders = await mongoose.connection
+        .collection("orders")
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
 
       return res.status(200).json(orders);
     } catch (error) {
