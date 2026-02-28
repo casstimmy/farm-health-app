@@ -218,14 +218,6 @@ export default function BusinessSetup() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader message="Loading business settings..." color="blue-600" fullPage />
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -239,6 +231,12 @@ export default function BusinessSetup() {
         gradient="from-blue-600 to-blue-700"
       />
 
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
+          <Loader message="Loading business settings..." color="blue-600" />
+        </div>
+      ) : (
+      <>
       {/* Settings Form */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12">
         {error && (
@@ -577,6 +575,8 @@ export default function BusinessSetup() {
           These settings are used throughout the system for display, currency formatting, and timezone calculations. Changes take effect immediately.
         </p>
       </div>
+      </>
+      )}
     </motion.div>
   );
 }

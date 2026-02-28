@@ -123,7 +123,30 @@ export default function ExpenseEntry() {
   const todayTotal = todayExpenses.reduce((s, e) => s + (e.amount || 0), 0);
   const totalAll = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Record Expense"
+          subtitle="Quick expense entry - accessible to all staff"
+          gradient="from-amber-500 to-orange-500"
+          icon="$"
+          actions={
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-lg transition-colors font-medium shadow-md"
+            >
+              {showForm ? <FaTimes /> : <FaPlus />}
+              {showForm ? "Hide Form" : "Add Expense"}
+            </button>
+          }
+        />
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
+          <Loader message="Loading expenses..." color="amber-600" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -351,3 +374,4 @@ export default function ExpenseEntry() {
 
 ExpenseEntry.layoutType = "default";
 ExpenseEntry.layoutProps = { title: "Record Expense" };
+

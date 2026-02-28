@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { FaChevronLeft, FaChevronRight, FaTrash, FaImage, FaPlus } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaTrash, FaPlus } from "react-icons/fa";
 import Loader from "../Loader";
 
 export default function ImageViewer({
@@ -14,40 +14,16 @@ export default function ImageViewer({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const fileInputRef = useRef(null);
 
-  const normalizedImages = Array.isArray(images) ? images : [];
+  const sourceImages = Array.isArray(images) ? images : [];
+  const usingPlaceholders = sourceImages.length === 0;
+  const normalizedImages = usingPlaceholders
+    ? [
+        { full: "/Image1.png", thumb: "/Image1.png", isPlaceholder: true, label: "Image 1 placeholder" },
+        { full: "/Image2.png", thumb: "/Image2.png", isPlaceholder: true, label: "Image 2 placeholder" },
+      ]
+    : sourceImages;
   const hasImages = normalizedImages.length > 0;
   const safeSelectedIndex = hasImages ? Math.min(selectedIndex, normalizedImages.length - 1) : 0;
-
-  if (!hasImages) {
-    return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg space-y-4 relative">
-        {isUploading && <Loader variant="overlay" />}
-        <FaImage className="mx-auto text-4xl text-gray-400" />
-        <p className="text-gray-500">No images available</p>
-        {onAddImage && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-            disabled={isUploading}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-semibold transition-all"
-          >
-            {isUploading ? "Uploading..." : "Add First Image"}
-          </button>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={onAddImage}
-          disabled={isUploading}
-          className="hidden"
-        />
-      </div>
-    );
-  }
 
   const currentImage = normalizedImages[safeSelectedIndex];
   const imageUrl = currentImage?.full || currentImage?.thumb || currentImage;
@@ -61,6 +37,7 @@ export default function ImageViewer({
   };
 
   const handleDeleteImage = async () => {
+    if (usingPlaceholders) return;
     if (confirm(`Delete image ${safeSelectedIndex + 1}?`)) {
       if (onDeleteImage) {
         await onDeleteImage(safeSelectedIndex);
@@ -149,15 +126,17 @@ export default function ImageViewer({
                 <span className="hidden sm:inline">{isUploading ? "Uploading..." : "Add"}</span>
               </button>
             )}
-            <button
-              onClick={handleDeleteImage}
-              disabled={isUploading}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
-              title={isUploading ? "Uploading..." : "Delete image (Delete key)"}
-            >
-              <FaTrash size={16} />
-              <span className="hidden sm:inline">Delete</span>
-            </button>
+            {!usingPlaceholders && (
+              <button
+                onClick={handleDeleteImage}
+                disabled={isUploading}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+                title={isUploading ? "Uploading..." : "Delete image (Delete key)"}
+              >
+                <FaTrash size={16} />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -207,7 +186,7 @@ export default function ImageViewer({
                     className="w-20 h-20 object-cover"
                   />
                   {safeSelectedIndex === idx && (
-                    <div className="absolute inset-0 bg-blue-500 bg-opacity-20" />
+                    <div className="absolute inset-0 bg-blue-200 bg-opacity-10" />
                   )}
                 </motion.button>
               );

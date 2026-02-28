@@ -174,7 +174,21 @@ export default function WeightTracking() {
     } catch (err) { setError(err.message); } finally { setFormLoading(false); }
   };
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Weight Tracking"
+          subtitle="Monitor and compare animal weight progression"
+          icon="âš–ï¸"
+          actions={<button onClick={() => { setShowForm(!showForm); setError(""); resetForm(); }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Record Weight"}</button>}
+        />
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
+          <Loader message="Loading weight records..." color="purple-600" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -270,7 +284,12 @@ export default function WeightTracking() {
                       </td>
                       <td className="px-4 py-3 text-sm text-center text-gray-700">{animal.recordCount}</td>
                       <td className="px-4 py-3 text-sm text-center">
-                        <button onClick={() => { setHistoryAnimalId(animal._id); setViewMode("history"); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs underline">History</button>
+                        <button
+                          onClick={() => { setHistoryAnimalId(animal._id); setViewMode("history"); }}
+                          className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-semibold transition-colors"
+                        >
+                          History
+                        </button>
                       </td>
                     </motion.tr>
                   ))}
@@ -338,9 +357,9 @@ export default function WeightTracking() {
                           <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
                           <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{record.notes || "—"}</td>
                           <td className="px-4 py-3 text-sm text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit"><FaEdit size={13} /></button>
-                              <button onClick={() => handleDelete(record._id)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg" title="Delete"><FaTrash size={13} /></button>
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => handleEdit(record)} className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors" title="Edit"><FaEdit size={13} /></button>
+                              <button onClick={() => handleDelete(record._id)} className="inline-flex items-center justify-center w-8 h-8 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors" title="Delete"><FaTrash size={13} /></button>
                             </div>
                           </td>
                         </motion.tr>
