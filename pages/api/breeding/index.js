@@ -1,5 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import BreedingRecord from "@/models/BreedingRecord";
+import "@/models/Animal";
+import "@/models/Location";
 import { withAuth } from "@/utils/middleware";
 import mongoose from "mongoose";
 

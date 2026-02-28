@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import HealthRecord from "@/models/HealthRecord";
 import Animal from "@/models/Animal";
+import "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
 
 async function handler(req, res) {

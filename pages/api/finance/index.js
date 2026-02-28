@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Finance from "@/models/Finance";
+import "@/models/Location";
 import { withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
