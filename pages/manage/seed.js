@@ -274,7 +274,7 @@ export default function SeedDatabase() {
     }
   };
 
-  const fetchSeedDocLinks = async () => {
+  async function fetchSeedDocLinks() {
     try {
       setLoadingDocLinks(true);
       const token = localStorage.getItem("token");
@@ -289,7 +289,7 @@ export default function SeedDatabase() {
     } finally {
       setLoadingDocLinks(false);
     }
-  };
+  }
 
   const handleDocLinkChange = (key, value) => {
     setSeedDocLinks((prev) => ({ ...prev, [key]: value }));
