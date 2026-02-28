@@ -58,7 +58,7 @@ export default function ManageInventory() {
   const [showConsumeModal, setShowConsumeModal] = useState(false);
   const [consumeItem, setConsumeItem] = useState(null);
   const [consumeLoading, setConsumeLoading] = useState(false);
-  const [consumeForm, setConsumeForm] = useState({ quantity: 1, reason: "Used", type: "Used", notes: "" });
+  const [consumeForm, setConsumeForm] = useState({ quantity: 1, reason: "Used", type: "Used", notes: "", performedBy: "" });
   const [formData, setFormData] = useState({
     name: "",
     quantity: "",
@@ -448,7 +448,13 @@ export default function ManageInventory() {
 
   const openConsumeModal = (item) => {
     setConsumeItem(item);
-    setConsumeForm({ quantity: 1, reason: "Used", type: "Used", notes: "" });
+    setConsumeForm({
+      quantity: 1,
+      reason: "Used",
+      type: "Used",
+      notes: "",
+      performedBy: user?.name || user?.email || "Unknown",
+    });
     setShowConsumeModal(true);
   };
 
@@ -474,7 +480,7 @@ export default function ManageInventory() {
           quantity: Number(consumeForm.quantity),
           reason: `${consumeForm.type}: ${consumeForm.reason || consumeForm.notes || consumeForm.type}`,
           notes: consumeForm.notes,
-          reportedBy: user?.name || user?.email || "Unknown",
+          reportedBy: consumeForm.performedBy || user?.name || user?.email || "Unknown",
         }),
       });
       if (!res.ok) {
@@ -1387,6 +1393,16 @@ export default function ManageInventory() {
               <option value="Damaged">Damaged</option>
               <option value="Expired">Expired</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Staff Performing Action</label>
+            <input
+              type="text"
+              value={consumeForm.performedBy || ""}
+              readOnly
+              className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-700"
+            />
           </div>
 
           <div>

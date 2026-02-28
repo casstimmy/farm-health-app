@@ -8,7 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import dynamic from "next/dynamic";
-import { getCachedData, invalidateCache } from "@/utils/cache";
+import { invalidateCache } from "@/utils/cache";
 
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
@@ -32,13 +32,21 @@ export default function Treatments() {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
+        const selectedMedication = medicationOptions.find((m) => m._id === editableTreatment.medication);
+        const payload = {
+          ...editableTreatment,
+          prescribedDays: editableTreatment.prescribedDays === "" ? 0 : Number(editableTreatment.prescribedDays || 0),
+          preWeight: editableTreatment.preWeight === "" ? null : Number(editableTreatment.preWeight),
+          postWeight: editableTreatment.postWeight === "" ? null : Number(editableTreatment.postWeight),
+          medicationName: selectedMedication?.item || editableTreatment.medicationName || "",
+        };
         const res = await fetch(`/api/treatment/${_id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(editableTreatment),
+          body: JSON.stringify(payload),
         });
         if (res.ok) {
           fetchTreatments();
@@ -84,6 +92,8 @@ export default function Treatments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [formLoading, setFormLoading] = useState(false);
+  const [medicationOptions, setMedicationOptions] = useState([]);
+  const [staffOptions, setStaffOptions] = useState([]);
   // Handle treatment form submit (create or update)
   const handleFormSubmit = async (form) => {
     setFormLoading(true);
@@ -139,13 +149,21 @@ export default function Treatments() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const data = await getCachedData("api/treatment", async () => {
-        const res = await fetch("/api/treatment", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return res.ok ? await res.json() : [];
-      }, 3 * 60 * 1000);
+      const headers = { Authorization: `Bearer ${token}` };
+      const [treatmentsRes, inventoryRes, usersRes] = await Promise.all([
+        fetch("/api/treatment", { headers }),
+        fetch("/api/inventory", { headers }),
+        fetch("/api/users", { headers }),
+      ]);
+      const data = treatmentsRes.ok ? await treatmentsRes.json() : [];
+      const inventory = inventoryRes.ok ? await inventoryRes.json() : [];
+      const users = usersRes.ok ? await usersRes.json() : [];
+      const meds = (Array.isArray(inventory) ? inventory : []).filter(
+        (item) => String(item.categoryName || item.category || "").toLowerCase() === "medication"
+      );
       setTreatments(Array.isArray(data) ? data : []);
+      setMedicationOptions(meds);
+      setStaffOptions(Array.isArray(users) ? users : []);
     } catch (err) {
       console.error("Failed to fetch treatments:", err);
     } finally {
@@ -217,6 +235,8 @@ export default function Treatments() {
                 onSubmit={handleFormSubmit}
                 loading={formLoading}
                 initialData={editTreatmentData}
+                medicationOptions={medicationOptions}
+                staffOptions={staffOptions}
                 onClose={() => { setShowForm(false); setEditTreatmentData(null); }}
               />
             </div>
@@ -328,13 +348,50 @@ export default function Treatments() {
                       {/* Type */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.type || "-")}</td>
                       {/* Medication */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="medicationName" value={editableTreatment.medicationName || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.medicationName || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {isEditing ? (
+                          <select
+                            name="medication"
+                            value={editableTreatment.medication || ""}
+                            onChange={(e) => {
+                              const selected = medicationOptions.find((m) => m._id === e.target.value);
+                              setEditableTreatment((prev) => ({
+                                ...prev,
+                                medication: e.target.value,
+                                medicationName: selected?.item || "",
+                              }));
+                            }}
+                            className="input input-sm w-40"
+                          >
+                            <option value="">Select medication</option>
+                            {medicationOptions.map((med) => (
+                              <option key={med._id} value={med._id}>{med.item}</option>
+                            ))}
+                          </select>
+                        ) : (treatment.medicationName || "-")}
+                      </td>
                       {/* Dosage */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.dosage || "-")}</td>
                       {/* Route */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.route || "-")}</td>
                       {/* Treated by */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="treatedBy" value={editableTreatment.treatedBy || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.treatedBy || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {isEditing ? (
+                          <select
+                            name="treatedBy"
+                            value={editableTreatment.treatedBy || ""}
+                            onChange={handleEditChange}
+                            className="input input-sm w-36"
+                          >
+                            <option value="">Select staff</option>
+                            {staffOptions.map((staff) => (
+                              <option key={staff._id} value={staff.name || staff.email || staff.username}>
+                                {staff.name || staff.email || staff.username}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (treatment.treatedBy || "-")}
+                      </td>
                       {/* Pre-Weight */}
                       <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.preWeight || "-")}</td>
                       {/* Post-Weight */}

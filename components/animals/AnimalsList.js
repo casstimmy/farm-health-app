@@ -358,11 +358,6 @@ export default function AnimalsList({
                           alt="Animal image 1"
                           className="w-10 h-10 object-cover rounded-lg border"
                         />
-                        <img
-                          src={animal.images?.[1]?.thumb || animal.images?.[1]?.full || "/Image2.png"}
-                          alt="Animal image 2"
-                          className="w-10 h-10 object-cover rounded-lg border"
-                        />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold">

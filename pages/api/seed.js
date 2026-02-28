@@ -12,6 +12,7 @@ import Inventory from "@/models/Inventory";
 import InventoryCategory from "@/models/InventoryCategory";
 import Finance from "@/models/Finance";
 import Service from "@/models/Service";
+import BlogPost from "@/models/BlogPost";
 import Location from "@/models/Location";
 import User from "@/models/User";
 import { withAuth } from "@/utils/middleware";
@@ -26,6 +27,10 @@ async function handler(req, res) {
   }
 
   await dbConnect();
+  const selectedCategories = Array.isArray(req.body?.selectedCategories) ? req.body.selectedCategories : [];
+  const selectedSet = new Set(selectedCategories);
+  const runAll = selectedSet.size === 0;
+  const shouldSeed = (key) => runAll || selectedSet.has(key);
 
   const results = {
     cleared: {},
@@ -43,6 +48,7 @@ async function handler(req, res) {
     mortalityRecords: 0,
     financialTransactions: 0,
     services: 0,
+    blogPosts: 0,
     errors: [],
   };
 
@@ -65,12 +71,14 @@ async function handler(req, res) {
       { model: Location, name: "Locations" },
     ];
 
-    for (const { model, name } of collections) {
-      try {
-        const deleted = await model.deleteMany({});
-        results.cleared[name] = deleted.deletedCount;
-      } catch (err) {
-        results.errors.push(`Clear ${name}: ${err.message}`);
+    if (runAll) {
+      for (const { model, name } of collections) {
+        try {
+          const deleted = await model.deleteMany({});
+          results.cleared[name] = deleted.deletedCount;
+        } catch (err) {
+          results.errors.push(`Clear ${name}: ${err.message}`);
+        }
       }
     }
 
@@ -81,13 +89,15 @@ async function handler(req, res) {
     ];
 
     const locationMap = {};
-    for (const loc of locationData) {
-      try {
-        const existing = await Location.create(loc);
-        results.locations++;
-        locationMap[loc.name] = existing._id;
-      } catch (err) {
-        results.errors.push(`Location ${loc.name}: ${err.message}`);
+    if (shouldSeed("locations")) {
+      for (const loc of locationData) {
+        try {
+          const existing = await Location.create(loc);
+          results.locations++;
+          locationMap[loc.name] = existing._id;
+        } catch (err) {
+          results.errors.push(`Location ${loc.name}: ${err.message}`);
+        }
       }
     }
 
@@ -100,13 +110,15 @@ async function handler(req, res) {
     ];
 
     const categoryMap = {};
-    for (const cat of categoryData) {
-      try {
-        const existing = await InventoryCategory.create(cat);
-        results.inventoryCategories++;
-        categoryMap[cat.name] = existing._id;
-      } catch (err) {
-        results.errors.push(`Category ${cat.name}: ${err.message}`);
+    if (shouldSeed("inventoryCategories")) {
+      for (const cat of categoryData) {
+        try {
+          const existing = await InventoryCategory.create(cat);
+          results.inventoryCategories++;
+          categoryMap[cat.name] = existing._id;
+        } catch (err) {
+          results.errors.push(`Category ${cat.name}: ${err.message}`);
+        }
       }
     }
 
@@ -143,9 +155,10 @@ async function handler(req, res) {
     ];
 
     const inventoryMap = {};
-    for (const inv of inventoryData) {
-      try {
-        const existing = await Inventory.create({
+    if (shouldSeed("inventoryItems")) {
+      for (const inv of inventoryData) {
+        try {
+          const existing = await Inventory.create({
             item: inv.item,
             quantity: inv.quantity,
             unit: inv.unit,
@@ -161,10 +174,11 @@ async function handler(req, res) {
             supplier: inv.supplier,
             dateAdded: new Date(),
           });
-        results.inventoryItems++;
-        inventoryMap[inv.item] = existing._id;
-      } catch (err) {
-        results.errors.push(`Inventory ${inv.item}: ${err.message}`);
+          results.inventoryItems++;
+          inventoryMap[inv.item] = existing._id;
+        } catch (err) {
+          results.errors.push(`Inventory ${inv.item}: ${err.message}`);
+        }
       }
     }
 
@@ -180,13 +194,15 @@ async function handler(req, res) {
     ];
 
     const feedTypeMap = {};
-    for (const ft of feedTypeData) {
-      try {
-        const existing = await FeedType.create(ft);
-        results.feedTypes++;
-        feedTypeMap[ft.name] = existing._id;
-      } catch (err) {
-        results.errors.push(`FeedType ${ft.name}: ${err.message}`);
+    if (shouldSeed("feedTypes")) {
+      for (const ft of feedTypeData) {
+        try {
+          const existing = await FeedType.create(ft);
+          results.feedTypes++;
+          feedTypeMap[ft.name] = existing._id;
+        } catch (err) {
+          results.errors.push(`FeedType ${ft.name}: ${err.message}`);
+        }
       }
     }
 
@@ -234,18 +250,20 @@ async function handler(req, res) {
     ];
 
     const animalMap = {};
-    for (const a of animalData) {
-      try {
-        const existing = await Animal.create(a);
-        results.animals++;
-        animalMap[a.tagId] = existing._id;
-      } catch (err) {
-        results.errors.push(`Animal ${a.tagId}: ${err.message}`);
+    if (shouldSeed("animals")) {
+      for (const a of animalData) {
+        try {
+          const existing = await Animal.create(a);
+          results.animals++;
+          animalMap[a.tagId] = existing._id;
+        } catch (err) {
+          results.errors.push(`Animal ${a.tagId}: ${err.message}`);
+        }
       }
     }
 
     // Set sire/dam references after all animals are created
-    try {
+    if (shouldSeed("animals")) try {
       const sultan = animalMap["BGM001"];
       if (sultan) {
         // Set Sultan as sire for bred-on-farm animals
@@ -282,34 +300,91 @@ async function handler(req, res) {
       { animalTag: "BGM001", date: new Date("2024-12-22"), time: "2:00 PM", isRoutine: true, symptoms: "Watery faeces with worm", possibleCause: "Worm", diagnosis: "Diarrhea", prescribedDays: 1, treatmentA: { treatmentType: "Deworming", dosage: "10ml", route: "Oral" }, needsMultipleTreatments: true, treatmentB: { treatmentType: "Deworming", medicationName: "Kepromec Ivermectin 50ml", dosage: "1.5ml", route: "Subcutaneous" }, treatedBy: "Azeezat", recoveryStatus: "Improving" },
     ];
 
-    for (const hr of healthRecordData) {
-      try {
-        const animalId = animalMap[hr.animalTag];
-        if (!animalId) { results.errors.push(`HealthRecord: Animal ${hr.animalTag} not found`); continue; }
+    if (shouldSeed("healthRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      if (!Object.keys(inventoryMap).length) {
+        const existingInventory = await Inventory.find({}, "_id item").lean();
+        existingInventory.forEach((m) => { inventoryMap[m.item] = m._id; });
+      }
 
-        // Link medications from inventory
-        if (hr.treatmentA?.medicationName && inventoryMap[hr.treatmentA.medicationName]) {
-          hr.treatmentA.medication = inventoryMap[hr.treatmentA.medicationName];
-        }
-        if (hr.treatmentB?.medicationName && inventoryMap[hr.treatmentB?.medicationName]) {
-          hr.treatmentB.medication = inventoryMap[hr.treatmentB.medicationName];
-        }
+      for (const hr of healthRecordData) {
+        try {
+          const animalId = animalMap[hr.animalTag];
+          if (!animalId) { results.errors.push(`HealthRecord: Animal ${hr.animalTag} not found`); continue; }
 
-        const animal = await Animal.findById(animalId);
-        await HealthRecord.create({
-          ...hr,
-          animal: animalId,
-          animalTagId: animal?.tagId,
-          animalGender: animal?.gender,
-          animalBreed: animal?.breed,
-        });
-        results.healthRecords++;
-      } catch (err) {
-        results.errors.push(`HealthRecord for ${hr.animalTag}: ${err.message}`);
+          if (hr.treatmentA?.medicationName && inventoryMap[hr.treatmentA.medicationName]) {
+            hr.treatmentA.medication = inventoryMap[hr.treatmentA.medicationName];
+          }
+          if (hr.treatmentB?.medicationName && inventoryMap[hr.treatmentB?.medicationName]) {
+            hr.treatmentB.medication = inventoryMap[hr.treatmentB.medicationName];
+          }
+
+          const animal = await Animal.findById(animalId);
+          await HealthRecord.create({
+            ...hr,
+            animal: animalId,
+            animalTagId: animal?.tagId,
+            animalGender: animal?.gender,
+            animalBreed: animal?.breed,
+          });
+          results.healthRecords++;
+        } catch (err) {
+          results.errors.push(`HealthRecord for ${hr.animalTag}: ${err.message}`);
+        }
       }
     }
 
     // ─── 6. Breeding Records ───
+    const treatmentData = [
+      { animalTag: "SGF001", date: new Date("2024-10-10"), routine: "NO", symptoms: "Emaciation", diagnosis: "Weakness", prescribedDays: 3, type: "Vitamin Dosing", medicationName: "100ml VMultinor", dosage: "2ml", route: "IM", treatedBy: "Azeezat", preWeight: 22, postWeight: 23, recoveryStatus: "Improving" },
+      { animalTag: "SGF001", date: new Date("2024-10-13"), routine: "NO", symptoms: "Watery faeces", diagnosis: "Diarrhea", prescribedDays: 3, type: "Antibiotics", medicationName: "Sulfanor 100ml", dosage: "4ml", route: "IM", treatedBy: "Azeezat", preWeight: 20, postWeight: 21, recoveryStatus: "Improving" },
+      { animalTag: "BGF001", date: new Date("2024-10-28"), routine: "NO", symptoms: "Wound", diagnosis: "Injury", prescribedDays: 3, type: "Antibiotics", medicationName: "oxySpray 210ml", dosage: "2 Sprays", route: "Backline", treatedBy: "Azeezat", preWeight: 23, postWeight: 24, recoveryStatus: "Recovered" },
+    ];
+
+    if (shouldSeed("treatments")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      if (!Object.keys(inventoryMap).length) {
+        const existingInventory = await Inventory.find({}, "_id item").lean();
+        existingInventory.forEach((m) => { inventoryMap[m.item] = m._id; });
+      }
+      for (const t of treatmentData) {
+        try {
+          const animalId = animalMap[t.animalTag];
+          if (!animalId) {
+            results.errors.push(`Treatment: Animal ${t.animalTag} not found`);
+            continue;
+          }
+          const medicationId = inventoryMap[t.medicationName] || null;
+          await Treatment.create({
+            animal: animalId,
+            date: t.date,
+            routine: t.routine,
+            symptoms: t.symptoms,
+            diagnosis: t.diagnosis,
+            prescribedDays: t.prescribedDays,
+            type: t.type,
+            medication: medicationId,
+            medicationName: t.medicationName,
+            dosage: t.dosage,
+            route: t.route,
+            treatedBy: t.treatedBy,
+            preWeight: t.preWeight,
+            postWeight: t.postWeight,
+            recoveryStatus: t.recoveryStatus,
+          });
+          results.treatments++;
+        } catch (err) {
+          results.errors.push(`Treatment for ${t.animalTag}: ${err.message}`);
+        }
+      }
+    }
+
     const breedingData = [
       { breedingId: "BRD001", species: "Goat", doeTag: "BGF001", buckTag: "BGM001", matingDate: new Date("2025-09-08"), breedingType: "AI", breedingCoordinator: "Azeezat", pregnancyCheckDate: new Date("2025-08-18"), pregnancyStatus: "Delivered", expectedDueDate: new Date("2025-12-30"), actualKiddingDate: new Date("2026-01-03"), kidsAlive: 2, kidsDead: 0 },
       { breedingId: "BRD002", species: "Goat", doeTag: "BGF002", buckTag: "BGM001", matingDate: new Date("2025-09-08"), breedingType: "AI", breedingCoordinator: "Azeezat", pregnancyCheckDate: new Date("2025-08-19"), pregnancyStatus: "Delivered", expectedDueDate: new Date("2025-12-31"), actualKiddingDate: new Date("2026-01-04"), kidsAlive: 2, kidsDead: 0 },
@@ -326,30 +401,36 @@ async function handler(req, res) {
       { breedingId: "BRD013", species: "Goat", doeTag: "SGF005", buckTag: "BGM001", matingDate: new Date("2025-09-08"), breedingType: "AI", breedingCoordinator: "Azeezat", pregnancyCheckDate: new Date("2025-08-30"), pregnancyStatus: "Delivered", expectedDueDate: new Date("2026-01-11"), actualKiddingDate: new Date("2026-01-15"), kidsAlive: 3, kidsDead: 0 },
     ];
 
-    for (const b of breedingData) {
-      try {
-        const doe = animalMap[b.doeTag];
-        const buck = animalMap[b.buckTag];
-        if (!doe || !buck) { results.errors.push(`Breeding: doe ${b.doeTag} or buck ${b.buckTag} not found`); continue; }
-        await BreedingRecord.create({
-          breedingId: b.breedingId,
-          species: b.species,
-          doe,
-          buck,
-          matingDate: b.matingDate,
-          breedingType: b.breedingType,
-          breedingCoordinator: b.breedingCoordinator,
-          pregnancyCheckDate: b.pregnancyCheckDate,
-          pregnancyStatus: b.pregnancyStatus,
-          expectedDueDate: b.expectedDueDate,
-          actualKiddingDate: b.actualKiddingDate,
-          kidsAlive: b.kidsAlive,
-          kidsDead: b.kidsDead,
-          notes: b.notes || "",
-        });
-        results.breedingRecords++;
-      } catch (err) {
-        results.errors.push(`Breeding ${b.breedingId}: ${err.message}`);
+    if (shouldSeed("breedingRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      for (const b of breedingData) {
+        try {
+          const doe = animalMap[b.doeTag];
+          const buck = animalMap[b.buckTag];
+          if (!doe || !buck) { results.errors.push(`Breeding: doe ${b.doeTag} or buck ${b.buckTag} not found`); continue; }
+          await BreedingRecord.create({
+            breedingId: b.breedingId,
+            species: b.species,
+            doe,
+            buck,
+            matingDate: b.matingDate,
+            breedingType: b.breedingType,
+            breedingCoordinator: b.breedingCoordinator,
+            pregnancyCheckDate: b.pregnancyCheckDate,
+            pregnancyStatus: b.pregnancyStatus,
+            expectedDueDate: b.expectedDueDate,
+            actualKiddingDate: b.actualKiddingDate,
+            kidsAlive: b.kidsAlive,
+            kidsDead: b.kidsDead,
+            notes: b.notes || "",
+          });
+          results.breedingRecords++;
+        } catch (err) {
+          results.errors.push(`Breeding ${b.breedingId}: ${err.message}`);
+        }
       }
     }
 
@@ -362,25 +443,31 @@ async function handler(req, res) {
       { animalTag: "G-201", dateOfDeath: new Date("2026-02-11"), cause: "Unknown", symptoms: "Found dead, no prior symptoms", daysSick: 0, weight: 7.2, estimatedValue: 18500, disposalMethod: "Incinerated", reportedBy: "Tunde O." },
     ];
 
-    for (const m of mortalityData) {
-      try {
-        const animalId = animalMap[m.animalTag];
-        if (!animalId) { results.errors.push(`Mortality: Animal ${m.animalTag} not found`); continue; }
-        await MortalityRecord.create({
-          animal: animalId,
-          dateOfDeath: m.dateOfDeath,
-          cause: m.cause,
-          symptoms: m.symptoms,
-          daysSick: m.daysSick,
-          weight: m.weight,
-          estimatedValue: m.estimatedValue,
-          disposalMethod: m.disposalMethod,
-          reportedBy: m.reportedBy,
-          notes: m.notes || "",
-        });
-        results.mortalityRecords++;
-      } catch (err) {
-        results.errors.push(`Mortality for ${m.animalTag}: ${err.message}`);
+    if (shouldSeed("mortalityRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      for (const m of mortalityData) {
+        try {
+          const animalId = animalMap[m.animalTag];
+          if (!animalId) { results.errors.push(`Mortality: Animal ${m.animalTag} not found`); continue; }
+          await MortalityRecord.create({
+            animal: animalId,
+            dateOfDeath: m.dateOfDeath,
+            cause: m.cause,
+            symptoms: m.symptoms,
+            daysSick: m.daysSick,
+            weight: m.weight,
+            estimatedValue: m.estimatedValue,
+            disposalMethod: m.disposalMethod,
+            reportedBy: m.reportedBy,
+            notes: m.notes || "",
+          });
+          results.mortalityRecords++;
+        } catch (err) {
+          results.errors.push(`Mortality for ${m.animalTag}: ${err.message}`);
+        }
       }
     }
 
@@ -470,20 +557,22 @@ async function handler(req, res) {
       { date: new Date("2026-01-07"), type: "Expense", category: "Feed", title: "2 bag Groundnut Hay + 1 bag Wheat offal + 1 bag Beans chaff", amount: 60000 },
     ];
 
-    for (const f of financeData) {
-      try {
-        await Finance.create({
-          date: f.date,
-          type: f.type,
-          category: f.category,
-          title: f.title,
-          description: f.description || f.title,
-          amount: f.amount,
-          status: "Completed",
-        });
-        results.financialTransactions++;
-      } catch (err) {
-        results.errors.push(`Finance ${f.title}: ${err.message}`);
+    if (shouldSeed("financialTransactions")) {
+      for (const f of financeData) {
+        try {
+          await Finance.create({
+            date: f.date,
+            type: f.type,
+            category: f.category,
+            title: f.title,
+            description: f.description || f.title,
+            amount: f.amount,
+            status: "Completed",
+          });
+          results.financialTransactions++;
+        } catch (err) {
+          results.errors.push(`Finance ${f.title}: ${err.message}`);
+        }
       }
     }
 
@@ -503,12 +592,50 @@ async function handler(req, res) {
       { name: "Pen Rental", category: "Equipment & Facilities", description: "Short-term pen/stall rental", price: 1000, unit: "per day", showOnSite: false },
     ];
 
-    for (const s of serviceData) {
-      try {
-        await Service.create(s);
-        results.services++;
-      } catch (err) {
-        results.errors.push(`Service ${s.name}: ${err.message}`);
+    if (shouldSeed("services")) {
+      for (const s of serviceData) {
+        try {
+          await Service.create(s);
+          results.services++;
+        } catch (err) {
+          results.errors.push(`Service ${s.name}: ${err.message}`);
+        }
+      }
+    }
+
+    const blogSeedData = [
+      {
+        title: "Best Feeding Routine For Growing Goats",
+        slug: "best-feeding-routine-growing-goats",
+        excerpt: "A practical weekly feeding structure that improves growth and lowers waste.",
+        content: "Use age-group feeding schedules, measure leftovers daily, and adjust protein intake by season.",
+        category: "Animal Care",
+        tags: ["feeding", "goats", "growth"],
+        status: "Published",
+        showOnSite: true,
+        publishedAt: new Date(),
+      },
+      {
+        title: "Preventive Health Plan For Small Farms",
+        slug: "preventive-health-plan-small-farms",
+        excerpt: "How to combine vaccinations, deworming, and treatment logs for better outcomes.",
+        content: "Set monthly health checks, maintain medication inventory, and track treatment response by animal.",
+        category: "Farm Health",
+        tags: ["health", "vaccination", "treatment"],
+        status: "Published",
+        showOnSite: true,
+        publishedAt: new Date(),
+      },
+    ];
+
+    if (shouldSeed("blogPosts")) {
+      for (const post of blogSeedData) {
+        try {
+          await BlogPost.create(post);
+          results.blogPosts++;
+        } catch (err) {
+          results.errors.push(`Blog ${post.title}: ${err.message}`);
+        }
       }
     }
 
@@ -537,14 +664,20 @@ async function handler(req, res) {
       { animalTag: "BGF003", weightKg: 22, date: new Date("2025-11-20"), recordedBy: "Azeezat" },
     ];
 
-    for (const w of weightData) {
-      try {
-        const animalId = animalMap[w.animalTag];
-        if (!animalId) { results.errors.push(`Weight: Animal ${w.animalTag} not found`); continue; }
-        await WeightRecord.create({ animal: animalId, weightKg: w.weightKg, date: w.date, recordedBy: w.recordedBy });
-        results.weightRecords++;
-      } catch (err) {
-        results.errors.push(`Weight for ${w.animalTag}: ${err.message}`);
+    if (shouldSeed("weightRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      for (const w of weightData) {
+        try {
+          const animalId = animalMap[w.animalTag];
+          if (!animalId) { results.errors.push(`Weight: Animal ${w.animalTag} not found`); continue; }
+          await WeightRecord.create({ animal: animalId, weightKg: w.weightKg, date: w.date, recordedBy: w.recordedBy });
+          results.weightRecords++;
+        } catch (err) {
+          results.errors.push(`Weight for ${w.animalTag}: ${err.message}`);
+        }
       }
     }
 
@@ -560,27 +693,36 @@ async function handler(req, res) {
       { animalTag: "BGF003", feedTypeName: "Wheat Offal", quantityOffered: 2, quantityConsumed: 1.5, unitCost: 180, totalCost: 270, date: new Date("2025-11-20"), feedingMethod: "Trough" },
     ];
 
-    for (const fd of feedingData) {
-      try {
-        const animalId = animalMap[fd.animalTag];
-        if (!animalId) { results.errors.push(`Feeding: Animal ${fd.animalTag} not found`); continue; }
-        // Find matching inventory item
-        const invId = inventoryMap[fd.feedTypeName] || null;
-        await FeedingRecord.create({
-          animal: animalId,
-          feedTypeName: fd.feedTypeName,
-          inventoryItem: invId,
-          quantityOffered: fd.quantityOffered,
-          quantityConsumed: fd.quantityConsumed,
-          unitCost: fd.unitCost,
-          totalCost: fd.totalCost,
-          date: fd.date,
-          feedingMethod: fd.feedingMethod,
-          notes: fd.notes || "",
-        });
-        results.feedingRecords++;
-      } catch (err) {
-        results.errors.push(`Feeding for ${fd.animalTag}: ${err.message}`);
+    if (shouldSeed("feedingRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      if (!Object.keys(inventoryMap).length) {
+        const existingInventory = await Inventory.find({}, "_id item").lean();
+        existingInventory.forEach((m) => { inventoryMap[m.item] = m._id; });
+      }
+      for (const fd of feedingData) {
+        try {
+          const animalId = animalMap[fd.animalTag];
+          if (!animalId) { results.errors.push(`Feeding: Animal ${fd.animalTag} not found`); continue; }
+          const invId = inventoryMap[fd.feedTypeName] || null;
+          await FeedingRecord.create({
+            animal: animalId,
+            feedTypeName: fd.feedTypeName,
+            inventoryItem: invId,
+            quantityOffered: fd.quantityOffered,
+            quantityConsumed: fd.quantityConsumed,
+            unitCost: fd.unitCost,
+            totalCost: fd.totalCost,
+            date: fd.date,
+            feedingMethod: fd.feedingMethod,
+            notes: fd.notes || "",
+          });
+          results.feedingRecords++;
+        } catch (err) {
+          results.errors.push(`Feeding for ${fd.animalTag}: ${err.message}`);
+        }
       }
     }
 
@@ -589,14 +731,20 @@ async function handler(req, res) {
       { animalTag: "BGM001", vaccineName: "PPR Vaccine", dosage: "1ml", method: "Subcutaneous", vaccinationDate: new Date("2024-11-13"), administeredBy: "Azeezat", nextDueDate: new Date("2025-11-13") },
     ];
 
-    for (const v of vaccinationData) {
-      try {
-        const animalId = animalMap[v.animalTag];
-        if (!animalId) { results.errors.push(`Vaccination: Animal ${v.animalTag} not found`); continue; }
-        await VaccinationRecord.create({ animal: animalId, vaccineName: v.vaccineName, dosage: v.dosage, method: v.method, vaccinationDate: v.vaccinationDate, administeredBy: v.administeredBy, nextDueDate: v.nextDueDate });
-        results.vaccinationRecords++;
-      } catch (err) {
-        results.errors.push(`Vaccination for ${v.animalTag}: ${err.message}`);
+    if (shouldSeed("vaccinationRecords")) {
+      if (!Object.keys(animalMap).length) {
+        const existingAnimals = await Animal.find({}, "_id tagId").lean();
+        existingAnimals.forEach((a) => { animalMap[a.tagId] = a._id; });
+      }
+      for (const v of vaccinationData) {
+        try {
+          const animalId = animalMap[v.animalTag];
+          if (!animalId) { results.errors.push(`Vaccination: Animal ${v.animalTag} not found`); continue; }
+          await VaccinationRecord.create({ animal: animalId, vaccineName: v.vaccineName, dosage: v.dosage, method: v.method, vaccinationDate: v.vaccinationDate, administeredBy: v.administeredBy, nextDueDate: v.nextDueDate });
+          results.vaccinationRecords++;
+        } catch (err) {
+          results.errors.push(`Vaccination for ${v.animalTag}: ${err.message}`);
+        }
       }
     }
 

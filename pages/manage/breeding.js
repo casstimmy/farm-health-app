@@ -53,19 +53,17 @@ export default function BreedingManagement() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-
-      const [animalsData, breedingRes, locRes] = await Promise.all([
-        fetchGlobalAnimals(),
+      const [animalsResult, breedingRes, locRes] = await Promise.all([
+        fetchGlobalAnimals().catch(() => []),
         fetch("/api/breeding", { headers }),
         fetch("/api/locations", { headers }),
       ]);
 
-      setAnimals(Array.isArray(animalsData) ? animalsData : []);
+      const breedingData = breedingRes.ok ? await breedingRes.json() : [];
+      const locData = locRes.ok ? await locRes.json() : [];
 
-      const breedingData = await breedingRes.json();
+      setAnimals(Array.isArray(animalsResult) ? animalsResult : []);
       setBreedingRecords(Array.isArray(breedingData) ? breedingData : []);
-
-      const locData = await locRes.json();
       setLocations(Array.isArray(locData) ? locData : []);
     } catch (err) {
       console.error("Failed to fetch data:", err);
@@ -191,9 +189,19 @@ export default function BreedingManagement() {
   };
 
   const filteredRecords = filterByLocation(filterByPeriod(breedingRecords.filter(record => {
+    const term = searchTerm.trim().toLowerCase();
+    const doeName = String(record.doe?.name || "");
+    const buckName = String(record.buck?.name || "");
+    const doeTag = String(record.doe?.tagId || "");
+    const buckTag = String(record.buck?.tagId || "");
+    const breedingId = String(record.breedingId || "");
     const matchesSearch =
-      record.doe?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.buck?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      term === "" ||
+      doeName.toLowerCase().includes(term) ||
+      buckName.toLowerCase().includes(term) ||
+      doeTag.toLowerCase().includes(term) ||
+      buckTag.toLowerCase().includes(term) ||
+      breedingId.toLowerCase().includes(term);
     const matchesFilter = filterStatus === "all" || record.pregnancyStatus === filterStatus;
     return matchesSearch && matchesFilter;
   }), filterPeriod, "matingDate"), filterLocation);

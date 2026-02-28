@@ -1,17 +1,61 @@
 import dbConnect from "@/lib/mongodb";
 import BreedingRecord from "@/models/BreedingRecord";
 import { withAuth } from "@/utils/middleware";
+import mongoose from "mongoose";
 
 async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
     try {
-      const records = await BreedingRecord.find()
+      let records = await BreedingRecord.find()
         .sort({ matingDate: -1 })
         .populate("doe", "tagId name species breed")
         .populate("buck", "tagId name species breed")
+        .populate("location", "name")
         .lean();
+
+      // Backward compatibility for legacy collection names.
+      if (!records.length) {
+        const legacy = await mongoose.connection
+          .collection("breedings")
+          .find({})
+          .sort({ matingDate: -1 })
+          .toArray();
+
+        if (legacy.length) {
+          const animalIds = Array.from(
+            new Set(
+              legacy
+                .flatMap((r) => [String(r.doe || ""), String(r.buck || "")])
+                .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+            )
+          ).map((id) => new mongoose.Types.ObjectId(id));
+
+          const locationIds = Array.from(
+            new Set(
+              legacy
+                .map((r) => String(r.location || ""))
+                .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+            )
+          ).map((id) => new mongoose.Types.ObjectId(id));
+
+          const [animals, locations] = await Promise.all([
+            animalIds.length ? mongoose.connection.collection("animals").find({ _id: { $in: animalIds } }).toArray() : [],
+            locationIds.length ? mongoose.connection.collection("locations").find({ _id: { $in: locationIds } }).toArray() : [],
+          ]);
+
+          const animalMap = new Map(animals.map((a) => [String(a._id), a]));
+          const locationMap = new Map(locations.map((l) => [String(l._id), l]));
+
+          records = legacy.map((r) => ({
+            ...r,
+            doe: animalMap.get(String(r.doe)) || r.doe,
+            buck: animalMap.get(String(r.buck)) || r.buck,
+            location: locationMap.get(String(r.location)) || r.location,
+          }));
+        }
+      }
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

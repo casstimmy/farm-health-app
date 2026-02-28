@@ -13,6 +13,7 @@ const TreatmentSchema = new mongoose.Schema(
     symptoms: String,
     possibleCause: String,
     diagnosis: String,
+    type: String,
     prescribedDays: { type: Number, default: 0 },
     preWeight: { type: Number, default: null },
     postWeight: { type: Number, default: null },

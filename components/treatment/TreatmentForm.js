@@ -10,6 +10,7 @@ const initialForm = {
   prescribedDays: "",
   type: "",
   preWeight: "",
+  medication: "",
   medicationName: "",
   dosage: "",
   route: "",
@@ -27,7 +28,14 @@ const TYPE_OPTIONS = ["Vitamin Dosing", "Antibiotics", "Deworming", "Ext- Parasi
 const ROUTE_OPTIONS = ["IM", "Oral", "Subcutaneous", "Spray", "Backline", "Other"];
 const RECOVERY_OPTIONS = ["Under Treatment", "Improving", "Recovered", "Regressing"];
 
-export default function TreatmentForm({ onSubmit, loading, initialData, onClose }) {
+export default function TreatmentForm({
+  onSubmit,
+  loading,
+  initialData,
+  onClose,
+  medicationOptions = [],
+  staffOptions = [],
+}) {
   const buildFormState = () => {
     if (!initialData) {
       return {
@@ -39,6 +47,7 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
       ...initialForm,
       ...initialData,
       animalId: initialData.animal?._id || initialData.animalId || initialData.animal || "",
+      medication: initialData.medication?._id || initialData.medication || "",
       date: initialData.date ? initialData.date.split("T")[0] : "",
       completionDate: initialData.completionDate ? initialData.completionDate.split("T")[0] : "",
     };
@@ -66,6 +75,15 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "medication") {
+      const selected = medicationOptions.find((m) => m._id === value);
+      setForm((prev) => ({
+        ...prev,
+        medication: value,
+        medicationName: selected?.item || "",
+      }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -74,6 +92,8 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
     const payload = {
       ...form,
       animal: form.animalId,
+      medication: form.medication || undefined,
+      medicationName: form.medicationName || undefined,
       prescribedDays: form.prescribedDays === "" ? 0 : Number(form.prescribedDays),
       preWeight: form.preWeight === "" ? null : Number(form.preWeight),
       postWeight: form.postWeight === "" ? null : Number(form.postWeight),
@@ -147,8 +167,15 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
         <h3 className="font-bold text-orange-900 mb-3">Medication & Weights</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="label">Medication</label>
-            <input name="medicationName" value={form.medicationName} onChange={handleChange} className="input-field" />
+            <label className="label">Medication (Inventory)</label>
+            <select name="medication" value={form.medication || ""} onChange={handleChange} className="input-field">
+              <option value="">Select medication</option>
+              {medicationOptions.map((med) => (
+                <option key={med._id} value={med._id}>
+                  {med.item}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="label">Dosage</label>
@@ -162,16 +189,23 @@ export default function TreatmentForm({ onSubmit, loading, initialData, onClose 
             </select>
           </div>
           <div>
-            <label className="label">Pre-Weight (kg)</label>
+            <label className="label">Pre-Weight (kg) - Optional</label>
             <input name="preWeight" type="number" step="0.1" min="0" value={form.preWeight} onChange={handleChange} className="input-field" />
           </div>
           <div>
-            <label className="label">Post-Weight (kg)</label>
+            <label className="label">Post-Weight (kg) - Optional</label>
             <input name="postWeight" type="number" step="0.1" min="0" value={form.postWeight} onChange={handleChange} className="input-field" />
           </div>
           <div>
-            <label className="label">Treated By</label>
-            <input name="treatedBy" value={form.treatedBy} onChange={handleChange} className="input-field" />
+            <label className="label">Treated By (Staff)</label>
+            <select name="treatedBy" value={form.treatedBy} onChange={handleChange} className="input-field">
+              <option value="">Select staff</option>
+              {staffOptions.map((staff) => (
+                <option key={staff._id} value={staff.name || staff.email || staff.username}>
+                  {staff.name || staff.email || staff.username}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

@@ -1,16 +1,47 @@
 import dbConnect from "@/lib/mongodb";
 import MortalityRecord from "@/models/MortalityRecord";
 import { withAuth } from "@/utils/middleware";
+import mongoose from "mongoose";
 
 async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
     try {
-      const records = await MortalityRecord.find()
+      let records = await MortalityRecord.find()
         .sort({ dateOfDeath: -1 })
         .populate("animal", "tagId name species breed gender")
+        .populate("location", "name")
         .lean();
+
+      // Backward compatibility for legacy collection names.
+      if (!records.length) {
+        const legacy = await mongoose.connection
+          .collection("mortalities")
+          .find({})
+          .sort({ dateOfDeath: -1 })
+          .toArray();
+
+        if (legacy.length) {
+          const animalIds = Array.from(
+            new Set(
+              legacy
+                .map((r) => String(r.animal || ""))
+                .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+            )
+          ).map((id) => new mongoose.Types.ObjectId(id));
+
+          const animals = animalIds.length
+            ? await mongoose.connection.collection("animals").find({ _id: { $in: animalIds } }).toArray()
+            : [];
+          const animalMap = new Map(animals.map((a) => [String(a._id), a]));
+
+          records = legacy.map((r) => ({
+            ...r,
+            animal: animalMap.get(String(r.animal)) || r.animal,
+          }));
+        }
+      }
       res.status(200).json(records);
     } catch (error) {
       res.status(500).json({ error: error.message });

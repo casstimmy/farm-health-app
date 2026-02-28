@@ -28,6 +28,7 @@ export default function CustomersPage() {
   const [locations, setLocations] = useState([]);
   const [services, setServices] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [animals, setAnimals] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
@@ -53,20 +54,23 @@ export default function CustomersPage() {
     try {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-      const [customersRes, locationsRes, servicesRes, inventoryRes] = await Promise.all([
+      const [customersRes, locationsRes, servicesRes, inventoryRes, animalsRes] = await Promise.all([
         fetch("/api/customers", { headers }),
         fetch("/api/locations", { headers }),
         fetch("/api/services", { headers }),
         fetch("/api/inventory", { headers }),
+        fetch("/api/animals?compact=true", { headers }),
       ]);
       const customersData = customersRes.ok ? await customersRes.json() : [];
       const locationsData = locationsRes.ok ? await locationsRes.json() : [];
       const servicesData = servicesRes.ok ? await servicesRes.json() : [];
       const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+      const animalsData = animalsRes.ok ? await animalsRes.json() : [];
       setCustomers(Array.isArray(customersData) ? customersData : []);
       setLocations(Array.isArray(locationsData) ? locationsData : []);
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setInventoryItems(Array.isArray(inventoryData) ? inventoryData : []);
+      setAnimals(Array.isArray(animalsData) ? animalsData : []);
     } catch (err) {
       setError("Failed to load customers.");
     } finally {
@@ -182,22 +186,36 @@ export default function CustomersPage() {
       });
 
       const lineRows = invoiceItems
-        .map((item) => `<tr><td style="padding:8px;border:1px solid #ddd;">${item.name || "-"}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">${item.qty}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">${formatCurrency(item.price || 0, businessSettings.currency)}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">${formatCurrency((item.qty || 0) * (item.price || 0), businessSettings.currency)}</td></tr>`)
+        .map((item) => `<tr><td style="padding:12px;border:1px solid #e5e7eb;">${item.type}</td><td style="padding:12px;border:1px solid #e5e7eb;">${item.name || "-"}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${item.qty}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${formatCurrency(item.price || 0, businessSettings.currency)}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${formatCurrency((item.qty || 0) * (item.price || 0), businessSettings.currency)}</td></tr>`)
         .join("");
       const invoiceNo = `INV-${Date.now()}`;
       const html = `
-        <html><head><title>${invoiceNo}</title></head><body style="font-family:Arial;padding:24px;">
-          <h2>${businessSettings.businessName || "Farm Manager"} Invoice</h2>
-          <p><strong>Invoice No:</strong> ${invoiceNo}</p>
-          <p><strong>Customer:</strong> ${invoiceCustomer.name}</p>
-          <p><strong>Email:</strong> ${invoiceCustomer.email || "-"}</p>
-          <p><strong>Phone:</strong> ${invoiceCustomer.phone || "-"}</p>
-          <table style="width:100%;border-collapse:collapse;margin-top:16px;">
-            <thead><tr><th style="padding:8px;border:1px solid #ddd;text-align:left;">Item</th><th style="padding:8px;border:1px solid #ddd;text-align:right;">Qty</th><th style="padding:8px;border:1px solid #ddd;text-align:right;">Price</th><th style="padding:8px;border:1px solid #ddd;text-align:right;">Total</th></tr></thead>
+        <html><head><title>${invoiceNo}</title></head><body style="font-family:Arial,sans-serif;padding:30px;color:#111827;">
+          <div style="max-width:900px;margin:0 auto;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+            <div style="background:#0f766e;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <h2 style="margin:0;font-size:20px;">${businessSettings.businessName || "Farm Manager"}</h2>
+                <p style="margin:4px 0 0 0;font-size:12px;opacity:.9;">Customer Invoice</p>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:700;">${invoiceNo}</div>
+                <div style="font-size:12px;">${new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
+            <div style="padding:18px 24px;">
+              <p style="margin:0 0 6px 0;"><strong>Customer:</strong> ${invoiceCustomer.name}</p>
+              <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${invoiceCustomer.email || "-"}</p>
+              <p style="margin:0;"><strong>Phone:</strong> ${invoiceCustomer.phone || "-"}</p>
+            </div>
+          <table style="width:100%;border-collapse:collapse;margin-top:6px;">
+            <thead><tr style="background:#f9fafb;"><th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Type</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Item</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Qty</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Price</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Total</th></tr></thead>
             <tbody>${lineRows}</tbody>
           </table>
-          <h3 style="text-align:right;margin-top:16px;">Grand Total: ${formatCurrency(invoiceTotal, businessSettings.currency)}</h3>
-          <p>${invoiceNotes || ""}</p>
+          <div style="padding:18px 24px;">
+            <h3 style="text-align:right;margin:0;">Grand Total: ${formatCurrency(invoiceTotal, businessSettings.currency)}</h3>
+            <p style="margin-top:12px;color:#4b5563;">${invoiceNotes || ""}</p>
+          </div>
+          </div>
           <script>window.print();</script>
         </body></html>`;
       const w = window.open("", "_blank");
@@ -309,37 +327,77 @@ export default function CustomersPage() {
             </div>
             <div className="space-y-2">
               {invoiceItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                  <select className="input-field md:col-span-2" value={item.type} onChange={(e) => updateInvoiceItem(idx, "type", e.target.value)}>
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 border border-gray-200 rounded-xl p-3 bg-gray-50">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
+                    <select
+                      className="input-field"
+                      value={item.type}
+                      onChange={(e) => {
+                        const type = e.target.value;
+                        const next = [...invoiceItems];
+                        next[idx] = { ...next[idx], type, name: "", qty: 1, price: 0 };
+                        setInvoiceItems(next);
+                      }}
+                    >
                     <option value="Service">Service</option>
                     <option value="Product">Product</option>
                     <option value="Animal">Animal</option>
                     <option value="Custom">Custom</option>
-                  </select>
-                  <select
-                    className="input-field md:col-span-5"
-                    value={item.name}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      updateInvoiceItem(idx, "name", value);
-                      if (item.type === "Service") {
-                        const selected = services.find((s) => s.name === value);
-                        if (selected) updateInvoiceItem(idx, "price", Number(selected.price || 0));
-                      }
-                      if (item.type === "Product") {
-                        const selected = inventoryItems.find((i) => i.item === value);
-                        if (selected) updateInvoiceItem(idx, "price", Number(selected.salesPrice || selected.price || 0));
-                      }
-                    }}
-                  >
-                    <option value="">Select item</option>
-                    {item.type === "Service" && services.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
-                    {item.type === "Product" && inventoryItems.map((p) => <option key={p._id} value={p.item}>{p.item}</option>)}
-                    {item.type !== "Service" && item.type !== "Product" && <option value={item.name}>{item.name || "Custom Entry"}</option>}
-                  </select>
-                  <input type="number" min="1" className="input-field md:col-span-2" value={item.qty} onChange={(e) => updateInvoiceItem(idx, "qty", Number(e.target.value || 1))} />
-                  <input type="number" min="0" step="0.01" className="input-field md:col-span-2" value={item.price} onChange={(e) => updateInvoiceItem(idx, "price", Number(e.target.value || 0))} />
-                  <button type="button" onClick={() => removeInvoiceItem(idx)} className="px-2 py-2 border border-red-300 text-red-700 rounded md:col-span-1">X</button>
+                    </select>
+                  </div>
+                  <div className="md:col-span-5">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Item</label>
+                    {item.type === "Custom" ? (
+                      <input
+                        className="input-field"
+                        placeholder="Enter custom item"
+                        value={item.name}
+                        onChange={(e) => updateInvoiceItem(idx, "name", e.target.value)}
+                      />
+                    ) : (
+                      <select
+                        className="input-field"
+                        value={item.name}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateInvoiceItem(idx, "name", value);
+                          if (item.type === "Service") {
+                            const selected = services.find((s) => s.name === value);
+                            if (selected) updateInvoiceItem(idx, "price", Number(selected.price || 0));
+                          }
+                          if (item.type === "Product") {
+                            const selected = inventoryItems.find((i) => i.item === value);
+                            if (selected) updateInvoiceItem(idx, "price", Number(selected.salesPrice || selected.price || 0));
+                          }
+                          if (item.type === "Animal") {
+                            const selected = animals.find((a) => `${a.tagId} - ${a.name || a.breed || "Animal"}` === value);
+                            if (selected) updateInvoiceItem(idx, "price", Number(selected.projectedSalesPrice || selected.purchaseCost || 0));
+                          }
+                        }}
+                      >
+                        <option value="">Select item</option>
+                        {item.type === "Service" && services.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
+                        {item.type === "Product" && inventoryItems.map((p) => <option key={p._id} value={p.item}>{p.item}</option>)}
+                        {item.type === "Animal" && animals.map((a) => (
+                          <option key={a._id} value={`${a.tagId} - ${a.name || a.breed || "Animal"}`}>
+                            {a.tagId} - {a.name || a.breed || "Animal"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity</label>
+                    <input type="number" min="1" className="input-field" value={item.qty} onChange={(e) => updateInvoiceItem(idx, "qty", Number(e.target.value || 1))} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price</label>
+                    <input type="number" min="0" step="0.01" className="input-field" value={item.price} onChange={(e) => updateInvoiceItem(idx, "price", Number(e.target.value || 0))} />
+                  </div>
+                  <div className="md:col-span-1 flex items-end">
+                    <button type="button" onClick={() => removeInvoiceItem(idx)} className="w-full px-2 py-2 border border-red-300 text-red-700 rounded">X</button>
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={addInvoiceItem} className="px-3 py-2 border rounded">Add Line</button>

@@ -21,8 +21,9 @@ const SEED_CATEGORIES = [
   { key: "vaccinationRecords", label: "Vaccinations", icon: "💉", desc: "Vaccination records" },
   { key: "breedingRecords", label: "Breeding", icon: "❤️", desc: "Breeding history" },
   { key: "mortalityRecords", label: "Mortality", icon: "💀", desc: "Mortality records" },
-  { key: "financialTransactions", label: "Finances", icon: "💰", desc: "Income & expenses" },
+  { key: "financialTransactions", label: "Finances", icon: "FIN", desc: "Income and expenses" },
   { key: "services", label: "Services", icon: "🔧", desc: "Farm services" },
+  { key: "blogPosts", label: "Blog Posts", icon: "📝", desc: "E-commerce blog posts" },
 ];
 
 const PASTE_DATA_TYPES = [
@@ -61,6 +62,7 @@ export default function SeedDatabase() {
 
   // Active tab
   const [activeTab, setActiveTab] = useState("seed");
+  const [selectedSeedKeys, setSelectedSeedKeys] = useState([]);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -95,7 +97,12 @@ export default function SeedDatabase() {
   }
 
   // ──── Seed Handler ────
-  const handleSeed = async () => {
+  const handleSeed = async (seedSelectedOnly = false) => {
+    const selectedCategories = seedSelectedOnly ? selectedSeedKeys : [];
+    if (seedSelectedOnly && selectedCategories.length === 0) {
+      setError("Select at least one category to seed.");
+      return;
+    }
     if (!confirm("⚠️ This will insert sample data into your database. Existing records with the same unique IDs will be skipped. Continue?")) return;
 
     setSeeding(true);
@@ -125,6 +132,7 @@ export default function SeedDatabase() {
       const res = await fetch("/api/seed", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ selectedCategories }),
       });
 
       const data = await res.json();
@@ -314,13 +322,22 @@ export default function SeedDatabase() {
               <p className="text-sm font-semibold text-gray-700 mb-3">All available seed data ({SEED_CATEGORIES.length} categories):</p>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
                 {SEED_CATEGORIES.map((cat) => (
-                  <div key={cat.key} className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-lg text-sm hover:bg-purple-100 transition-colors">
+                  <label key={cat.key} className="flex items-start gap-2 px-3 py-2 bg-purple-50 rounded-lg text-sm hover:bg-purple-100 transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedSeedKeys.includes(cat.key)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedSeedKeys((prev) => [...prev, cat.key]);
+                        else setSelectedSeedKeys((prev) => prev.filter((k) => k !== cat.key));
+                      }}
+                      className="mt-0.5"
+                    />
                     <span className="text-lg">{cat.icon}</span>
                     <div className="min-w-0">
                       <span className="text-gray-700 font-medium text-xs block truncate">{cat.label}</span>
                       <p className="text-xs text-gray-400 truncate">{cat.desc}</p>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </div>
 
@@ -340,12 +357,20 @@ export default function SeedDatabase() {
                 )}
               </AnimatePresence>
 
-              <button onClick={handleSeed} disabled={seeding || !isOnline}
-                className={`w-full px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                  seeding || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 hover:shadow-lg active:scale-[0.98]"
-                }`}>
-                {seeding ? <><FaSpinner className="animate-spin" /> Seeding...</> : <><FaDatabase /> Seed All Data</>}
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button onClick={() => handleSeed(false)} disabled={seeding || !isOnline}
+                  className={`w-full px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                    seeding || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 hover:shadow-lg active:scale-[0.98]"
+                  }`}>
+                  {seeding ? <><FaSpinner className="animate-spin" /> Seeding...</> : <><FaDatabase /> Seed All Data</>}
+                </button>
+                <button onClick={() => handleSeed(true)} disabled={seeding || !isOnline || selectedSeedKeys.length === 0}
+                  className={`w-full px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                    seeding || !isOnline || selectedSeedKeys.length === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg active:scale-[0.98]"
+                  }`}>
+                  {seeding ? <><FaSpinner className="animate-spin" /> Seeding...</> : <>Seed Selected ({selectedSeedKeys.length})</>}
+                </button>
+              </div>
             </div>
 
             {/* Results */}
@@ -574,3 +599,4 @@ function ImportResultBox({ result }) {
 
 SeedDatabase.layoutType = "default";
 SeedDatabase.layoutProps = { title: "Data Management" };
+
