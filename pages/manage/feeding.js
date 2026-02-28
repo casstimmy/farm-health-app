@@ -399,8 +399,6 @@ export default function Feeding() {
     return d.toDateString() === new Date().toDateString();
   }).length;
 
-  if (loading) return <Loader />;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -417,6 +415,12 @@ export default function Feeding() {
           </button>
         }
       />
+
+      {loading && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading feeding records..." color="amber-600" />
+        </div>
+      )}
 
       {/* Messages */}
       {error && (

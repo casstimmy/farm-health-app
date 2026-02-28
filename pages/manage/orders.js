@@ -37,6 +37,7 @@ export default function OrdersPage() {
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   useEffect(() => {
     if (roleLoading) return;
@@ -185,13 +186,20 @@ export default function OrdersPage() {
     }
   };
 
-  if (loading || roleLoading) return <Loader message="Loading orders..." color="green-600" />;
-
   return (
     <div className="space-y-6">
       <PageHeader title="Orders" subtitle="Track customer orders and payment status" gradient="from-indigo-600 to-indigo-700" icon="🧾" />
 
+      {(loading || roleLoading) && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading orders..." color="green-600" />
+        </div>
+      )}
+
       {error && <div className="error-message">{error}</div>}
+
+      {!loading && !roleLoading && (
+      <>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -345,8 +353,8 @@ export default function OrdersPage() {
                 <td className="px-4 py-3 text-sm text-right">{formatCurrency(order.balance ?? ((order.total || 0) - (order.amountPaid || 0)), businessSettings.currency)}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => handleEdit(order)} className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>
-                    <button onClick={() => handleDelete(order._id)} className="px-2 py-1 bg-red-100 text-red-700 rounded">Delete</button>
+                    <button onClick={() => handleEdit(order)} className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>Edit</button>
+                    <button onClick={() => handleDelete(order._id)} className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}>Delete</button>
                   </div>
                 </td>
               </tr>
@@ -359,6 +367,8 @@ export default function OrdersPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }

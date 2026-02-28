@@ -213,8 +213,6 @@ export default function ManageServices() {
   const shownOnSite = services.filter((s) => s.showOnSite).length;
   const avgPrice = totalServices > 0 ? services.reduce((sum, s) => sum + (s.price || 0), 0) / totalServices : 0;
 
-  if (loading) return <Loader />;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -237,6 +235,12 @@ export default function ManageServices() {
           )
         }
       />
+
+      {loading && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading services..." color="blue-600" />
+        </div>
+      )}
 
       {/* Messages */}
       {error && (

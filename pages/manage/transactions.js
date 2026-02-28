@@ -150,13 +150,17 @@ export default function Transactions() {
   filtered = filterByPeriod(filtered, filterPeriod);
   filtered = filterByLocation(filtered, filterLocation);
 
-  if (loading) return <Loader />;
-
   return (
     <div className="space-y-6">
       <PageHeader title="Finance & Expenses" subtitle="Track income, expenses, and financial analytics" icon="💸"
         actions={<button onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialForm }); }} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Add Record"}</button>}
       />
+
+      {loading && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading transactions..." color="orange-600" />
+        </div>
+      )}
 
       {error && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="error-message flex items-center justify-between"><span>{error}</span><button onClick={() => setError("")} className="text-red-500"><FaTimes /></button></motion.div>}
       {success && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="success-message"><FaCheck className="inline mr-2" />{success}</motion.div>}

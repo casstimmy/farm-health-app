@@ -37,22 +37,38 @@ export default function CustomersPage() {
   const [invoiceItems, setInvoiceItems] = useState([{ type: "Service", name: "", qty: 1, price: 0 }]);
   const [invoiceNotes, setInvoiceNotes] = useState("");
   const [savingInvoice, setSavingInvoice] = useState(false);
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   useEffect(() => {
-    if (roleLoading) return;
-    if (!user || !["SuperAdmin", "Manager"].includes(user.role)) {
+    if (roleLoading || !router.isReady) return;
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    if (!user) return;
+    if (!["SuperAdmin", "Manager"].includes(user.role)) {
       router.push("/");
       return;
     }
-    fetchData();
+    fetchData(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleLoading, user]);
+  }, [roleLoading, user, router.isReady]);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    const onFocus = () => {
+      const token = localStorage.getItem("token");
+      if (token && user && ["SuperAdmin", "Manager"].includes(user.role)) fetchData(token);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user]);
+
+  const fetchData = async (existingToken = "") => {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
+      const token = existingToken || localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
       const [customersRes, locationsRes, servicesRes, inventoryRes, animalsRes] = await Promise.all([
         fetch("/api/customers", { headers }),
@@ -234,8 +250,6 @@ export default function CustomersPage() {
     }
   };
 
-  if (loading || roleLoading) return <Loader message="Loading customers..." color="green-600" />;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -245,8 +259,16 @@ export default function CustomersPage() {
         icon="👥"
       />
 
+      {(loading || roleLoading) && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading customers..." color="green-600" />
+        </div>
+      )}
+
       {error && <div className="error-message">{error}</div>}
 
+      {!loading && !roleLoading && (
+      <>
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <input className="input-field" placeholder="Customer name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className="input-field" placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
@@ -297,11 +319,11 @@ export default function CustomersPage() {
                 <td className="px-4 py-3 text-sm">{customer.isActive ? "Active" : "Inactive"}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => handleEdit(customer)} className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>
-                    <button onClick={() => handleDelete(customer._id)} className="px-2 py-1 bg-red-100 text-red-700 rounded">Delete</button>
+                    <button onClick={() => handleEdit(customer)} className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>Edit</button>
+                    <button onClick={() => handleDelete(customer._id)} className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}>Delete</button>
                     <button
                       onClick={() => setInvoiceCustomer(customer)}
-                      className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded"
+                      className={`${actionBtnClass} border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
                     >
                       Invoice
                     </button>
@@ -411,6 +433,8 @@ export default function CustomersPage() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

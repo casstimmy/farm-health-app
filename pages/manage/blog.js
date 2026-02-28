@@ -26,6 +26,8 @@ export default function BlogManagement() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   useEffect(() => {
     if (roleLoading) return;
@@ -123,7 +125,28 @@ export default function BlogManagement() {
     }
   };
 
-  if (loading || roleLoading) return <Loader message="Loading blog posts..." color="green-600" />;
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCover(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Failed to upload cover image");
+      const data = await res.json();
+      const uploaded = data?.links?.[0];
+      const url = uploaded?.full || uploaded || "";
+      if (!url) throw new Error("No image URL returned");
+      setForm((prev) => ({ ...prev, coverImage: url }));
+    } catch (err) {
+      setError(err.message || "Cover image upload failed");
+    } finally {
+      setUploadingCover(false);
+      e.target.value = "";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -134,13 +157,31 @@ export default function BlogManagement() {
         icon="📝"
       />
 
+      {(loading || roleLoading) && (
+        <div className="bg-white rounded-xl border border-gray-200 p-10">
+          <Loader message="Loading blog posts..." color="green-600" />
+        </div>
+      )}
+
       {error && <div className="error-message">{error}</div>}
 
+      {!loading && !roleLoading && (
+      <>
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <input className="input-field md:col-span-2" placeholder="Post title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <input className="input-field" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-          <input className="input-field md:col-span-2" placeholder="Cover image URL" value={form.coverImage} onChange={(e) => setForm({ ...form, coverImage: e.target.value })} />
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Cover Image Upload</label>
+            <input type="file" accept="image/*" className="input-field" onChange={handleCoverUpload} disabled={uploadingCover} />
+            {uploadingCover && <p className="text-xs text-gray-500 mt-1">Uploading cover image...</p>}
+            {form.coverImage && (
+              <div className="mt-2 flex items-center gap-3">
+                <img src={form.coverImage} alt="Cover preview" className="w-16 h-16 object-cover rounded-lg border" />
+                <button type="button" onClick={() => setForm({ ...form, coverImage: "" })} className="text-xs px-2 py-1 border border-red-200 text-red-700 rounded-lg">Remove</button>
+              </div>
+            )}
+          </div>
           <input className="input-field" placeholder="Tags (comma separated)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
         </div>
         <textarea className="input-field" rows={2} placeholder="Excerpt" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} />
@@ -183,8 +224,8 @@ export default function BlogManagement() {
                 <td className="px-4 py-3 text-sm">{post.showOnSite ? "Yes" : "No"}</td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => handleEdit(post)} className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>
-                    <button onClick={() => handleDelete(post._id)} className="px-2 py-1 bg-red-100 text-red-700 rounded">Delete</button>
+                    <button onClick={() => handleEdit(post)} className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>Edit</button>
+                    <button onClick={() => handleDelete(post._id)} className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}>Delete</button>
                   </div>
                 </td>
               </tr>
@@ -197,6 +238,8 @@ export default function BlogManagement() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }
