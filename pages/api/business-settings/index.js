@@ -33,6 +33,7 @@ export default async function handler(req, res) {
         loginHeroImage,
         currency,
         timezone,
+        seedDocLinks,
       } = req.body;
 
       let settings = await BusinessSettings.findOne();
@@ -49,6 +50,9 @@ export default async function handler(req, res) {
       if (loginHeroImage !== undefined) settings.loginHeroImage = loginHeroImage;
       if (currency) settings.currency = currency;
       if (timezone) settings.timezone = timezone;
+      if (seedDocLinks && typeof seedDocLinks === "object" && !Array.isArray(seedDocLinks)) {
+        settings.seedDocLinks = seedDocLinks;
+      }
 
       await settings.save();
       return res.status(200).json(settings);

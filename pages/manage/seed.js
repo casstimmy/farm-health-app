@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle } from "react-icons/fa";
+import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle, FaExternalLinkAlt, FaSave } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
 import { invalidateCachePattern } from "@/utils/cache";
@@ -35,6 +35,13 @@ const PASTE_DATA_TYPES = [
   { value: "feed types", label: "Feed Types" },
 ];
 
+const normalizeSeedDocLinks = (links) => {
+  if (!links) return {};
+  if (links instanceof Map) return Object.fromEntries(links.entries());
+  if (typeof links === "object" && !Array.isArray(links)) return links;
+  return {};
+};
+
 export default function SeedDatabase() {
   const router = useRouter();
   const { user, isLoading: roleLoading, isAdmin } = useRole();
@@ -63,6 +70,10 @@ export default function SeedDatabase() {
   // Active tab
   const [activeTab, setActiveTab] = useState("seed");
   const [selectedSeedKeys, setSelectedSeedKeys] = useState([]);
+  const [seedDocLinks, setSeedDocLinks] = useState({});
+  const [loadingDocLinks, setLoadingDocLinks] = useState(false);
+  const [savingDocLinks, setSavingDocLinks] = useState(false);
+  const [docLinksMessage, setDocLinksMessage] = useState("");
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -74,6 +85,10 @@ export default function SeedDatabase() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    fetchSeedDocLinks();
   }, []);
 
   if (roleLoading) {
@@ -259,6 +274,73 @@ export default function SeedDatabase() {
     }
   };
 
+  const fetchSeedDocLinks = async () => {
+    try {
+      setLoadingDocLinks(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/business-settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setSeedDocLinks(normalizeSeedDocLinks(data?.seedDocLinks));
+    } catch (err) {
+      console.error("Failed to load seed doc links", err);
+    } finally {
+      setLoadingDocLinks(false);
+    }
+  };
+
+  const handleDocLinkChange = (key, value) => {
+    setSeedDocLinks((prev) => ({ ...prev, [key]: value }));
+    if (docLinksMessage) setDocLinksMessage("");
+  };
+
+  const isValidExcelDocLink = (url) => {
+    if (!url || !url.trim()) return true;
+    const normalized = url.trim();
+    return (
+      /^https?:\/\//i.test(normalized) &&
+      (/(\.xlsx($|\?))|(\.xls($|\?))|(\.csv($|\?))/i.test(normalized) ||
+        /docs\.google\.com\/spreadsheets/i.test(normalized))
+    );
+  };
+
+  const handleSaveDocLinks = async () => {
+    const invalidEntry = Object.entries(seedDocLinks).find(([, link]) => !isValidExcelDocLink(link));
+    if (invalidEntry) {
+      setError("One or more links are invalid. Use a valid Excel/CSV link or Google Sheets link.");
+      return;
+    }
+    try {
+      setSavingDocLinks(true);
+      setError("");
+      const token = localStorage.getItem("token");
+      const payload = {};
+      Object.entries(seedDocLinks).forEach(([key, value]) => {
+        if (value?.trim()) payload[key] = value.trim();
+      });
+      const res = await fetch("/api/business-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ seedDocLinks: payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to save document links");
+      const normalizedLinks = normalizeSeedDocLinks(data?.seedDocLinks);
+      setSeedDocLinks(Object.keys(normalizedLinks).length > 0 ? normalizedLinks : payload);
+      setDocLinksMessage("Seed document links saved.");
+      setTimeout(() => setDocLinksMessage(""), 3000);
+    } catch (err) {
+      setError(err.message || "Failed to save document links");
+    } finally {
+      setSavingDocLinks(false);
+    }
+  };
+
   const resultItems = result
     ? SEED_CATEGORIES.map((cat) => ({ label: cat.label, icon: cat.icon, count: result[cat.key] || 0 }))
     : [];
@@ -346,6 +428,62 @@ export default function SeedDatabase() {
                   <FaExclamationTriangle className="inline mr-1" />
                   Existing records with the same unique IDs will be <strong>skipped</strong>, not overwritten. This is safe to run multiple times.
                 </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900">Seed Document Links (Excel/Sheets)</h4>
+                    <p className="text-xs text-blue-700 mt-0.5">View and edit links for each seeded category. Accepted: `.xlsx`, `.xls`, `.csv`, Google Sheets.</p>
+                  </div>
+                  <button
+                    onClick={handleSaveDocLinks}
+                    disabled={savingDocLinks || loadingDocLinks || !isOnline}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 ${
+                      savingDocLinks || loadingDocLinks || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                  >
+                    {savingDocLinks ? <FaSpinner className="animate-spin" /> : <FaSave />}
+                    {savingDocLinks ? "Saving..." : "Save Links"}
+                  </button>
+                </div>
+
+                {docLinksMessage && (
+                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1 mb-3">{docLinksMessage}</p>
+                )}
+
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {SEED_CATEGORIES.map((cat) => {
+                    const linkValue = seedDocLinks?.[cat.key] || "";
+                    const isValid = isValidExcelDocLink(linkValue);
+                    return (
+                      <div key={cat.key} className="grid grid-cols-1 md:grid-cols-[190px_1fr_90px] gap-2 items-center bg-white border border-blue-100 rounded-lg p-2">
+                        <div className="text-xs font-semibold text-gray-700 flex items-center gap-2">
+                          <span>{cat.icon}</span>
+                          <span>{cat.label}</span>
+                        </div>
+                        <input
+                          type="url"
+                          value={linkValue}
+                          onChange={(e) => handleDocLinkChange(cat.key, e.target.value)}
+                          placeholder={`https://.../${cat.key}.xlsx`}
+                          className={`input-field text-xs py-2 ${!isValid ? "border-red-300 focus:border-red-400" : ""}`}
+                        />
+                        <button
+                          type="button"
+                          disabled={!linkValue}
+                          onClick={() => window.open(linkValue, "_blank", "noopener,noreferrer")}
+                          className={`px-2 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 ${
+                            linkValue ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
+                        >
+                          <FaExternalLinkAlt size={11} />
+                          Open
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Progress */}
