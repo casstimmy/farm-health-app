@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle, FaExternalLinkAlt, FaSave } from "react-icons/fa";
+import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExcel, FaCloudUploadAlt, FaTimes, FaClipboard, FaInfoCircle, FaEdit } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
 import { invalidateCachePattern } from "@/utils/cache";
@@ -35,12 +35,7 @@ const PASTE_DATA_TYPES = [
   { value: "feed types", label: "Feed Types" },
 ];
 
-const normalizeSeedDocLinks = (links) => {
-  if (!links) return {};
-  if (links instanceof Map) return Object.fromEntries(links.entries());
-  if (typeof links === "object" && !Array.isArray(links)) return links;
-  return {};
-};
+const ANIMALS_TEMPLATE_CATEGORY = "animals";
 
 export default function SeedDatabase() {
   const router = useRouter();
@@ -70,10 +65,13 @@ export default function SeedDatabase() {
   // Active tab
   const [activeTab, setActiveTab] = useState("seed");
   const [selectedSeedKeys, setSelectedSeedKeys] = useState([]);
-  const [seedDocLinks, setSeedDocLinks] = useState({});
-  const [loadingDocLinks, setLoadingDocLinks] = useState(false);
-  const [savingDocLinks, setSavingDocLinks] = useState(false);
-  const [docLinksMessage, setDocLinksMessage] = useState("");
+  const [templateCategory, setTemplateCategory] = useState("");
+  const [templateColumns, setTemplateColumns] = useState([]);
+  const [templateRowsText, setTemplateRowsText] = useState("");
+  const [templateSource, setTemplateSource] = useState("default");
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState("");
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -85,10 +83,6 @@ export default function SeedDatabase() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
-
-  useEffect(() => {
-    fetchSeedDocLinks();
   }, []);
 
   if (roleLoading) {
@@ -274,70 +268,98 @@ export default function SeedDatabase() {
     }
   };
 
-  async function fetchSeedDocLinks() {
+  const stringifyTemplateRows = (columns, rows) => {
+    const safeColumns = Array.isArray(columns) ? columns : [];
+    const header = safeColumns.join("\t");
+    const lines = (Array.isArray(rows) ? rows : []).map((row) =>
+      safeColumns
+        .map((col) => {
+          const value = row?.[col];
+          return value === undefined || value === null ? "" : String(value);
+        })
+        .join("\t")
+    );
+    return [header, ...lines].join("\n");
+  };
+
+  const parseTemplateText = (text) => {
+    const lines = String(text || "").split("\n").map((l) => l.trimEnd()).filter((l) => l.trim().length > 0);
+    if (lines.length < 2) {
+      return { columns: [], rows: [], error: "Template must include a header row and at least one data row." };
+    }
+    const delimiter = lines[0].includes("\t") ? "\t" : ",";
+    const columns = lines[0].split(delimiter).map((h) => h.trim()).filter(Boolean);
+    if (columns.length === 0) {
+      return { columns: [], rows: [], error: "Header row is empty." };
+    }
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(delimiter).map((v) => v.trim());
+      const row = {};
+      columns.forEach((col, idx) => {
+        row[col] = values[idx] ?? "";
+      });
+      rows.push(row);
+    }
+    return { columns, rows, error: "" };
+  };
+
+  const handleOpenTemplateEditor = async (category) => {
     try {
-      setLoadingDocLinks(true);
+      setTemplateCategory(category);
+      setTemplateLoading(true);
+      setError("");
+      setTemplateMessage("");
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/business-settings", {
+      const res = await fetch(`/api/seed-templates?category=${encodeURIComponent(category)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) return;
       const data = await res.json();
-      setSeedDocLinks(normalizeSeedDocLinks(data?.seedDocLinks));
+      if (!res.ok) throw new Error(data?.error || "Failed to load seed template");
+      setTemplateCategory(category);
+      setTemplateColumns(data.columns || []);
+      setTemplateRowsText(stringifyTemplateRows(data.columns || [], data.rows || []));
+      setTemplateSource(data.source || "default");
     } catch (err) {
-      console.error("Failed to load seed doc links", err);
+      setError(err.message || "Failed to load seed template");
     } finally {
-      setLoadingDocLinks(false);
+      setTemplateLoading(false);
     }
-  }
-
-  const handleDocLinkChange = (key, value) => {
-    setSeedDocLinks((prev) => ({ ...prev, [key]: value }));
-    if (docLinksMessage) setDocLinksMessage("");
   };
 
-  const isValidExcelDocLink = (url) => {
-    if (!url || !url.trim()) return true;
-    const normalized = url.trim();
-    return (
-      /^https?:\/\//i.test(normalized) &&
-      (/(\.xlsx($|\?))|(\.xls($|\?))|(\.csv($|\?))/i.test(normalized) ||
-        /docs\.google\.com\/spreadsheets/i.test(normalized))
-    );
-  };
-
-  const handleSaveDocLinks = async () => {
-    const invalidEntry = Object.entries(seedDocLinks).find(([, link]) => !isValidExcelDocLink(link));
-    if (invalidEntry) {
-      setError("One or more links are invalid. Use a valid Excel/CSV link or Google Sheets link.");
+  const handleSaveTemplate = async () => {
+    const parsed = parseTemplateText(templateRowsText);
+    if (parsed.error) {
+      setError(parsed.error);
       return;
     }
     try {
-      setSavingDocLinks(true);
+      setTemplateSaving(true);
       setError("");
       const token = localStorage.getItem("token");
-      const payload = {};
-      Object.entries(seedDocLinks).forEach(([key, value]) => {
-        if (value?.trim()) payload[key] = value.trim();
-      });
-      const res = await fetch("/api/business-settings", {
+      const res = await fetch("/api/seed-templates", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ seedDocLinks: payload }),
+        body: JSON.stringify({
+          category: templateCategory,
+          columns: parsed.columns,
+          rows: parsed.rows,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to save document links");
-      const normalizedLinks = normalizeSeedDocLinks(data?.seedDocLinks);
-      setSeedDocLinks(Object.keys(normalizedLinks).length > 0 ? normalizedLinks : payload);
-      setDocLinksMessage("Seed document links saved.");
-      setTimeout(() => setDocLinksMessage(""), 3000);
+      if (!res.ok) throw new Error(data?.error || "Failed to save seed template");
+      setTemplateColumns(data.columns || parsed.columns);
+      setTemplateRowsText(stringifyTemplateRows(data.columns || parsed.columns, data.rows || parsed.rows));
+      setTemplateSource("custom");
+      setTemplateMessage("Template saved. Next seeding run will use this edited data.");
+      setTimeout(() => setTemplateMessage(""), 3000);
     } catch (err) {
-      setError(err.message || "Failed to save document links");
+      setError(err.message || "Failed to save seed template");
     } finally {
-      setSavingDocLinks(false);
+      setTemplateSaving(false);
     }
   };
 
@@ -404,22 +426,34 @@ export default function SeedDatabase() {
               <p className="text-sm font-semibold text-gray-700 mb-3">All available seed data ({SEED_CATEGORIES.length} categories):</p>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
                 {SEED_CATEGORIES.map((cat) => (
-                  <label key={cat.key} className="flex items-start gap-2 px-3 py-2 bg-purple-50 rounded-lg text-sm hover:bg-purple-100 transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedSeedKeys.includes(cat.key)}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedSeedKeys((prev) => [...prev, cat.key]);
-                        else setSelectedSeedKeys((prev) => prev.filter((k) => k !== cat.key));
-                      }}
-                      className="mt-0.5"
-                    />
-                    <span className="text-lg">{cat.icon}</span>
-                    <div className="min-w-0">
-                      <span className="text-gray-700 font-medium text-xs block truncate">{cat.label}</span>
-                      <p className="text-xs text-gray-400 truncate">{cat.desc}</p>
-                    </div>
-                  </label>
+                  <div key={cat.key} className="px-3 py-2 bg-purple-50 rounded-lg text-sm hover:bg-purple-100 transition-colors">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedSeedKeys.includes(cat.key)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedSeedKeys((prev) => [...prev, cat.key]);
+                          else setSelectedSeedKeys((prev) => prev.filter((k) => k !== cat.key));
+                        }}
+                        className="mt-0.5"
+                      />
+                      <span className="text-lg">{cat.icon}</span>
+                      <div className="min-w-0">
+                        <span className="text-gray-700 font-medium text-xs block truncate">{cat.label}</span>
+                        <p className="text-xs text-gray-400 truncate">{cat.desc}</p>
+                      </div>
+                    </label>
+                    {cat.key === ANIMALS_TEMPLATE_CATEGORY && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenTemplateEditor(cat.key)}
+                        className="mt-2 text-xs px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold flex items-center gap-1"
+                      >
+                        <FaEdit size={11} />
+                        Edit Seed Data
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
 
@@ -430,61 +464,50 @@ export default function SeedDatabase() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-blue-900">Seed Document Links (Excel/Sheets)</h4>
-                    <p className="text-xs text-blue-700 mt-0.5">View and edit links for each seeded category. Accepted: `.xlsx`, `.xls`, `.csv`, Google Sheets.</p>
+              {templateCategory === ANIMALS_TEMPLATE_CATEGORY && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-indigo-900">Animals Seed Editor (Excel Format)</h4>
+                      <p className="text-xs text-indigo-700 mt-0.5">
+                        Edit tab/comma-separated rows. First row must be headers. Save, then run seeding.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSaveTemplate}
+                      disabled={templateSaving || templateLoading || !isOnline}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${
+                        templateSaving || templateLoading || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+                      }`}
+                    >
+                      {templateSaving ? "Saving..." : "Save Template"}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleSaveDocLinks}
-                    disabled={savingDocLinks || loadingDocLinks || !isOnline}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 ${
-                      savingDocLinks || loadingDocLinks || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {savingDocLinks ? <FaSpinner className="animate-spin" /> : <FaSave />}
-                    {savingDocLinks ? "Saving..." : "Save Links"}
-                  </button>
-                </div>
 
-                {docLinksMessage && (
-                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1 mb-3">{docLinksMessage}</p>
-                )}
-
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {SEED_CATEGORIES.map((cat) => {
-                    const linkValue = seedDocLinks?.[cat.key] || "";
-                    const isValid = isValidExcelDocLink(linkValue);
-                    return (
-                      <div key={cat.key} className="grid grid-cols-1 md:grid-cols-[190px_1fr_90px] gap-2 items-center bg-white border border-blue-100 rounded-lg p-2">
-                        <div className="text-xs font-semibold text-gray-700 flex items-center gap-2">
-                          <span>{cat.icon}</span>
-                          <span>{cat.label}</span>
-                        </div>
-                        <input
-                          type="url"
-                          value={linkValue}
-                          onChange={(e) => handleDocLinkChange(cat.key, e.target.value)}
-                          placeholder={`https://.../${cat.key}.xlsx`}
-                          className={`input-field text-xs py-2 ${!isValid ? "border-red-300 focus:border-red-400" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          disabled={!linkValue}
-                          onClick={() => window.open(linkValue, "_blank", "noopener,noreferrer")}
-                          className={`px-2 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 ${
-                            linkValue ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          <FaExternalLinkAlt size={11} />
-                          Open
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {templateLoading ? (
+                    <div className="py-4"><ProgressBox step="Loading seed template..." progress={45} color="purple" /></div>
+                  ) : (
+                    <>
+                      {templateMessage && (
+                        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1 mb-3">{templateMessage}</p>
+                      )}
+                      <p className="text-xs text-indigo-700 mb-2">
+                        Source: <strong>{templateSource === "custom" ? "Saved custom template" : "Default seed template"}</strong>
+                      </p>
+                      <textarea
+                        value={templateRowsText}
+                        onChange={(e) => setTemplateRowsText(e.target.value)}
+                        rows={12}
+                        className="w-full border-2 border-indigo-200 rounded-lg px-3 py-2 text-xs font-mono bg-white focus:border-indigo-400 outline-none resize-y"
+                        placeholder="tagId\tname\tspecies\tbreed\tgender..."
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Columns loaded: {templateColumns.length > 0 ? templateColumns.join(", ") : "none"}
+                      </p>
+                    </>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* Progress */}
               <AnimatePresence>
