@@ -325,7 +325,7 @@ export default function BreedingManagement() {
         filters={[
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
           { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
-          { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, { value: "Pending", label: "Pending" }, { value: "Confirmed", label: "Confirmed" }, { value: "Delivered", label: "Delivered" }, { value: "Not Pregnant", label: "Not Pregnant" }] },
+          { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, { value: "Pending", label: "Pending" }, { value: "Confirmed", label: "Pregnant" }, { value: "Delivered", label: "Delivered" }, { value: "Not Pregnant", label: "Not Pregnant" }] },
         ]}
         showAddButton={true}
         onAddClick={() => setShowForm(!showForm)}
