@@ -144,31 +144,48 @@ export default function OrdersPage() {
 
   const handleEdit = (order) => {
     setEditingId(order._id);
-    const customerValue =
-      (typeof order.customer === "object" && order.customer?._id) ||
-      (typeof order.customer === "string" ? order.customer : "");
+    
+    // Extract customer ID
+    const customerValue = (typeof order.customer === "object" && order.customer?._id) 
+      || (typeof order.customer === "string" ? order.customer : "");
+    
+    // Extract location ID
+    const locationValue = (typeof order.location === "object" && order.location?._id)
+      || (typeof order.location === "string" ? order.location : "");
+    
+    // Format dates - handle both ISO strings and Date objects
+    const orderDate = order.orderDate 
+      ? new Date(order.orderDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
+    
+    const dueDate = order.dueDate
+      ? new Date(order.dueDate).toISOString().split("T")[0]
+      : "";
+    
+    // Set form with all fields
     setForm({
       customer: customerValue,
-      location: order.location?._id || order.location || "",
-      orderDate: order.orderDate ? new Date(order.orderDate).toISOString().split("T")[0] : "",
-      dueDate: order.dueDate ? new Date(order.dueDate).toISOString().split("T")[0] : "",
+      location: locationValue,
+      orderDate,
+      dueDate,
       status: order.status || "Pending",
       paymentStatus: order.paymentStatus || "Unpaid",
       amountPaid: Number(order.amountPaid || 0),
       notes: order.notes || "",
-      items: Array.isArray(order.items) && order.items.length ? order.items : [emptyItem],
+      items: Array.isArray(order.items) && order.items.length 
+        ? order.items.map((item) => ({
+            type: item.type || (item.product ? "Product" : item.service ? "Service" : item.animal ? "Animal" : "Custom"),
+            description: item.description || item.name || "",
+            quantity: Number(item.quantity || 1),
+            unitPrice: Number(item.unitPrice ?? item.price ?? 0),
+          }))
+        : [{ ...emptyItem }],
     });
-    if (Array.isArray(order.items) && order.items.length) {
-      setForm((prev) => ({
-        ...prev,
-        items: order.items.map((item) => ({
-          type: item.type || (item.product ? "Product" : item.service ? "Service" : item.animal ? "Animal" : "Custom"),
-          description: item.description || item.name || "",
-          quantity: item.quantity || 1,
-          unitPrice: item.unitPrice ?? item.price ?? 0,
-        })),
-      }));
-    }
+    
+    // Scroll to form
+    setTimeout(() => {
+      document.querySelector("form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const handleDelete = async (id) => {
@@ -201,133 +218,212 @@ export default function OrdersPage() {
       {!loading && !roleLoading && (
       <>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Customer</label>
-            <select className="input-field" value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })}>
-            <option value="">Select customer</option>
-            {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
-            <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
-            <option value="">Select location</option>
-            {locations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date</label>
-            <input type="date" className="input-field" value={form.orderDate} onChange={(e) => setForm({ ...form, orderDate: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
-            <input type="date" className="input-field" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Order Status</label>
-            <select className="input-field" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-            {["Pending", "Confirmed", "Processing", "Completed", "Cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Status</label>
-            <select className="input-field" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}>
-            {["Unpaid", "Partially Paid", "Paid", "Refunded"].map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Amount Paid</label>
-            <input type="number" min="0" step="0.01" className="input-field" placeholder="Amount paid" value={form.amountPaid} onChange={(e) => setForm({ ...form, amountPaid: e.target.value })} />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-            <input className="input-field" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {(form.items || []).map((item, idx) => (
-            <div key={`${idx}-${item.description}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 border border-gray-200 rounded-xl p-3 bg-gray-50">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
-                <select
-                  className="input-field"
-                  value={item.type || "Custom"}
-                  onChange={(e) => {
-                    const type = e.target.value;
-                    const next = [...form.items];
-                    next[idx] = { ...next[idx], type, description: "", unitPrice: 0 };
-                    setForm({ ...form, items: next });
-                  }}
-                >
-                  <option value="Animal">Animal</option>
-                  <option value="Service">Service</option>
-                  <option value="Product">Product</option>
-                  <option value="Custom">Custom</option>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Form */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Customer</label>
+                <select className="input-field" value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })}>
+                <option value="">Select customer</option>
+                {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="md:col-span-4">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Item</label>
-                {item.type === "Custom" ? (
-                  <input className="input-field" placeholder="Item description" value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} />
-                ) : (
-                  <select
-                    className="input-field"
-                    value={item.description}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      updateItem(idx, "description", val);
-                      if (item.type === "Service") {
-                        const selected = services.find((s) => s.name === val);
-                        if (selected) updateItem(idx, "unitPrice", Number(selected.price || 0));
-                      }
-                      if (item.type === "Product") {
-                        const selected = inventoryItems.find((p) => p.item === val);
-                        if (selected) updateItem(idx, "unitPrice", Number(selected.salesPrice || selected.price || 0));
-                      }
-                      if (item.type === "Animal") {
-                        const selected = animals.find((a) => `${a.tagId} - ${a.name || a.breed || "Animal"}` === val);
-                        if (selected) updateItem(idx, "unitPrice", Number(selected.projectedSalesPrice || selected.purchaseCost || 0));
-                      }
-                    }}
-                  >
-                    <option value="">Select item</option>
-                    {item.type === "Service" && services.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
-                    {item.type === "Product" && inventoryItems.map((p) => <option key={p._id} value={p.item}>{p.item}</option>)}
-                    {item.type === "Animal" && animals.map((a) => (
-                      <option key={a._id} value={`${a.tagId} - ${a.name || a.breed || "Animal"}`}>
-                        {a.tagId} - {a.name || a.breed || "Animal"}
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
+                <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
+                <option value="">Select location</option>
+                {locations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date</label>
+                <input type="date" className="input-field" value={form.orderDate} onChange={(e) => setForm({ ...form, orderDate: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
+                <input type="date" className="input-field" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Order Status</label>
+                <select className="input-field" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                {["Pending", "Confirmed", "Processing", "Completed", "Cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Status</label>
+                <select className="input-field" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}>
+                {["Unpaid", "Partially Paid", "Paid", "Refunded"].map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Amount Paid</label>
+                <input type="number" min="0" step="0.01" className="input-field" placeholder="Amount paid" value={form.amountPaid} onChange={(e) => setForm({ ...form, amountPaid: e.target.value })} />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Qty</label>
-                <input type="number" min="0" step="0.01" className="input-field" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                <input className="input-field" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price</label>
-                <input type="number" min="0" step="0.01" className="input-field" placeholder="Unit price" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} />
-              </div>
-              <button type="button" onClick={() => removeItem(idx)} className="px-2 py-2 border border-red-300 text-red-700 rounded-lg md:col-span-2">Remove</button>
             </div>
-          ))}
-          <button type="button" onClick={addItem} className="px-3 py-2 border border-gray-300 rounded-lg">Add Item</button>
+
+            <div className="h-px bg-gray-300 my-4" />
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold text-gray-700">Order Items</h4>
+              {(form.items || []).map((item, idx) => (
+                <div key={`${idx}-${item.description}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 border border-gray-200 rounded-xl p-3 bg-gray-50">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
+                    <select
+                      className="input-field"
+                      value={item.type || "Custom"}
+                      onChange={(e) => {
+                        const type = e.target.value;
+                        const next = [...form.items];
+                        next[idx] = { ...next[idx], type, description: "", unitPrice: 0 };
+                        setForm({ ...form, items: next });
+                      }}
+                    >
+                      <option value="Animal">Animal</option>
+                      <option value="Service">Service</option>
+                      <option value="Product">Product</option>
+                      <option value="Custom">Custom</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Item</label>
+                    {item.type === "Custom" ? (
+                      <input className="input-field" placeholder="Item description" value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} />
+                    ) : (
+                      <select
+                        className="input-field"
+                        value={item.description}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateItem(idx, "description", val);
+                          if (item.type === "Service") {
+                            const selected = services.find((s) => s.name === val);
+                            if (selected) updateItem(idx, "unitPrice", Number(selected.price || 0));
+                          }
+                          if (item.type === "Product") {
+                            const selected = inventoryItems.find((p) => p.item === val);
+                            if (selected) updateItem(idx, "unitPrice", Number(selected.salesPrice || selected.price || 0));
+                          }
+                          if (item.type === "Animal") {
+                            const selected = animals.find((a) => `${a.tagId} - ${a.name || a.breed || "Animal"}` === val);
+                            if (selected) updateItem(idx, "unitPrice", Number(selected.projectedSalesPrice || selected.purchaseCost || 0));
+                          }
+                        }}
+                      >
+                        <option value="">Select item</option>
+                        {item.type === "Service" && services.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
+                        {item.type === "Product" && inventoryItems.map((p) => <option key={p._id} value={p.item}>{p.item}</option>)}
+                        {item.type === "Animal" && animals.map((a) => (
+                          <option key={a._id} value={`${a.tagId} - ${a.name || a.breed || "Animal"}`}>
+                            {a.tagId} - {a.name || a.breed || "Animal"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Qty</label>
+                    <input type="number" min="0" step="0.01" className="input-field" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price</label>
+                    <input type="number" min="0" step="0.01" className="input-field" placeholder="Unit price" value={item.unitPrice} onChange={(e) => updateItem(idx, "unitPrice", e.target.value)} />
+                  </div>
+                  <button type="button" onClick={() => removeItem(idx)} className="px-2 py-2 border border-red-300 text-red-700 rounded-lg md:col-span-2 hover:bg-red-50 font-semibold text-xs">Remove</button>
+                </div>
+              ))}
+              <button type="button" onClick={addItem} className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50">+ Add Item</button>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-300">
+              <p className="font-semibold text-gray-700">Order Total: {formatCurrency(orderTotal, businessSettings.currency)}</p>
+              <div className="flex gap-2">
+                <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">
+                  {editingId ? "Update" : "Create"} Order
+                </button>
+                {editingId && <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50">Cancel</button>}
+              </div>
+            </div>
+          </form>
         </div>
 
-        <div className="flex items-center justify-between">
-          <p className="font-semibold">Order Total: {formatCurrency(orderTotal, businessSettings.currency)}</p>
-          <div className="flex gap-2">
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
-              {editingId ? "Update" : "Create"} Order
-            </button>
-            {editingId && <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>}
+        {/* Preview Panel */}
+        <div className="lg:col-span-1">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6 sticky top-20 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">📋 Order Preview</h3>
+            
+            <div className="space-y-3">
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs text-gray-600 font-semibold">CUSTOMER</p>
+                <p className="text-sm font-bold text-gray-800">{customers.find(c => c._id === form.customer)?.name || "Not selected"}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs text-gray-600 font-semibold">LOCATION</p>
+                <p className="text-sm font-bold text-gray-800">{locations.find(l => l._id === form.location)?.name || "Not selected"}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white rounded-lg p-3 border border-blue-100">
+                  <p className="text-xs text-gray-600 font-semibold">ORDER DATE</p>
+                  <p className="text-sm font-bold text-gray-800">{form.orderDate || "--"}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-blue-100">
+                  <p className="text-xs text-gray-600 font-semibold">DUE DATE</p>
+                  <p className="text-sm font-bold text-gray-800">{form.dueDate || "--"}</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs text-gray-600 font-semibold mb-2">STATUS</p>
+                <div className="flex gap-2 flex-wrap">
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">{form.status}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    form.paymentStatus === "Paid" ? "bg-green-100 text-green-800" :
+                    form.paymentStatus === "Partially Paid" ? "bg-yellow-100 text-yellow-800" :
+                    "bg-red-100 text-red-800"
+                  }`}>{form.paymentStatus}</span>
+                </div>
+              </div>
+
+              <div className="h-px bg-blue-200" />
+
+              <div className="bg-white rounded-lg p-3 border border-blue-100">
+                <p className="text-xs text-gray-600 font-semibold mb-2">ITEMS ({form.items?.length || 0})</p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {(form.items || []).filter(i => i.description).map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span className="text-gray-700 truncate flex-1">{item.description}</span>
+                      <span className="text-gray-500">×{item.quantity}</span>
+                      <span className="text-gray-800 font-semibold text-right ml-2 min-w-fit">{formatCurrency(Number(item.quantity || 0) * Number(item.unitPrice || 0), businessSettings.currency)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-3 border-2 border-indigo-300">
+                <p className="text-xs text-gray-600 font-semibold mb-1">TOTAL ORDER VALUE</p>
+                <p className="text-2xl font-bold text-indigo-700">{formatCurrency(orderTotal, businessSettings.currency)}</p>
+                <p className="text-xs text-gray-600 mt-2">Amount Paid: <span className="font-semibold">{formatCurrency(Number(form.amountPaid || 0), businessSettings.currency)}</span></p>
+                <p className="text-xs text-gray-600">Balance: <span className="font-semibold text-orange-600">{formatCurrency(orderTotal - Number(form.amountPaid || 0), businessSettings.currency)}</span></p>
+              </div>
+
+              {form.notes && (
+                <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">NOTES</p>
+                  <p className="text-xs text-gray-700">{form.notes}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </form>
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full">

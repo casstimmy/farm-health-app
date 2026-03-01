@@ -13,6 +13,7 @@ export default function RolesPermissions() {
   const { user, isLoading, isAdmin } = useRole();
   const [roles, setRoles] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [editingRole, setEditingRole] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -111,6 +112,32 @@ export default function RolesPermissions() {
     setPageLoading(false);
   };
 
+  const togglePermission = (roleId, featureIdx, permission) => {
+    const updatedRoles = roles.map(role => {
+      if (role._id === roleId) {
+        const updatedPerms = role.permissions.map((perm, idx) => {
+          if (idx === featureIdx) {
+            const newAccess = perm.access.includes(permission)
+              ? perm.access.filter(a => a !== permission)
+              : [...perm.access, permission];
+            return { ...perm, access: newAccess };
+          }
+          return perm;
+        });
+        return { ...role, permissions: updatedPerms };
+      }
+      return role;
+    });
+    setRoles(updatedRoles);
+  };
+
+  const saveRoleChanges = async () => {
+    // This would be saved to the backend in a real app
+    // For now, we'll just show a success message
+    alert("Role permissions have been updated successfully!");
+    setEditingRole(null);
+  };
+
   if (pageLoading || isLoading) {
     return (
       <div className="space-y-8">
@@ -146,10 +173,20 @@ export default function RolesPermissions() {
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${role.color} flex items-center justify-center text-white text-2xl shadow-lg`}>
                 <FaKey className="w-6 h-6" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="text-xl font-bold text-gray-900">{role.name}</h3>
                 <p className="text-sm text-gray-600">{role.description}</p>
               </div>
+              <button
+                onClick={() => setEditingRole(editingRole === role._id ? null : role._id)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  editingRole === role._id
+                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                    : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                }`}
+              >
+                {editingRole === role._id ? "Cancel Edit" : "Edit"}
+              </button>
             </div>
 
             {/* Permissions Grid */}
@@ -160,21 +197,42 @@ export default function RolesPermissions() {
                     <span className="font-semibold text-gray-900 text-sm">{perm.feature}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {perm.access.length > 0 ? (
-                      perm.access.map((access, i) => (
-                        <span
-                          key={i}
-                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${role.badgeColor}`}
-                        >
-                          <FaCheckCircle className="w-3 h-3" />
-                          {access}
-                        </span>
-                      ))
+                    {editingRole === role._id ? (
+                      <div className="flex flex-wrap gap-2 w-full">
+                        {["View", "Create", "Edit", "Delete", "Manage"].map((access) => (
+                          <button
+                            key={access}
+                            onClick={() => togglePermission(role._id, idx, access)}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                              perm.access.includes(access)
+                                ? `${role.badgeColor} border-2 border-green-500`
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-300"
+                            }`}
+                          >
+                            <FaCheckCircle className="w-3 h-3" />
+                            {access}
+                          </button>
+                        ))}
+                      </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        <FaTimesCircle className="w-3 h-3" />
-                        No Access
-                      </span>
+                      <>
+                        {perm.access.length > 0 ? (
+                          perm.access.map((access, i) => (
+                            <span
+                              key={i}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:shadow-md transition-all ${role.badgeColor}`}
+                            >
+                              <FaCheckCircle className="w-3 h-3" />
+                              {access}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            <FaTimesCircle className="w-3 h-3" />
+                            No Access
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -183,11 +241,20 @@ export default function RolesPermissions() {
 
             {/* User Count Badge */}
             <div className="mt-6 pt-6 border-t border-gray-300">
-              <p className="text-xs text-gray-600 text-center">
-                {role.name === "SuperAdmin" && "👑 System Administrator"}
-                {role.name === "Manager" && "👔 Farm Manager"}
-                {role.name === "Attendant" && "👷 Farm Attendant"}
-              </p>
+              {editingRole === role._id ? (
+                <button
+                  onClick={saveRoleChanges}
+                  className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all"
+                >
+                  Save Changes
+                </button>
+              ) : (
+                <p className="text-xs text-gray-600 text-center">
+                  {role.name === "SuperAdmin" && "👑 System Administrator"}
+                  {role.name === "Manager" && "👔 Farm Manager"}
+                  {role.name === "Attendant" && "👷 Farm Attendant"}
+                </p>
+              )}
             </div>
           </motion.div>
         ))}

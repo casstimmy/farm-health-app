@@ -1,9 +1,42 @@
 import dbConnect from "@/lib/mongodb";
 import { withAuth } from "@/utils/middleware";
 import SeedTemplate from "@/models/SeedTemplate";
-import { ANIMAL_SEED_COLUMNS, DEFAULT_ANIMAL_SEED_ROWS } from "@/lib/seedDefaults";
+import {
+  ANIMAL_SEED_COLUMNS,
+  DEFAULT_ANIMAL_SEED_ROWS,
+  LOCATIONS_SEED_COLUMNS,
+  LOCATIONS_SEED_ROWS,
+  INVENTORY_CATEGORIES_SEED_COLUMNS,
+  INVENTORY_CATEGORIES_SEED_ROWS,
+  INVENTORY_ITEMS_SEED_COLUMNS,
+  INVENTORY_ITEMS_SEED_ROWS,
+  FEED_TYPES_SEED_COLUMNS,
+  FEED_TYPES_SEED_ROWS,
+  SERVICES_SEED_COLUMNS,
+  SERVICES_SEED_ROWS,
+  CUSTOMERS_SEED_COLUMNS,
+  CUSTOMERS_SEED_ROWS,
+} from "@/lib/seedDefaults";
 
-const SUPPORTED_CATEGORIES = new Set(["animals"]);
+const SUPPORTED_CATEGORIES = new Set([
+  "animals",
+  "locations",
+  "inventoryCategories",
+  "inventoryItems",
+  "feedTypes",
+  "services",
+  "customers"
+]);
+
+const SEED_TEMPLATES = {
+  animals: { columns: ANIMAL_SEED_COLUMNS, rows: DEFAULT_ANIMAL_SEED_ROWS },
+  locations: { columns: LOCATIONS_SEED_COLUMNS, rows: LOCATIONS_SEED_ROWS },
+  inventoryCategories: { columns: INVENTORY_CATEGORIES_SEED_COLUMNS, rows: INVENTORY_CATEGORIES_SEED_ROWS },
+  inventoryItems: { columns: INVENTORY_ITEMS_SEED_COLUMNS, rows: INVENTORY_ITEMS_SEED_ROWS },
+  feedTypes: { columns: FEED_TYPES_SEED_COLUMNS, rows: FEED_TYPES_SEED_ROWS },
+  services: { columns: SERVICES_SEED_COLUMNS, rows: SERVICES_SEED_ROWS },
+  customers: { columns: CUSTOMERS_SEED_COLUMNS, rows: CUSTOMERS_SEED_ROWS },
+};
 
 async function handler(req, res) {
   if (!["GET", "PUT"].includes(req.method)) {
@@ -18,23 +51,27 @@ async function handler(req, res) {
 
   const category = String(req.query.category || req.body?.category || "").trim();
   if (!SUPPORTED_CATEGORIES.has(category)) {
-    return res.status(400).json({ error: "Unsupported category. Currently supported: animals" });
+    return res.status(400).json({
+      error: `Unsupported category. Currently supported: ${Array.from(SUPPORTED_CATEGORIES).join(", ")}`,
+    });
   }
 
   if (req.method === "GET") {
     const template = await SeedTemplate.findOne({ category }).lean();
+    const defaults = SEED_TEMPLATES[category] || SEED_TEMPLATES.animals;
+
     if (template?.rows?.length) {
       return res.status(200).json({
         category,
-        columns: template.columns?.length ? template.columns : ANIMAL_SEED_COLUMNS,
+        columns: template.columns?.length ? template.columns : defaults.columns,
         rows: template.rows,
         source: "custom",
       });
     }
     return res.status(200).json({
       category,
-      columns: ANIMAL_SEED_COLUMNS,
-      rows: DEFAULT_ANIMAL_SEED_ROWS,
+      columns: defaults.columns,
+      rows: defaults.rows,
       source: "default",
     });
   }
@@ -57,9 +94,10 @@ async function handler(req, res) {
       return obj;
     });
 
+  const defaults = SEED_TEMPLATES[category] || SEED_TEMPLATES.animals;
   const safeColumns = Array.isArray(columns) && columns.length
     ? columns.map((c) => String(c).trim()).filter(Boolean)
-    : ANIMAL_SEED_COLUMNS;
+    : defaults.columns;
 
   const updated = await SeedTemplate.findOneAndUpdate(
     { category },
