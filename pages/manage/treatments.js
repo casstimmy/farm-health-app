@@ -185,6 +185,8 @@ export default function Treatments() {
 
   const treatmentTypes = [...new Set(treatments.map((t) => t.type || t.recoveryStatus).filter(Boolean))];
 
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -290,46 +292,46 @@ export default function Treatments() {
                     >
                       {/* Action Buttons */}
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           {isEditing ? (
                             <>
                               <button 
-                                className="text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded transition" 
+                                className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}
                                 onClick={() => handleSaveEdit(treatment._id)} 
                                 title="Save"
                               >
-                                <FaCheck size={16} />
+                                Save
                               </button>
                               <button 
-                                className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded transition" 
+                                className={`${actionBtnClass} border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100`}
                                 onClick={handleCancelEdit} 
                                 title="Cancel"
                               >
-                                <FaTimesIcon size={16} />
+                                Cancel
                               </button>
                             </>
                           ) : (
                             <>
                               <button 
-                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-1 rounded transition" 
+                                className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}
                                 onClick={() => handleEditClick(idx, treatment)} 
                                 title="Quick Edit"
                               >
-                                <FaEdit size={16} />
+                                Edit
                               </button>
                               <button 
-                                className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 p-1 rounded transition" 
+                                className={`${actionBtnClass} border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100`}
                                 onClick={() => handleAdvance(treatment)} 
                                 title="Full Edit"
                               >
-                                <FaArrowRight size={16} />
+                                Full
                               </button>
                               <button 
-                                className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded transition" 
+                                className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}
                                 onClick={() => handleDeleteTreatment(treatment._id)} 
                                 title="Delete"
                               >
-                                <FaTimes size={16} />
+                                Delete
                               </button>
                             </>
                           )}

@@ -16,6 +16,24 @@ import {
   SERVICES_SEED_ROWS,
   CUSTOMERS_SEED_COLUMNS,
   CUSTOMERS_SEED_ROWS,
+  TREATMENTS_SEED_COLUMNS,
+  TREATMENTS_SEED_ROWS,
+  HEALTH_RECORDS_SEED_COLUMNS,
+  HEALTH_RECORDS_SEED_ROWS,
+  FEEDING_RECORDS_SEED_COLUMNS,
+  FEEDING_RECORDS_SEED_ROWS,
+  WEIGHT_RECORDS_SEED_COLUMNS,
+  WEIGHT_RECORDS_SEED_ROWS,
+  VACCINATION_RECORDS_SEED_COLUMNS,
+  VACCINATION_RECORDS_SEED_ROWS,
+  BREEDING_RECORDS_SEED_COLUMNS,
+  BREEDING_RECORDS_SEED_ROWS,
+  MORTALITY_RECORDS_SEED_COLUMNS,
+  MORTALITY_RECORDS_SEED_ROWS,
+  FINANCIAL_TRANSACTIONS_SEED_COLUMNS,
+  FINANCIAL_TRANSACTIONS_SEED_ROWS,
+  BLOG_POSTS_SEED_COLUMNS,
+  BLOG_POSTS_SEED_ROWS,
 } from "@/lib/seedDefaults";
 
 const SUPPORTED_CATEGORIES = new Set([
@@ -25,7 +43,16 @@ const SUPPORTED_CATEGORIES = new Set([
   "inventoryItems",
   "feedTypes",
   "services",
-  "customers"
+  "customers",
+  "treatments",
+  "healthRecords",
+  "feedingRecords",
+  "weightRecords",
+  "vaccinationRecords",
+  "breedingRecords",
+  "mortalityRecords",
+  "financialTransactions",
+  "blogPosts",
 ]);
 
 const SEED_TEMPLATES = {
@@ -36,6 +63,15 @@ const SEED_TEMPLATES = {
   feedTypes: { columns: FEED_TYPES_SEED_COLUMNS, rows: FEED_TYPES_SEED_ROWS },
   services: { columns: SERVICES_SEED_COLUMNS, rows: SERVICES_SEED_ROWS },
   customers: { columns: CUSTOMERS_SEED_COLUMNS, rows: CUSTOMERS_SEED_ROWS },
+  treatments: { columns: TREATMENTS_SEED_COLUMNS, rows: TREATMENTS_SEED_ROWS },
+  healthRecords: { columns: HEALTH_RECORDS_SEED_COLUMNS, rows: HEALTH_RECORDS_SEED_ROWS },
+  feedingRecords: { columns: FEEDING_RECORDS_SEED_COLUMNS, rows: FEEDING_RECORDS_SEED_ROWS },
+  weightRecords: { columns: WEIGHT_RECORDS_SEED_COLUMNS, rows: WEIGHT_RECORDS_SEED_ROWS },
+  vaccinationRecords: { columns: VACCINATION_RECORDS_SEED_COLUMNS, rows: VACCINATION_RECORDS_SEED_ROWS },
+  breedingRecords: { columns: BREEDING_RECORDS_SEED_COLUMNS, rows: BREEDING_RECORDS_SEED_ROWS },
+  mortalityRecords: { columns: MORTALITY_RECORDS_SEED_COLUMNS, rows: MORTALITY_RECORDS_SEED_ROWS },
+  financialTransactions: { columns: FINANCIAL_TRANSACTIONS_SEED_COLUMNS, rows: FINANCIAL_TRANSACTIONS_SEED_ROWS },
+  blogPosts: { columns: BLOG_POSTS_SEED_COLUMNS, rows: BLOG_POSTS_SEED_ROWS },
 };
 
 async function handler(req, res) {

@@ -202,38 +202,102 @@ export default function CustomersPage() {
       });
 
       const lineRows = invoiceItems
-        .map((item) => `<tr><td style="padding:12px;border:1px solid #e5e7eb;">${item.type}</td><td style="padding:12px;border:1px solid #e5e7eb;">${item.name || "-"}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${item.qty}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${formatCurrency(item.price || 0, businessSettings.currency)}</td><td style="padding:12px;border:1px solid #e5e7eb;text-align:right;">${formatCurrency((item.qty || 0) * (item.price || 0), businessSettings.currency)}</td></tr>`)
+        .map((item, i) => `<tr style="background:${i % 2 === 0 ? '#ffffff' : '#f9fafb'};">
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">${i + 1}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">${item.type}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;">${item.name || "-"}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.qty}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatCurrency(item.price || 0, businessSettings.currency)}</td>
+          <td style="padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatCurrency((item.qty || 0) * (item.price || 0), businessSettings.currency)}</td>
+        </tr>`)
         .join("");
       const invoiceNo = `INV-${Date.now()}`;
-      const html = `
-        <html><head><title>${invoiceNo}</title></head><body style="font-family:Arial,sans-serif;padding:30px;color:#111827;">
-          <div style="max-width:900px;margin:0 auto;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
-            <div style="background:#0f766e;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <h2 style="margin:0;font-size:20px;">${businessSettings.businessName || "Farm Manager"}</h2>
-                <p style="margin:4px 0 0 0;font-size:12px;opacity:.9;">Customer Invoice</p>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-weight:700;">${invoiceNo}</div>
-                <div style="font-size:12px;">${new Date().toLocaleDateString()}</div>
-              </div>
-            </div>
-            <div style="padding:18px 24px;">
-              <p style="margin:0 0 6px 0;"><strong>Customer:</strong> ${invoiceCustomer.name}</p>
-              <p style="margin:0 0 6px 0;"><strong>Email:</strong> ${invoiceCustomer.email || "-"}</p>
-              <p style="margin:0;"><strong>Phone:</strong> ${invoiceCustomer.phone || "-"}</p>
-            </div>
-          <table style="width:100%;border-collapse:collapse;margin-top:6px;">
-            <thead><tr style="background:#f9fafb;"><th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Type</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:left;">Item</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Qty</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Price</th><th style="padding:12px;border:1px solid #e5e7eb;text-align:right;">Total</th></tr></thead>
-            <tbody>${lineRows}</tbody>
-          </table>
-          <div style="padding:18px 24px;">
-            <h3 style="text-align:right;margin:0;">Grand Total: ${formatCurrency(invoiceTotal, businessSettings.currency)}</h3>
-            <p style="margin-top:12px;color:#4b5563;">${invoiceNotes || ""}</p>
-          </div>
-          </div>
-          <script>window.print();</script>
-        </body></html>`;
+      const todayStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+      const businessAddr = businessSettings.businessAddress || "";
+      const businessPhone = businessSettings.businessPhone || "";
+      const businessEmail = businessSettings.businessEmail || "";
+      const html = `<!DOCTYPE html>
+<html><head><title>Invoice ${invoiceNo}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 40px 48px; position: relative; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 3px solid #0f766e; }
+  .brand h1 { font-size: 26px; color: #0f766e; margin-bottom: 4px; }
+  .brand p { font-size: 11px; color: #6b7280; line-height: 1.5; }
+  .invoice-meta { text-align: right; }
+  .invoice-meta .inv-label { font-size: 28px; font-weight: 800; color: #0f766e; letter-spacing: 2px; }
+  .invoice-meta p { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .parties { display: flex; justify-content: space-between; margin-bottom: 32px; }
+  .party { flex: 1; }
+  .party h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-bottom: 8px; font-weight: 700; }
+  .party p { font-size: 13px; color: #374151; line-height: 1.6; }
+  .party .name { font-weight: 700; font-size: 15px; color: #111827; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  thead th { background: #0f766e; color: #fff; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  .totals { display: flex; justify-content: flex-end; margin-bottom: 32px; }
+  .totals-box { width: 280px; }
+  .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; color: #374151; }
+  .totals-row.grand { border-top: 2px solid #0f766e; padding-top: 12px; margin-top: 4px; font-size: 18px; font-weight: 800; color: #0f766e; }
+  .notes { background: #f9fafb; border-radius: 8px; padding: 16px 20px; margin-bottom: 32px; }
+  .notes h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; margin-bottom: 6px; }
+  .notes p { font-size: 12px; color: #4b5563; line-height: 1.5; }
+  .footer { position: absolute; bottom: 40px; left: 48px; right: 48px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { padding: 32px 40px; } }
+</style>
+</head><body>
+<div class="page">
+  <div class="header">
+    <div class="brand">
+      <h1>${businessSettings.businessName || "Farm Manager"}</h1>
+      ${businessAddr ? `<p>${businessAddr}</p>` : ""}
+      ${businessPhone ? `<p>Tel: ${businessPhone}</p>` : ""}
+      ${businessEmail ? `<p>${businessEmail}</p>` : ""}
+    </div>
+    <div class="invoice-meta">
+      <div class="inv-label">INVOICE</div>
+      <p><strong>${invoiceNo}</strong></p>
+      <p>Date: ${todayStr}</p>
+    </div>
+  </div>
+  <div class="parties">
+    <div class="party">
+      <h3>Bill To</h3>
+      <p class="name">${invoiceCustomer.name}</p>
+      ${invoiceCustomer.email ? `<p>${invoiceCustomer.email}</p>` : ""}
+      ${invoiceCustomer.phone ? `<p>${invoiceCustomer.phone}</p>` : ""}
+      ${invoiceCustomer.address ? `<p>${invoiceCustomer.address}</p>` : ""}
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;width:40px;">#</th>
+        <th style="text-align:left;">Type</th>
+        <th style="text-align:left;">Description</th>
+        <th style="text-align:center;width:60px;">Qty</th>
+        <th style="text-align:right;width:120px;">Unit Price</th>
+        <th style="text-align:right;width:120px;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${lineRows}</tbody>
+  </table>
+  <div class="totals">
+    <div class="totals-box">
+      <div class="totals-row"><span>Subtotal</span><span>${formatCurrency(invoiceTotal, businessSettings.currency)}</span></div>
+      <div class="totals-row grand"><span>Total Due</span><span>${formatCurrency(invoiceTotal, businessSettings.currency)}</span></div>
+    </div>
+  </div>
+  ${invoiceNotes ? `<div class="notes"><h4>Notes</h4><p>${invoiceNotes}</p></div>` : ""}
+  <div class="footer">
+    <p>Thank you for your business! &bull; ${businessSettings.businessName || "Farm Manager"}</p>
+  </div>
+</div>
+<script>window.onload = function() { window.print(); };</script>
+</body></html>`;
       const w = window.open("", "_blank");
       if (w) {
         w.document.open();

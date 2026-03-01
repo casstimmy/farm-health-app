@@ -91,6 +91,7 @@ export default function SeedDatabase() {
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateSaving, setTemplateSaving] = useState(false);
   const [templateMessage, setTemplateMessage] = useState("");
+  const [templateRows, setTemplateRows] = useState([]);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -337,6 +338,7 @@ export default function SeedDatabase() {
       if (!res.ok) throw new Error(data?.error || "Failed to load seed template");
       setTemplateCategory(category);
       setTemplateColumns(data.columns || []);
+      setTemplateRows(data.rows || []);
       setTemplateRowsText(stringifyTemplateRows(data.columns || [], data.rows || []));
       setTemplateSource(data.source || "default");
     } catch (err) {
@@ -347,9 +349,8 @@ export default function SeedDatabase() {
   };
 
   const handleSaveTemplate = async () => {
-    const parsed = parseTemplateText(templateRowsText);
-    if (parsed.error) {
-      setError(parsed.error);
+    if (!templateColumns.length || !templateRows.length) {
+      setError("Template must include columns and at least one data row.");
       return;
     }
     try {
@@ -364,14 +365,15 @@ export default function SeedDatabase() {
         },
         body: JSON.stringify({
           category: templateCategory,
-          columns: parsed.columns,
-          rows: parsed.rows,
+          columns: templateColumns,
+          rows: templateRows,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to save seed template");
-      setTemplateColumns(data.columns || parsed.columns);
-      setTemplateRowsText(stringifyTemplateRows(data.columns || parsed.columns, data.rows || parsed.rows));
+      setTemplateColumns(data.columns || templateColumns);
+      setTemplateRows(data.rows || templateRows);
+      setTemplateRowsText(stringifyTemplateRows(data.columns || templateColumns, data.rows || templateRows));
       setTemplateSource("custom");
       setTemplateMessage("Template saved. Next seeding run will use this edited data.");
       setTimeout(() => setTemplateMessage(""), 3000);
@@ -380,6 +382,24 @@ export default function SeedDatabase() {
     } finally {
       setTemplateSaving(false);
     }
+  };
+
+  const handleCellEdit = (rowIdx, col, value) => {
+    setTemplateRows(prev => {
+      const next = [...prev];
+      next[rowIdx] = { ...next[rowIdx], [col]: value };
+      return next;
+    });
+  };
+
+  const handleAddRow = () => {
+    const emptyRow = {};
+    templateColumns.forEach(col => { emptyRow[col] = ""; });
+    setTemplateRows(prev => [...prev, emptyRow]);
+  };
+
+  const handleDeleteRow = (rowIdx) => {
+    setTemplateRows(prev => prev.filter((_, i) => i !== rowIdx));
   };
 
   const resultItems = result
@@ -497,6 +517,7 @@ export default function SeedDatabase() {
                           onClick={() => {
                             setTemplateCategory("");
                             setTemplateColumns([]);
+                            setTemplateRows([]);
                             setTemplateRowsText("");
                             setTemplateMessage("");
                           }}
@@ -526,86 +547,76 @@ export default function SeedDatabase() {
                       {templateMessage && (
                         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1">{templateMessage}</p>
                       )}
-                      <p className="text-xs text-gray-600">
-                        Source: <strong>{templateSource === "custom" ? "Saved custom template" : "Default seed template"}</strong>
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-600">
+                          Source: <strong>{templateSource === "custom" ? "Saved custom template" : "Default seed template"}</strong>
+                        </p>
+                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono">
+                          {templateColumns.length} columns × {templateRows.length} rows
+                        </span>
+                      </div>
 
-                      {/* Excel-like Grid Preview */}
-                      {templateRowsText && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-gray-700">📊 Data Preview:</p>
-                          <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm max-h-64 overflow-y-auto">
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr className="bg-gradient-to-r from-gray-700 to-gray-800">
-                                  {templateColumns.map((col, idx) => (
-                                    <td
-                                      key={idx}
-                                      className="border border-gray-400 px-3 py-2 text-xs font-bold text-white bg-gray-700 whitespace-nowrap"
-                                    >
-                                      {col}
+                      {/* Editable Excel-like Grid */}
+                      <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm">
+                        <div className="max-h-[420px] overflow-auto">
+                          <table className="w-full border-collapse min-w-max">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-gradient-to-r from-gray-700 to-gray-800">
+                                <th className="border border-gray-500 px-2 py-2 text-xs font-bold text-gray-300 bg-gray-800 w-10 text-center">#</th>
+                                {templateColumns.map((col, idx) => (
+                                  <th
+                                    key={idx}
+                                    className="border border-gray-500 px-3 py-2 text-xs font-bold text-white bg-gray-700 whitespace-nowrap text-left"
+                                  >
+                                    {col}
+                                  </th>
+                                ))}
+                                <th className="border border-gray-500 px-2 py-2 text-xs font-bold text-gray-300 bg-gray-800 w-10"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {templateRows.map((row, rowIdx) => (
+                                <tr key={rowIdx} className={`${rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition-colors`}>
+                                  <td className="border border-gray-200 px-2 py-1 text-xs text-gray-400 text-center font-mono bg-gray-50">{rowIdx + 1}</td>
+                                  {templateColumns.map((col, colIdx) => (
+                                    <td key={colIdx} className="border border-gray-200 p-0">
+                                      <input
+                                        type="text"
+                                        value={row[col] ?? ""}
+                                        onChange={(e) => handleCellEdit(rowIdx, col, e.target.value)}
+                                        className="w-full px-2 py-1.5 text-xs text-gray-700 bg-transparent border-0 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 font-mono min-w-[80px]"
+                                      />
                                     </td>
                                   ))}
+                                  <td className="border border-gray-200 px-1 py-1 text-center bg-gray-50">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteRow(rowIdx)}
+                                      className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
+                                      title="Delete row"
+                                    >
+                                      <FaTimes size={10} />
+                                    </button>
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {(() => {
-                                  const lines = templateRowsText.split("\n").map(l => l.trimEnd()).filter(l => l.trim());
-                                  const delimiter = lines[0]?.includes("\t") ? "\t" : ",";
-                                  return lines.slice(1).map((line, rowIdx) => {
-                                    const values = line.split(delimiter).map(v => v.trim());
-                                    return (
-                                      <tr key={rowIdx} className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                        {templateColumns.map((col, colIdx) => (
-                                          <td
-                                            key={colIdx}
-                                            className="border border-gray-300 px-3 py-2 text-xs text-gray-700"
-                                          >
-                                            {values[colIdx] || ""}
-                                          </td>
-                                        ))}
-                                      </tr>
-                                    );
-                                  });
-                                })()}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold text-gray-700">Edit Data (Tab or Comma Separated):</label>
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono">
-                            {templateColumns.length} columns × {Math.max(0, templateRowsText.split("\n").filter(l => l.trim()).length - 1)} rows
-                          </span>
+                        <div className="flex items-center justify-between bg-gray-50 border-t border-gray-200 px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={handleAddRow}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            + Add Row
+                          </button>
+                          <p className="text-xs text-gray-400">Click any cell to edit. Tab between cells.</p>
                         </div>
-                        <textarea
-                          value={templateRowsText}
-                          onChange={(e) => setTemplateRowsText(e.target.value)}
-                          rows={14}
-                          className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50 focus:bg-white focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300 outline-none resize-y"
-                          placeholder="Enter tab/comma-separated data here...&#10;Example (headers must be in first row):&#10;tagId&#9;name&#9;species&#9;breed&#10;G001&#9;Bella&#9;Goat&#9;Boer&#10;G002&#9;Daisy&#9;Goat&#9;Sahel"
-                        />
-                        <p className="text-xs text-gray-500">
-                          💡 <strong>Tip:</strong> Use Tab to separate columns from Excel, or comma for CSV format. First row must be column headers.
-                        </p>
-                      </div>
-                      
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-blue-900 mb-2">ℹ️ How to use:</p>
-                        <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                          <li>Copy data from Excel and paste directly (tab-separated)</li>
-                          <li>Or manually enter comma-separated values</li>
-                          <li>First row must contain column headers</li>
-                          <li>Leave cells empty for optional fields</li>
-                          <li>Preview updates automatically as you type</li>
-                        </ul>
                       </div>
 
                       <p className="text-xs text-gray-500">
-                        Loaded columns: {templateColumns.length > 0 ? templateColumns.join(" • ") : "none"}
+                        Columns: {templateColumns.length > 0 ? templateColumns.join(" • ") : "none"}
                       </p>
                     </div>
                   )}

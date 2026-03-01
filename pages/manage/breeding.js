@@ -65,6 +65,10 @@ export default function BreedingManagement() {
       setAnimals(Array.isArray(animalsResult) ? animalsResult : []);
       setBreedingRecords(Array.isArray(breedingData) ? breedingData : []);
       setLocations(Array.isArray(locData) ? locData : []);
+      // Auto-fill location if only one available
+      if (Array.isArray(locData) && locData.length === 1 && !formData.location) {
+        setFormData(prev => ({ ...prev, location: locData[0]._id }));
+      }
     } catch (err) {
       console.error("Failed to fetch data:", err);
     } finally {
@@ -268,7 +272,16 @@ export default function BreedingManagement() {
         const d = await res.json();
         throw new Error(d.error || "Failed to register kid");
       }
-      setSuccess(`Kid ${kidForm.tagId} registered successfully! Linked to ${doeAnimal?.tagId || "Dam"} × ${buckAnimal?.tagId || "Sire"}`);
+      // Delete the breeding record after successful kid registration
+      try {
+        await fetch(`/api/breeding/${record._id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (delErr) {
+        console.warn("Kid registered but failed to remove breeding record:", delErr);
+      }
+      setSuccess(`Kid ${kidForm.tagId} registered successfully! Linked to ${doeAnimal?.tagId || "Dam"} × ${buckAnimal?.tagId || "Sire"}. Breeding record removed.`);
       setShowRegisterKids(null);
       setKidForm({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
       fetchGlobalAnimals();

@@ -114,6 +114,8 @@ export default function AnimalsList({
   };
 
   const canDelete = useMemo(() => user?.role === "SuperAdmin", [user]);
+  const canSeePricing = useMemo(() => ["SuperAdmin", "Manager"].includes(user?.role), [user]);
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   const handleEditClick = (animal) => {
     setEditingId(animal._id);
@@ -312,40 +314,39 @@ export default function AnimalsList({
           </div>
         ) : (
           <table className="w-full">
-            <thead>
-              <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="px-2 py-3 text-left text-xs font-bold">Edit</th>
-                <th className="px-2 py-3 text-left text-xs font-bold">Adv</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Photo</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Tag ID</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Species</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-bold">Weight</th>
-                <th className="px-4 py-3 text-right text-xs font-bold">Cost</th>
-                <th className="px-4 py-3 text-right text-xs font-bold">Projected</th>
-                {canDelete && <th className="px-2 py-3 text-center text-xs font-bold">Del</th>}
+            <thead className="bg-gradient-to-r from-green-600 to-green-700">
+              <tr>
+                <th className="px-3 py-3 text-left text-xs font-bold text-white">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Photo</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Tag ID</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Species</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-white">Weight</th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-white">Cost</th>
+                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Projected Sales</th>}
               </tr>
             </thead>
             <tbody>
               {animals.map((animal) => {
                 const isEditing = editingId === animal._id;
                 return (
-                  <tr key={animal._id} className="border-b border-gray-100 hover:bg-green-50">
-                    <td className="px-2 py-3">
-                      {isEditing ? (
-                        <div className="flex gap-1">
-                          <button onClick={() => handleUpdateClick(animal._id)} disabled={saving} className="px-2 py-1 bg-green-600 text-white rounded text-xs"><FaCheck /></button>
-                          <button onClick={handleCancelClick} disabled={saving} className="px-2 py-1 bg-gray-300 rounded text-xs"><FaTimes /></button>
-                        </div>
-                      ) : (
-                        <button onClick={() => handleEditClick(animal)} className="px-2 py-1 border border-blue-600 text-blue-700 rounded text-xs">
-                          <FaEdit />
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-2 py-3">
-                      <Link href={`/manage/animals/${animal._id}`} className="px-2 py-1 border border-gray-400 rounded text-xs inline-block">Adv</Link>
+                  <tr key={animal._id} className={`${isEditing ? 'bg-amber-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100 hover:bg-green-50 transition-colors`}>
+                    <td className="px-3 py-3">
+                      <div className="flex gap-1.5 flex-wrap">
+                        {isEditing ? (
+                          <>
+                            <button onClick={() => handleUpdateClick(animal._id)} disabled={saving} className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}>Save</button>
+                            <button onClick={handleCancelClick} disabled={saving} className={`${actionBtnClass} border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100`}>Cancel</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => handleEditClick(animal)} className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>Edit</button>
+                            <Link href={`/manage/animals/${animal._id}`} className={`${actionBtnClass} border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 inline-flex items-center`}>Details</Link>
+                            {canDelete && <button onClick={() => handleDeleteClick(animal._id)} disabled={saving} className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}>Delete</button>}
+                          </>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div
@@ -374,14 +375,7 @@ export default function AnimalsList({
                     <td className="px-4 py-3 text-xs">{animal.status || "—"}</td>
                     <td className="px-4 py-3 text-xs text-right">{animal.currentWeight ? `${animal.currentWeight} kg` : "—"}</td>
                     <td className="px-4 py-3 text-xs text-right">{animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}</td>
-                    <td className="px-4 py-3 text-xs text-right">{animal.projectedSalesPrice ? formatCurrency(animal.projectedSalesPrice, businessSettings.currency) : "—"}</td>
-                    {canDelete && (
-                      <td className="px-2 py-3 text-center">
-                        <button onClick={() => handleDeleteClick(animal._id)} disabled={saving} className="px-2 py-1 bg-red-50 border border-red-300 text-red-700 rounded text-xs">
-                          <FaTrash />
-                        </button>
-                      </td>
-                    )}
+                    {canSeePricing && <td className="px-4 py-3 text-xs text-right">{animal.projectedSalesPrice ? formatCurrency(animal.projectedSalesPrice, businessSettings.currency) : "—"}</td>}
                   </tr>
                 );
               })}
