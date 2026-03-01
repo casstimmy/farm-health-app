@@ -328,7 +328,7 @@ export default function AnimalsList({
               </tr>
             </thead>
             <tbody>
-              {animals.map((animal) => {
+              {animals.map((animal, idx) => {
                 const isEditing = editingId === animal._id;
                 return (
                   <tr key={animal._id} className={`${isEditing ? 'bg-amber-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100 hover:bg-green-50 transition-colors`}>

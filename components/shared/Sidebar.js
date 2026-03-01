@@ -14,6 +14,7 @@ import {
   FaStethoscope,
   FaMoneyBill,
   FaClipboard,
+  FaTasks,
 } from "react-icons/fa";
 
 export default function Sidebar() {
@@ -195,6 +196,9 @@ export default function Sidebar() {
           <ul className="space-y-1">
             {/* Home */}
             {renderMenuItem("/", <FaHome className="w-5 h-5" />, "Home")}
+
+            {/* Tasks - Prominent Quick Access */}
+            {renderMenuItem("/manage/tasks", <FaTasks className="w-5 h-5" />, "Tasks")}
 
             {/* Dynamic Menu Items */}
             {menuStructure.map(({ section, icon, submenu }) => {
