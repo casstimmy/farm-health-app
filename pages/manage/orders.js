@@ -145,41 +145,62 @@ export default function OrdersPage() {
   const handleEdit = (order) => {
     setEditingId(order._id);
     
-    // Extract customer ID
-    const customerValue = (typeof order.customer === "object" && order.customer?._id) 
-      || (typeof order.customer === "string" ? order.customer : "");
+    // Handle customer - can be ID or object
+    let customerValue = "";
+    if (typeof order.customer === "object" && order.customer?._id) {
+      customerValue = order.customer._id;
+    } else if (typeof order.customer === "string") {
+      customerValue = order.customer;
+    }
     
-    // Extract location ID
-    const locationValue = (typeof order.location === "object" && order.location?._id)
-      || (typeof order.location === "string" ? order.location : "");
+    // Handle location - can be ID or object
+    let locationValue = "";
+    if (typeof order.location === "object" && order.location?._id) {
+      locationValue = order.location._id;
+    } else if (typeof order.location === "string") {
+      locationValue = order.location;
+    }
     
-    // Format dates - handle both ISO strings and Date objects
-    const orderDate = order.orderDate 
-      ? new Date(order.orderDate).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
+    // Handle dates - with fallback
+    let orderDate = "";
+    let dueDate = "";
     
-    const dueDate = order.dueDate
-      ? new Date(order.dueDate).toISOString().split("T")[0]
-      : "";
+    if (order.orderDate) {
+      const d = new Date(order.orderDate);
+      if (!isNaN(d.getTime())) {
+        orderDate = d.toISOString().split("T")[0];
+      }
+    }
     
-    // Set form with all fields
+    if (order.dueDate) {
+      const d = new Date(order.dueDate);
+      if (!isNaN(d.getTime())) {
+        dueDate = d.toISOString().split("T")[0];
+      }
+    }
+    
+    // Handle items - with flexible structure
+    let items = [{ ...emptyItem }];
+    if (Array.isArray(order.items) && order.items.length > 0) {
+      items = order.items.map((item) => ({
+        type: item.type || (item.product ? "Product" : item.inventoryItem ? "Product" : item.animal ? "Animal" : "Custom"),
+        description: item.description || item.name || "",
+        quantity: Number(item.quantity || 1),
+        unitPrice: Number(item.unitPrice ?? item.price ?? item.costPrice ?? 0),
+      }));
+    }
+    
+    // Set form with all available fields
     setForm({
       customer: customerValue,
       location: locationValue,
-      orderDate,
+      orderDate: orderDate || new Date().toISOString().split("T")[0],
       dueDate,
       status: order.status || "Pending",
       paymentStatus: order.paymentStatus || "Unpaid",
       amountPaid: Number(order.amountPaid || 0),
       notes: order.notes || "",
-      items: Array.isArray(order.items) && order.items.length 
-        ? order.items.map((item) => ({
-            type: item.type || (item.product ? "Product" : item.service ? "Service" : item.animal ? "Animal" : "Custom"),
-            description: item.description || item.name || "",
-            quantity: Number(item.quantity || 1),
-            unitPrice: Number(item.unitPrice ?? item.price ?? 0),
-          }))
-        : [{ ...emptyItem }],
+      items,
     });
     
     // Scroll to form

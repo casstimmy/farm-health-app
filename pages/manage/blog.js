@@ -167,42 +167,138 @@ export default function BlogManagement() {
 
       {!loading && !roleLoading && (
       <>
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input className="input-field md:col-span-2" placeholder="Post title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input className="input-field" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Cover Image Upload</label>
-            <input type="file" accept="image/*" className="input-field" onChange={handleCoverUpload} disabled={uploadingCover} />
-            {uploadingCover && <p className="text-xs text-gray-500 mt-1">Uploading cover image...</p>}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Blog Form */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input className="input-field" placeholder="Post title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <input className="input-field" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Cover Image Upload</label>
+              <input type="file" accept="image/*" className="input-field" onChange={handleCoverUpload} disabled={uploadingCover} />
+              {uploadingCover && <p className="text-xs text-gray-500 mt-1">Uploading cover image...</p>}
+              {form.coverImage && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img src={form.coverImage} alt="Cover preview" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                  <button type="button" onClick={() => setForm({ ...form, coverImage: "" })} className="text-xs px-3 py-1.5 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 font-semibold">Remove</button>
+                </div>
+              )}
+            </div>
+
+            <textarea className="input-field" rows={2} placeholder="Excerpt (short summary)" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} />
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Post Content</label>
+              <textarea className="input-field" rows={8} placeholder="Write your post content here..." value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+            </div>
+
+            <input className="input-field" placeholder="Tags (comma separated, e.g: farming, animals, tips)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+
+            <div className="h-px bg-gray-300 my-4" />
+
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-600">Status:</label>
+                <select className="input-field w-40" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option value="Draft">Draft</option>
+                  <option value="Published">Published</option>
+                </select>
+              </div>
+              
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={form.showOnSite} onChange={(e) => setForm({ ...form, showOnSite: e.target.checked })} className="w-4 h-4 rounded" />
+                Show On Site
+              </label>
+              
+              <div className="flex gap-2 ml-auto">
+                {editingId && <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50">Cancel</button>}
+                <button type="submit" disabled={submitting} className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold disabled:bg-gray-400">
+                  {editingId ? "Update" : "Create"} Post
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Blog Preview Panel */}
+        <div className="lg:col-span-1">
+          <div className="bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border-2 border-violet-200 p-5 sticky top-20 space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">👁️ Preview</h3>
+            
+            {/* Cover Image Preview */}
             {form.coverImage && (
-              <div className="mt-2 flex items-center gap-3">
-                <img src={form.coverImage} alt="Cover preview" className="w-16 h-16 object-cover rounded-lg border" />
-                <button type="button" onClick={() => setForm({ ...form, coverImage: "" })} className="text-xs px-2 py-1 border border-red-200 text-red-700 rounded-lg">Remove</button>
+              <div className="rounded-xl overflow-hidden border-2 border-violet-300 bg-white">
+                <img src={form.coverImage} alt="Cover" className="w-full h-40 object-cover" />
               </div>
             )}
+            
+            {/* Blog Card Preview */}
+            <div className="bg-white rounded-xl border border-violet-200 p-4 space-y-3 shadow-sm hover:shadow-md transition-all">
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 justify-between">
+                  <h2 className="text-lg font-bold text-gray-900 line-clamp-2">{form.title || "Your Post Title"}</h2>
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                    form.status === "Published" 
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}>{form.status}</span>
+                </div>
+                
+                <div className="flex gap-2 items-center text-xs text-gray-500">
+                  <span className="bg-violet-100 text-violet-700 px-2 py-1 rounded-full font-semibold">{form.category || "General"}</span>
+                  {form.showOnSite ? (
+                    <span className="text-green-700 font-semibold">✓ Visible</span>
+                  ) : (
+                    <span className="text-orange-700 font-semibold">⊘ Hidden</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-px bg-violet-200" />
+
+              {form.excerpt && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-700 line-clamp-2">{form.excerpt}</p>
+                </div>
+              )}
+
+              {form.content && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-600 line-clamp-3">{form.content}</p>
+                </div>
+              )}
+
+              {form.tags && (
+                <div className="flex flex-wrap gap-1 pt-2">
+                  {form.tags.split(",").map((tag, idx) => (
+                    <span key={idx} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">
+                      #{tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-xs text-gray-400 pt-2">
+                📅 {new Date().toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-blue-900 mb-2">💡 Preview Tips:</p>
+              <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                <li>Title must be provided</li>
+                <li>Featured image recommended</li>
+                <li>Excerpt appears in listings</li>
+                <li>Tags help with search</li>
+              </ul>
+            </div>
           </div>
-          <input className="input-field" placeholder="Tags (comma separated)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
         </div>
-        <textarea className="input-field" rows={2} placeholder="Excerpt" value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} />
-        <textarea className="input-field" rows={6} placeholder="Post content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-        <div className="flex flex-wrap items-center gap-4">
-          <select className="input-field w-44" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-            <option value="Draft">Draft</option>
-            <option value="Published">Published</option>
-          </select>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.showOnSite} onChange={(e) => setForm({ ...form, showOnSite: e.target.checked })} />
-            Show On Site
-          </label>
-          <div className="flex gap-2 ml-auto">
-            {editingId && <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>}
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg">
-              {editingId ? "Update" : "Create"} Post
-            </button>
-          </div>
-        </div>
-      </form>
+      </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto">
         <table className="w-full">
