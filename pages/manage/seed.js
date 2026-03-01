@@ -35,7 +35,26 @@ const PASTE_DATA_TYPES = [
   { value: "feed types", label: "Feed Types" },
 ];
 
-const ANIMALS_TEMPLATE_CATEGORY = "animals";
+const getCategoryColor = (key) => {
+  const colors = {
+    locations: { bg: "from-blue-600 to-blue-700", border: "border-blue-200", tag: "bg-blue-50", label: "text-blue-700" },
+    inventoryCategories: { bg: "from-cyan-600 to-cyan-700", border: "border-cyan-200", tag: "bg-cyan-50", label: "text-cyan-700" },
+    inventoryItems: { bg: "from-teal-600 to-teal-700", border: "border-teal-200", tag: "bg-teal-50", label: "text-teal-700" },
+    feedTypes: { bg: "from-yellow-600 to-amber-700", border: "border-yellow-200", tag: "bg-yellow-50", label: "text-yellow-700" },
+    animals: { bg: "from-purple-600 to-purple-700", border: "border-purple-200", tag: "bg-purple-50", label: "text-purple-700" },
+    treatments: { bg: "from-pink-600 to-pink-700", border: "border-pink-200", tag: "bg-pink-50", label: "text-pink-700" },
+    healthRecords: { bg: "from-red-600 to-red-700", border: "border-red-200", tag: "bg-red-50", label: "text-red-700" },
+    feedingRecords: { bg: "from-green-600 to-green-700", border: "border-green-200", tag: "bg-green-50", label: "text-green-700" },
+    weightRecords: { bg: "from-orange-600 to-orange-700", border: "border-orange-200", tag: "bg-orange-50", label: "text-orange-700" },
+    vaccinationRecords: { bg: "from-indigo-600 to-indigo-700", border: "border-indigo-200", tag: "bg-indigo-50", label: "text-indigo-700" },
+    breedingRecords: { bg: "from-rose-600 to-rose-700", border: "border-rose-200", tag: "bg-rose-50", label: "text-rose-700" },
+    mortalityRecords: { bg: "from-slate-600 to-slate-700", border: "border-slate-200", tag: "bg-slate-50", label: "text-slate-700" },
+    financialTransactions: { bg: "from-emerald-600 to-emerald-700", border: "border-emerald-200", tag: "bg-emerald-50", label: "text-emerald-700" },
+    services: { bg: "from-violet-600 to-violet-700", border: "border-violet-200", tag: "bg-violet-50", label: "text-violet-700" },
+    blogPosts: { bg: "from-fuchsia-600 to-fuchsia-700", border: "border-fuchsia-200", tag: "bg-fuchsia-50", label: "text-fuchsia-700" },
+  };
+  return colors[key] || colors.animals;
+};
 
 export default function SeedDatabase() {
   const router = useRouter();
@@ -443,16 +462,14 @@ export default function SeedDatabase() {
                         <p className="text-xs text-gray-400 truncate">{cat.desc}</p>
                       </div>
                     </label>
-                    {cat.key === ANIMALS_TEMPLATE_CATEGORY && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTemplateEditor(cat.key)}
-                        className="mt-2 text-xs px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold flex items-center gap-1"
-                      >
-                        <FaEdit size={11} />
-                        Edit Seed Data
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTemplateEditor(cat.key)}
+                      className="mt-2 text-xs px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold flex items-center gap-1"
+                    >
+                      <FaEdit size={11} />
+                      Edit Data
+                    </button>
                   </div>
                 ))}
               </div>
@@ -464,61 +481,80 @@ export default function SeedDatabase() {
                 </p>
               </div>
 
-              {templateCategory === ANIMALS_TEMPLATE_CATEGORY && (
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-indigo-900">Animals Seed Editor (Excel Format)</h4>
-                      <p className="text-xs text-indigo-700 mt-0.5">
-                        Edit tab/comma-separated rows. First row must be headers. Save, then run seeding.
-                      </p>
+              {templateCategory && (
+                <>
+                  <div className="h-px bg-gray-300 mb-6" />
+                  <div className={`bg-gradient-to-r ${getCategoryColor(templateCategory).bg} border-b-2 border-gray-300 rounded-t-xl px-4 py-3 mb-0`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-white">{SEED_CATEGORIES.find(cat => cat.key === templateCategory)?.label} Seed Editor</h4>
+                        <p className="text-xs text-white/80 mt-0.5">
+                          Edit tab/comma-separated rows. First row must be headers. Save, then run seeding.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setTemplateCategory("");
+                            setTemplateColumns([]);
+                            setTemplateRowsText("");
+                            setTemplateMessage("");
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-white/20 hover:bg-white/30 transition-colors"
+                        >
+                          <FaTimes className="inline mr-1" /> Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveTemplate}
+                          disabled={templateSaving || templateLoading || !isOnline}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${
+                            templateSaving || templateLoading || !isOnline ? "bg-white/20 cursor-not-allowed" : "bg-white/30 hover:bg-white/40"
+                          }`}
+                        >
+                          {templateSaving ? "Saving..." : "Save Template"}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={handleSaveTemplate}
-                      disabled={templateSaving || templateLoading || !isOnline}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${
-                        templateSaving || templateLoading || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
-                      }`}
-                    >
-                      {templateSaving ? "Saving..." : "Save Template"}
-                    </button>
                   </div>
 
                   {templateLoading ? (
-                    <div className="py-4"><ProgressBox step="Loading seed template..." progress={45} color="purple" /></div>
+                    <div className="py-4 bg-white rounded-b-xl border-2 border-t-0 border-gray-200 px-4">
+                      <ProgressBox step="Loading seed template..." progress={45} color="purple" />
+                    </div>
                   ) : (
-                    <>
+                    <div className="bg-white rounded-b-xl border-2 border-t-0 border-gray-200 p-4">
                       {templateMessage && (
                         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1 mb-3">{templateMessage}</p>
                       )}
-                      <p className="text-xs text-indigo-700 mb-2">
+                      <p className="text-xs text-gray-600 mb-2">
                         Source: <strong>{templateSource === "custom" ? "Saved custom template" : "Default seed template"}</strong>
                       </p>
+                      <div className="h-px bg-gray-300 mb-3" />
                       <textarea
                         value={templateRowsText}
                         onChange={(e) => setTemplateRowsText(e.target.value)}
                         rows={12}
-                        className="w-full border-2 border-indigo-200 rounded-lg px-3 py-2 text-xs font-mono bg-white focus:border-indigo-400 outline-none resize-y"
-                        placeholder="tagId\tname\tspecies\tbreed\tgender..."
+                        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50 focus:bg-white focus:border-indigo-400 outline-none resize-y"
+                        placeholder="Enter tab/comma-separated data here..."
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Columns loaded: {templateColumns.length > 0 ? templateColumns.join(", ") : "none"}
+                        Columns: {templateColumns.length > 0 ? templateColumns.join(", ") : "none loaded"}
                       </p>
-                    </>
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               {/* Progress */}
               <AnimatePresence>
                 {seeding && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6">
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-6 mt-6">
                     <ProgressBox step={seedStep} progress={seedProgress} color="purple" />
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
                 <button onClick={() => handleSeed(false)} disabled={seeding || !isOnline}
                   className={`w-full px-6 py-3 rounded-xl text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                     seeding || !isOnline ? "bg-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 hover:shadow-lg active:scale-[0.98]"
