@@ -72,7 +72,6 @@ export default function Navbar() {
     { href: "/", label: "Dashboard", icon: FaHome },
     { href: "/manage/animals", label: "Animals", icon: FaLeaf },
     { href: "/manage/inventory", label: "Inventory", icon: FaBoxes },
-    { href: "/manage/tasks", label: "Tasks", icon: FaClipboardList },
     { href: "/manage/expenses", label: "Expenses", icon: FaMoneyBillWave },
     { href: "/manage/users", label: "Users", icon: FaUsers },
   ];
@@ -125,6 +124,24 @@ export default function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Task Notification Icon */}
+            <Link
+              href="/manage/tasks"
+              className={`relative flex items-center gap-2 px-3 py-2 rounded-lg transition duration-200 ${
+                isActive("/manage/tasks")
+                  ? "bg-green-500 bg-opacity-50 font-semibold"
+                  : "hover:bg-green-500 hover:bg-opacity-30"
+              }`}
+              title={pendingTasks > 0 ? `${pendingTasks} pending task${pendingTasks > 1 ? "s" : ""}` : "Tasks"}
+            >
+              <FaBell size={18} />
+              {pendingTasks > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  {pendingTasks > 9 ? "9+" : pendingTasks}
+                </span>
+              )}
+            </Link>
 
             {/* Setup Dropdown */}
             <div className="relative group">
@@ -257,6 +274,25 @@ export default function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Mobile Tasks link with bell */}
+            <Link
+              href="/manage/tasks"
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition duration-200 ${
+                isActive("/manage/tasks")
+                  ? "bg-green-500 bg-opacity-50 font-semibold"
+                  : "hover:bg-green-500 hover:bg-opacity-30"
+              }`}
+            >
+              <FaBell size={20} />
+              Tasks
+              {pendingTasks > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-2 py-0.5 ml-auto animate-pulse">
+                  {pendingTasks}
+                </span>
+              )}
+            </Link>
 
             {/* Mobile Setup Menu */}
             <div className="border-t border-green-500 mt-2 pt-2">

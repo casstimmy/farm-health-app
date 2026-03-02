@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 const initialForm = {
   date: "",
   animalId: "",
+  location: "",
   routine: "",
   symptoms: "",
   possibleCause: "",
@@ -21,6 +22,9 @@ const initialForm = {
   recoveryStatus: "",
   postWeight: "",
   notes: "",
+  followUpRequired: false,
+  followUpDate: "",
+  followUpNotes: "",
 };
 
 const ROUTINE_OPTIONS = ["NO", "YES"];
@@ -48,18 +52,23 @@ export default function TreatmentForm({
       ...initialData,
       animalId: initialData.animal?._id || initialData.animalId || initialData.animal || "",
       medication: initialData.medication?._id || initialData.medication || "",
+      location: initialData.location?._id || initialData.location || "",
       date: initialData.date ? initialData.date.split("T")[0] : "",
       completionDate: initialData.completionDate ? initialData.completionDate.split("T")[0] : "",
+      followUpDate: initialData.followUpDate ? initialData.followUpDate.split("T")[0] : "",
+      followUpRequired: initialData.followUpRequired || false,
+      followUpNotes: initialData.followUpNotes || "",
     };
   };
 
   const [form, setForm] = useState(buildFormState);
   const [animals, setAnimals] = useState([]);
+  const [locations, setLocations] = useState([]);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     const fetchAnimals = async () => {
       try {
-        const token = localStorage.getItem("token");
         const res = await fetch("/api/animals?compact=true", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -70,7 +79,20 @@ export default function TreatmentForm({
         setAnimals([]);
       }
     };
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch("/api/locations", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setLocations(Array.isArray(data) ? data : []);
+      } catch {
+        setLocations([]);
+      }
+    };
     fetchAnimals();
+    fetchLocations();
   }, []);
 
   const handleChange = (e) => {
@@ -94,11 +116,15 @@ export default function TreatmentForm({
       animal: form.animalId,
       medication: form.medication || undefined,
       medicationName: form.medicationName || undefined,
+      location: form.location || undefined,
       prescribedDays: form.prescribedDays === "" ? 0 : Number(form.prescribedDays),
       preWeight: form.preWeight === "" ? null : Number(form.preWeight),
       postWeight: form.postWeight === "" ? null : Number(form.postWeight),
       date: form.date ? new Date(form.date).toISOString() : new Date().toISOString(),
       completionDate: form.completionDate ? new Date(form.completionDate).toISOString() : undefined,
+      followUpRequired: form.followUpRequired || false,
+      followUpDate: form.followUpDate ? new Date(form.followUpDate).toISOString() : undefined,
+      followUpNotes: form.followUpNotes || undefined,
     };
     delete payload.animalId;
     onSubmit(payload);
@@ -108,7 +134,7 @@ export default function TreatmentForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
         <h3 className="font-bold text-blue-900 mb-3">Basic Info</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="label">Date *</label>
             <input name="date" type="date" value={form.date} onChange={handleChange} className="input-field" required />
@@ -121,6 +147,15 @@ export default function TreatmentForm({
                 <option key={a._id} value={a._id}>
                   {a.tagId} - {a.name || a.breed || "Animal"}
                 </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Location</label>
+            <select name="location" value={form.location} onChange={handleChange} className="input-field">
+              <option value="">-- Select Location --</option>
+              {locations.map((loc) => (
+                <option key={loc._id} value={loc._id}>{loc.name}</option>
               ))}
             </select>
           </div>
@@ -232,6 +267,36 @@ export default function TreatmentForm({
         <div className="mt-4">
           <label className="label">Post Treatment Observation</label>
           <input name="postObservation" value={form.postObservation} onChange={handleChange} className="input-field" />
+        </div>
+      </div>
+
+      <div className="bg-pink-50 border-2 border-pink-200 rounded-xl p-4">
+        <h3 className="font-bold text-pink-900 mb-3">Post-Treatment & Follow-up</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="label">Follow-up Required</label>
+            <select
+              name="followUpRequired"
+              value={form.followUpRequired ? "yes" : "no"}
+              onChange={(e) => setForm((prev) => ({ ...prev, followUpRequired: e.target.value === "yes" }))}
+              className="input-field"
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          {form.followUpRequired && (
+            <>
+              <div>
+                <label className="label">Follow-up Date</label>
+                <input name="followUpDate" type="date" value={form.followUpDate} onChange={handleChange} className="input-field" />
+              </div>
+              <div>
+                <label className="label">Follow-up Notes</label>
+                <input name="followUpNotes" value={form.followUpNotes} onChange={handleChange} className="input-field" placeholder="e.g., Check wound healing" />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

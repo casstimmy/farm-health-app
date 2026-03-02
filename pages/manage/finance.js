@@ -175,6 +175,13 @@ export default function Finance() {
       {error && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="error-message flex items-center justify-between"><span>{error}</span><button onClick={() => setError("")} className="text-red-500"><FaTimes /></button></motion.div>}
       {success && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="success-message"><FaCheck className="inline mr-2" />{success}</motion.div>}
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p></div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p></div>
+        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p></div>
+      </div>
+
       {showForm && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden">
           <div className="bg-orange-600 px-6 py-3"><h3 className="text-lg font-bold text-white">{editingId ? "Edit Financial Record" : "Add Financial Record"}</h3></div>
@@ -224,13 +231,6 @@ export default function Finance() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p></div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p></div>
-        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p></div>
-      </div>
-
       {expensesByCategory.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
@@ -267,6 +267,7 @@ export default function Finance() {
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Category</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Vendor</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Location</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Recorded By</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Amount</th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Actions</th>
                 </tr>
@@ -284,6 +285,7 @@ export default function Finance() {
                     <td className="px-4 py-3 text-sm"><span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold">{r.category || "—"}</span></td>
                     <td className="px-4 py-3 text-sm text-gray-700">{r.vendor || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{r.location?.name || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{r.recordedBy || "—"}</td>
                     <td className={`px-4 py-3 text-sm text-right font-bold ${r.type?.toLowerCase() === "income" ? "text-green-700" : "text-red-700"}`}>
                       {r.type?.toLowerCase() === "income" ? "+" : "-"}{formatCurrency(r.amount || 0, businessSettings.currency)}
                     </td>

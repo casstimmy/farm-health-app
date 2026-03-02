@@ -27,7 +27,7 @@ export default function ManageAnimals() {
         sire: sire || "",
         dam: dam || "",
         origin: origin || "Born on Farm",
-        acquisitionType: acquisitionType || "Born",
+        acquisitionType: acquisitionType === "Born" ? "Bred on farm" : (acquisitionType || "Bred on farm"),
         location: location || "",
         dob: new Date().toISOString().split("T")[0],
         acquisitionDate: new Date().toISOString().split("T")[0],

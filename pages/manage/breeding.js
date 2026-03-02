@@ -621,7 +621,7 @@ export default function BreedingManagement() {
                             sire: buckAnimal?._id || record.buck?._id || record.buck || "",
                             dam: doeAnimal?._id || record.doe?._id || record.doe || "",
                             origin: "Born on Farm",
-                            acquisitionType: "Born",
+                            acquisitionType: "Bred on farm",
                             location: record.location?._id || record.location || "",
                           });
                           router.push(`/manage/animals?${params.toString()}`);

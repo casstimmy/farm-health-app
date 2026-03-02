@@ -83,6 +83,7 @@ async function handler(req, res) {
           status: 1,
           isArchived: 1,
           location: 1,
+          paddock: 1,
           currentWeight: 1,
           purchaseCost: 1,
           totalFeedCost: 1,

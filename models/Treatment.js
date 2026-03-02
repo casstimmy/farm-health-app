@@ -46,6 +46,14 @@ const TreatmentSchema = new mongoose.Schema(
       ],
     },
     notes: String,
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
+      default: null,
+    },
+    followUpRequired: { type: Boolean, default: false },
+    followUpDate: { type: Date, default: null },
+    followUpNotes: String,
   },
   { timestamps: true }
 );

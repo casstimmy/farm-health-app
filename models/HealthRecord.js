@@ -68,34 +68,58 @@ const HealthRecordSchema = new mongoose.Schema(
 HealthRecordSchema.index({ animal: 1, date: -1 });
 HealthRecordSchema.index({ recoveryStatus: 1 });
 
-// Post-save hook: deduct inventory for medications used
+// Post-save hook: deduct inventory for medications used & update animal cost
 HealthRecordSchema.post("save", async function (doc) {
   try {
     const Inventory = mongoose.model("Inventory");
     const Animal = mongoose.model("Animal");
+    let totalMedCost = 0;
 
     // Deduct Treatment A medication
     if (doc.treatmentA?.medication) {
       const qty = 1;
-      await Inventory.findByIdAndUpdate(doc.treatmentA.medication, {
-        $inc: { quantity: -qty, totalConsumed: qty },
-      });
+      const inv = await Inventory.findByIdAndUpdate(
+        doc.treatmentA.medication,
+        { $inc: { quantity: -qty, totalConsumed: qty } },
+        { new: false }
+      );
+      if (inv && inv.costPrice) {
+        totalMedCost += inv.costPrice * qty;
+      }
     }
 
     // Deduct Treatment B medication
     if (doc.needsMultipleTreatments && doc.treatmentB?.medication) {
       const qty = 1;
-      await Inventory.findByIdAndUpdate(doc.treatmentB.medication, {
-        $inc: { quantity: -qty, totalConsumed: qty },
-      });
+      const inv = await Inventory.findByIdAndUpdate(
+        doc.treatmentB.medication,
+        { $inc: { quantity: -qty, totalConsumed: qty } },
+        { new: false }
+      );
+      if (inv && inv.costPrice) {
+        totalMedCost += inv.costPrice * qty;
+      }
     }
 
-    // Update animal weight if postWeight provided
+    // Update animal weight if postWeight provided, and medication cost
+    const animalUpdate = {};
     if (doc.postWeight && doc.postWeight > 0) {
-      await Animal.findByIdAndUpdate(doc.animal, {
-        currentWeight: doc.postWeight,
-        weightDate: doc.date,
-      });
+      animalUpdate.currentWeight = doc.postWeight;
+      animalUpdate.weightDate = doc.date;
+    }
+    if (totalMedCost > 0) {
+      animalUpdate.$inc = { totalMedicationCost: totalMedCost };
+    }
+
+    if (Object.keys(animalUpdate).length > 0) {
+      // If we have both $inc and set fields, use mixed update
+      if (animalUpdate.$inc) {
+        const inc = animalUpdate.$inc;
+        delete animalUpdate.$inc;
+        await Animal.findByIdAndUpdate(doc.animal, { ...animalUpdate, $inc: inc });
+      } else {
+        await Animal.findByIdAndUpdate(doc.animal, animalUpdate);
+      }
     }
   } catch (err) {
     console.error("HealthRecord post-save hook error:", err);

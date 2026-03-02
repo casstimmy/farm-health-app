@@ -14,6 +14,16 @@ export default function RolesPermissions() {
   const [roles, setRoles] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [editingRole, setEditingRole] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [statusMsg, setStatusMsg] = useState(null);
+
+  // UI styling per role (not stored in DB)
+  const ROLE_STYLES = {
+    SuperAdmin: { color: "from-red-500 to-pink-500", bgColor: "bg-red-50", badgeColor: "bg-red-100 text-red-800" },
+    SubAdmin: { color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50", badgeColor: "bg-orange-100 text-orange-800" },
+    Manager: { color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-50", badgeColor: "bg-blue-100 text-blue-800" },
+    Attendant: { color: "from-green-500 to-emerald-500", bgColor: "bg-green-50", badgeColor: "bg-green-100 text-green-800" },
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -28,112 +38,31 @@ export default function RolesPermissions() {
       return;
     }
 
-    loadRolesInfo();
+    if (user) loadRolesInfo();
   }, [user, isLoading]);
 
-  const loadRolesInfo = () => {
-    // Define all system roles with their permissions
-    const systemRoles = [
-      {
-        _id: "1",
-        name: "SuperAdmin",
-        description: "Full system access and administration",
-        color: "from-red-500 to-pink-500",
-        bgColor: "bg-red-50",
-        badgeColor: "bg-red-100 text-red-800",
-        permissions: [
-          { feature: "Animals", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Health Records", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Treatments", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Inventory", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Feeding Records", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Weight Tracking", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Finance", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Transactions", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Reports", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Users Management", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Roles & Permissions", access: ["View", "Manage"] },
-          { feature: "Business Setup", access: ["View", "Edit"] },
-          { feature: "Locations", access: ["View", "Create", "Edit", "Delete"] },
-          { feature: "Notifications", access: ["View", "Manage"] }
-        ]
-      },
-      {
-        _id: "2",
-        name: "SubAdmin",
-        description: "Location-scoped administrator — can only access data from assigned location",
-        color: "from-orange-500 to-amber-500",
-        bgColor: "bg-orange-50",
-        badgeColor: "bg-orange-100 text-orange-800",
-        permissions: [
-          { feature: "Animals", access: ["View", "Create", "Edit"] },
-          { feature: "Health Records", access: ["View", "Create", "Edit"] },
-          { feature: "Treatments", access: ["View", "Create", "Edit"] },
-          { feature: "Inventory", access: ["View", "Create", "Edit"] },
-          { feature: "Feeding Records", access: ["View", "Create", "Edit"] },
-          { feature: "Weight Tracking", access: ["View", "Create", "Edit"] },
-          { feature: "Finance", access: ["View", "Create"] },
-          { feature: "Transactions", access: ["View", "Create"] },
-          { feature: "Reports", access: ["View"] },
-          { feature: "Users Management", access: ["View"] },
-          { feature: "Roles & Permissions", access: [] },
-          { feature: "Business Setup", access: ["View"] },
-          { feature: "Locations", access: ["View"] },
-          { feature: "Notifications", access: ["View", "Manage"] }
-        ]
-      },
-      {
-        _id: "3a",
-        name: "Manager",
-        description: "Can manage farm operations and view reports",
-        color: "from-blue-500 to-cyan-500",
-        bgColor: "bg-blue-50",
-        badgeColor: "bg-blue-100 text-blue-800",
-        permissions: [
-          { feature: "Animals", access: ["View", "Create", "Edit"] },
-          { feature: "Health Records", access: ["View", "Create", "Edit"] },
-          { feature: "Treatments", access: ["View", "Create", "Edit"] },
-          { feature: "Inventory", access: ["View", "Create", "Edit"] },
-          { feature: "Feeding Records", access: ["View", "Create", "Edit"] },
-          { feature: "Weight Tracking", access: ["View", "Create", "Edit"] },
-          { feature: "Finance", access: ["View", "Create", "Edit"] },
-          { feature: "Transactions", access: ["View", "Create", "Edit"] },
-          { feature: "Reports", access: ["View"] },
-          { feature: "Users Management", access: ["View"] },
-          { feature: "Roles & Permissions", access: [] },
-          { feature: "Business Setup", access: ["View", "Edit"] },
-          { feature: "Locations", access: ["View", "Edit"] },
-          { feature: "Notifications", access: ["View"] }
-        ]
-      },
-      {
-        _id: "4",
-        name: "Attendant",
-        description: "Can record data and view animal records",
-        color: "from-green-500 to-emerald-500",
-        bgColor: "bg-green-50",
-        badgeColor: "bg-green-100 text-green-800",
-        permissions: [
-          { feature: "Animals", access: ["View"] },
-          { feature: "Health Records", access: ["View", "Create"] },
-          { feature: "Treatments", access: ["View", "Create"] },
-          { feature: "Inventory", access: ["View"] },
-          { feature: "Feeding Records", access: ["View", "Create"] },
-          { feature: "Weight Tracking", access: ["View", "Create"] },
-          { feature: "Finance", access: [] },
-          { feature: "Transactions", access: [] },
-          { feature: "Reports", access: [] },
-          { feature: "Users Management", access: [] },
-          { feature: "Roles & Permissions", access: [] },
-          { feature: "Business Setup", access: [] },
-          { feature: "Locations", access: [] },
-          { feature: "Notifications", access: [] }
-        ]
-      }
-    ];
+  const loadRolesInfo = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/roles", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to load roles");
+      const data = await res.json();
 
-    setRoles(systemRoles);
-    setPageLoading(false);
+      // Merge DB data with client-side styling
+      const enriched = data.map((r) => ({
+        ...r,
+        name: r.roleName,
+        ...(ROLE_STYLES[r.roleName] || ROLE_STYLES.Attendant),
+      }));
+
+      setRoles(enriched);
+    } catch (err) {
+      console.error("Error loading roles:", err);
+    } finally {
+      setPageLoading(false);
+    }
   };
 
   const togglePermission = (roleId, featureIdx, permission) => {
@@ -156,10 +85,37 @@ export default function RolesPermissions() {
   };
 
   const saveRoleChanges = async () => {
-    // This would be saved to the backend in a real app
-    // For now, we'll just show a success message
-    alert("Role permissions have been updated successfully!");
-    setEditingRole(null);
+    const role = roles.find((r) => r._id === editingRole);
+    if (!role) return;
+
+    setSaving(true);
+    setStatusMsg(null);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/roles", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          roleName: role.name || role.roleName,
+          permissions: role.permissions,
+          description: role.description,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+      setStatusMsg({ type: "success", text: `${role.name || role.roleName} permissions saved!` });
+      setEditingRole(null);
+    } catch (err) {
+      setStatusMsg({ type: "error", text: err.message });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setStatusMsg(null), 4000);
+    }
   };
 
   if (pageLoading || isLoading) {
@@ -182,6 +138,14 @@ export default function RolesPermissions() {
         description="Manage user roles and their access levels"
         icon={<FaShieldAlt className="w-8 h-8" />}
       />
+
+      {statusMsg && (
+        <div className={`p-4 rounded-xl text-sm font-medium ${
+          statusMsg.type === "success" ? "bg-green-100 text-green-800 border border-green-300" : "bg-red-100 text-red-800 border border-red-300"
+        }`}>
+          {statusMsg.text}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         {roles.map((role) => (
@@ -268,9 +232,10 @@ export default function RolesPermissions() {
               {editingRole === role._id ? (
                 <button
                   onClick={saveRoleChanges}
-                  className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all"
+                  disabled={saving}
+                  className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50"
                 >
-                  Save Changes
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               ) : (
                 <p className="text-xs text-gray-600 text-center">

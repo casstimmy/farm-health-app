@@ -448,14 +448,48 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           {/* Breed */}
           <div>
             <label className="label">Breed</label>
-            <input
-              type="text"
-              name="breed"
-              value={formData.breed}
-              onChange={handleChange}
-              className="input-field"
-              placeholder="e.g., Boer"
-            />
+            {formData.breed === "_custom" || formData._customBreed != null ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="breed"
+                  value={formData._customBreed || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, _customBreed: e.target.value, breed: e.target.value || "_custom" }))}
+                  className="input-field flex-1"
+                  placeholder="Enter breed name..."
+                  autoFocus
+                />
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, breed: "", _customBreed: undefined }))} className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+              </div>
+            ) : (
+              <select
+                name="breed"
+                value={formData.breed}
+                onChange={(e) => {
+                  if (e.target.value === "_custom") {
+                    setFormData(prev => ({ ...prev, breed: "_custom", _customBreed: "" }));
+                  } else {
+                    handleChange(e);
+                  }
+                }}
+                className="input-field"
+              >
+                <option value="">-- Select Breed --</option>
+                {(() => {
+                  // Build unique breed list from existing animals
+                  const existingBreeds = [...new Set(
+                    (allAnimals || [])
+                      .map(a => a.breed)
+                      .filter(b => b && b.trim())
+                  )].sort();
+                  // Common default breeds
+                  const defaultBreeds = ["Boer", "Kalahari Red", "Savanna", "Indigenous", "Angora", "Dorper", "Merino", "Damara", "Nguni", "Brahman", "Bonsmara", "Jersey", "Holstein", "Hereford", "Angus", "Simmental"];
+                  const combined = [...new Set([...existingBreeds, ...defaultBreeds])].sort();
+                  return combined.map(b => <option key={b} value={b}>{b}</option>);
+                })()}
+                <option value="_custom">+ Add Custom Breed</option>
+              </select>
+            )}
           </div>
 
           {/* Origin */}
