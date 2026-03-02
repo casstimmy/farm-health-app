@@ -60,6 +60,30 @@ export default function RolesPermissions() {
       },
       {
         _id: "2",
+        name: "SubAdmin",
+        description: "Location-scoped administrator — can only access data from assigned location",
+        color: "from-orange-500 to-amber-500",
+        bgColor: "bg-orange-50",
+        badgeColor: "bg-orange-100 text-orange-800",
+        permissions: [
+          { feature: "Animals", access: ["View", "Create", "Edit"] },
+          { feature: "Health Records", access: ["View", "Create", "Edit"] },
+          { feature: "Treatments", access: ["View", "Create", "Edit"] },
+          { feature: "Inventory", access: ["View", "Create", "Edit"] },
+          { feature: "Feeding Records", access: ["View", "Create", "Edit"] },
+          { feature: "Weight Tracking", access: ["View", "Create", "Edit"] },
+          { feature: "Finance", access: ["View", "Create"] },
+          { feature: "Transactions", access: ["View", "Create"] },
+          { feature: "Reports", access: ["View"] },
+          { feature: "Users Management", access: ["View"] },
+          { feature: "Roles & Permissions", access: [] },
+          { feature: "Business Setup", access: ["View"] },
+          { feature: "Locations", access: ["View"] },
+          { feature: "Notifications", access: ["View", "Manage"] }
+        ]
+      },
+      {
+        _id: "3a",
         name: "Manager",
         description: "Can manage farm operations and view reports",
         color: "from-blue-500 to-cyan-500",
@@ -83,7 +107,7 @@ export default function RolesPermissions() {
         ]
       },
       {
-        _id: "3",
+        _id: "4",
         name: "Attendant",
         description: "Can record data and view animal records",
         color: "from-green-500 to-emerald-500",
@@ -159,7 +183,7 @@ export default function RolesPermissions() {
         icon={<FaShieldAlt className="w-8 h-8" />}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         {roles.map((role) => (
           <motion.div
             key={role._id}
@@ -250,7 +274,8 @@ export default function RolesPermissions() {
                 </button>
               ) : (
                 <p className="text-xs text-gray-600 text-center">
-                  {role.name === "SuperAdmin" && "👑 System Administrator"}
+                  {role.name === "SuperAdmin" && "👑 System Administrator — All Locations"}
+                  {role.name === "SubAdmin" && "🔑 Location Admin — Assigned Location Only"}
                   {role.name === "Manager" && "👔 Farm Manager"}
                   {role.name === "Attendant" && "👷 Farm Attendant"}
                 </p>

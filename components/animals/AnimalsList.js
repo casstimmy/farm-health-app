@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FaCheck, FaEdit, FaTrash, FaTimes } from "react-icons/fa";
+import { FaCheck, FaEdit, FaTrash, FaTimes, FaInfoCircle } from "react-icons/fa";
 import Modal from "../shared/Modal";
 import Loader from "@/components/Loader";
 import ImageViewer from "./ImageViewer";
@@ -44,6 +44,9 @@ export default function AnimalsList({
   const [modalAnimal, setModalAnimal] = useState(null);
   const [modalImages, setModalImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [costBreakdown, setCostBreakdown] = useState(null); // {animal, x, y} for popup
+  const [editingSalesPrice, setEditingSalesPrice] = useState(null); // animal _id
+  const [salesPriceValue, setSalesPriceValue] = useState("");
 
   const currentCursor = cursorStack[pageIndex] || null;
 
@@ -176,6 +179,26 @@ export default function AnimalsList({
       fetchAnimals();
     } catch (err) {
       setError(err.message || "Failed to archive animal");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSalesPrice = async (animalId) => {
+    try {
+      setSaving(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/animals/${animalId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ salesPrice: Number(salesPriceValue) || 0 }),
+      });
+      if (!res.ok) throw new Error("Failed to update sales price");
+      setEditingSalesPrice(null);
+      setSalesPriceValue("");
+      fetchAnimals();
+    } catch (err) {
+      setError(err.message || "Failed to update sales price");
     } finally {
       setSaving(false);
     }
@@ -326,6 +349,7 @@ export default function AnimalsList({
                 <th className="px-4 py-3 text-right text-xs font-bold text-white">Weight</th>
                 {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Purchase</th>}
                 {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Total Cost</th>}
+                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Cost/kg</th>}
                 {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Sales Price</th>}
               </tr>
             </thead>
@@ -378,22 +402,101 @@ export default function AnimalsList({
                     <td className="px-4 py-3 text-xs text-right">{animal.currentWeight ? `${animal.currentWeight} kg` : "—"}</td>
                     {canSeePricing && <td className="px-4 py-3 text-xs text-right">{animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}</td>}
                     {canSeePricing && (
-                      <td className="px-4 py-3 text-xs text-right" title={`Purchase: ${formatCurrency(animal.purchaseCost || 0, businessSettings.currency)} + Feed: ${formatCurrency(animal.totalFeedCost || 0, businessSettings.currency)} + Meds: ${formatCurrency(animal.totalMedicationCost || 0, businessSettings.currency)}`}>
-                        {formatCurrency((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0), businessSettings.currency)}
+                      <td className="px-4 py-3 text-xs text-right relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCostBreakdown(costBreakdown?._id === animal._id ? null : animal);
+                          }}
+                          className="underline decoration-dotted cursor-pointer hover:text-blue-700 font-medium"
+                          title="Click for cost breakdown"
+                        >
+                          {formatCurrency((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0), businessSettings.currency)}
+                        </button>
+                        {costBreakdown?._id === animal._id && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-white border-2 border-blue-200 rounded-xl shadow-2xl p-4 w-64 text-left" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-bold text-gray-900 text-sm">💰 Cost Breakdown</h4>
+                              <button onClick={() => setCostBreakdown(null)} className="text-gray-400 hover:text-gray-600"><FaTimes size={12} /></button>
+                            </div>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Purchase Cost:</span>
+                                <span className="font-semibold">{formatCurrency(animal.purchaseCost || 0, businessSettings.currency)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Total Feed Cost:</span>
+                                <span className="font-semibold">{formatCurrency(animal.totalFeedCost || 0, businessSettings.currency)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Medication Cost:</span>
+                                <span className="font-semibold">{formatCurrency(animal.totalMedicationCost || 0, businessSettings.currency)}</span>
+                              </div>
+                              <div className="border-t pt-2 flex justify-between font-bold text-gray-900">
+                                <span>Total Cost:</span>
+                                <span>{formatCurrency((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0), businessSettings.currency)}</span>
+                              </div>
+                              {animal.currentWeight > 0 && (
+                                <div className="border-t pt-2 flex justify-between text-blue-700 font-bold">
+                                  <span>Cost per kg:</span>
+                                  <span>{formatCurrency(((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0)) / animal.currentWeight, businessSettings.currency)}/kg</span>
+                                </div>
+                              )}
+                              {(animal.salesPrice || animal.projectedSalesPrice) && (
+                                <div className={`border-t pt-2 flex justify-between font-bold ${((animal.salesPrice || animal.projectedSalesPrice || 0) - ((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0))) >= 0 ? "text-green-700" : "text-red-600"}`}>
+                                  <span>Profit:</span>
+                                  <span>{formatCurrency((animal.salesPrice || animal.projectedSalesPrice || 0) - ((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0)), businessSettings.currency)}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    )}
+                    {canSeePricing && (
+                      <td className="px-4 py-3 text-xs text-right text-gray-600">
+                        {animal.currentWeight > 0
+                          ? `${formatCurrency(((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0)) / animal.currentWeight, businessSettings.currency)}/kg`
+                          : "—"}
                       </td>
                     )}
                     {canSeePricing && (
                       <td className="px-4 py-3 text-xs text-right font-semibold">
-                        {(() => {
-                          const sp = animal.salesPrice || animal.projectedSalesPrice || 0;
-                          const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
-                          const profit = sp - totalCost;
-                          return sp ? (
-                            <span className={profit >= 0 ? "text-green-700" : "text-red-600"}>
-                              {formatCurrency(sp, businessSettings.currency)}
-                            </span>
-                          ) : "—";
-                        })()}
+                        {editingSalesPrice === animal._id ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              value={salesPriceValue}
+                              onChange={(e) => setSalesPriceValue(e.target.value)}
+                              className="border-2 border-blue-400 px-2 py-1 rounded w-24 text-xs text-right"
+                              min="0"
+                              step="0.01"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveSalesPrice(animal._id);
+                                if (e.key === "Escape") { setEditingSalesPrice(null); setSalesPriceValue(""); }
+                              }}
+                            />
+                            <button onClick={() => handleSaveSalesPrice(animal._id)} className="text-green-600 hover:text-green-800"><FaCheck size={10} /></button>
+                            <button onClick={() => { setEditingSalesPrice(null); setSalesPriceValue(""); }} className="text-gray-400 hover:text-gray-600"><FaTimes size={10} /></button>
+                          </div>
+                        ) : (
+                          <span
+                            className={`cursor-pointer hover:underline ${(() => {
+                              const sp = animal.salesPrice || animal.projectedSalesPrice || 0;
+                              const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+                              return sp ? (sp - totalCost >= 0 ? "text-green-700" : "text-red-600") : "text-gray-400";
+                            })()}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSalesPrice(animal._id);
+                              setSalesPriceValue(animal.salesPrice || animal.projectedSalesPrice || "");
+                            }}
+                            title="Click to edit sales price"
+                          >
+                            {(animal.salesPrice || animal.projectedSalesPrice) ? formatCurrency(animal.salesPrice || animal.projectedSalesPrice, businessSettings.currency) : "Set price"}
+                          </span>
+                        )}
                       </td>
                     )}
                   </tr>

@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Treatment from "@/models/Treatment";
+import HealthRecord from "@/models/HealthRecord";
 import { withAuth } from "@/utils/middleware";
 
 function isObjectIdString(value) {
@@ -48,6 +49,23 @@ async function handler(req, res) {
       if (!updated) {
         return res.status(404).json({ error: "Treatment not found" });
       }
+
+      // Sync recoveryStatus to linked HealthRecord
+      try {
+        const syncFields = {
+          recoveryStatus: updated.recoveryStatus || "",
+          postWeight: updated.postWeight,
+          postObservation: updated.postObservation || "",
+          completionDate: updated.completionDate || null,
+        };
+        await HealthRecord.findOneAndUpdate(
+          { linkedTreatment: id },
+          syncFields
+        );
+      } catch (syncErr) {
+        console.warn("Health record sync failed:", syncErr.message);
+      }
+
       res.status(200).json(updated);
     } catch (error) {
       res.status(500).json({ error: error.message });

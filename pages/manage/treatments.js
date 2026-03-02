@@ -180,10 +180,12 @@ export default function Treatments() {
         treatment.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         treatment.animal?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         treatment.animal?.tagId?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterType === "all" || treatment.type === filterType || treatment.recoveryStatus === filterType)
+      (filterType === "all"
+        ? treatment.recoveryStatus !== "Recovered"
+        : (treatment.type === filterType || treatment.recoveryStatus === filterType))
   );
 
-  const treatmentTypes = [...new Set(treatments.map((t) => t.type || t.recoveryStatus).filter(Boolean))];
+  const treatmentTypes = [...new Set(treatments.map((t) => t.type || t.recoveryStatus).filter(Boolean)), "Recovered"];
 
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 

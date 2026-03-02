@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { motion } from "framer-motion";
-import { FaUsers, FaSpinner, FaSave, FaTimes, FaEdit } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaUsers, FaSpinner, FaSave, FaTimes, FaEdit, FaPlus, FaUserPlus, FaTrash } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
@@ -19,6 +19,10 @@ export default function ManageUsers() {
   const [savingUserId, setSavingUserId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  // Add User form state
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [addUserForm, setAddUserForm] = useState({ name: "", email: "", pin: "", role: "Attendant", location: "", phone: "" });
+  const [addingUser, setAddingUser] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -113,6 +117,76 @@ export default function ManageUsers() {
     }
   };
 
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!addUserForm.name || !addUserForm.email || !addUserForm.pin) {
+      setError("Name, Email, and PIN are required.");
+      return;
+    }
+    if (!/^\d{4}$/.test(addUserForm.pin)) {
+      setError("PIN must be exactly 4 digits.");
+      return;
+    }
+    setAddingUser(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: addUserForm.name.trim(),
+          email: addUserForm.email.trim().toLowerCase(),
+          pin: addUserForm.pin,
+          role: addUserForm.role || "Attendant",
+          phone: addUserForm.phone || "",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to register user");
+      // If a location was selected, assign it
+      if (addUserForm.location && data.user?.id) {
+        const token = localStorage.getItem("token");
+        await fetch("/api/users", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ userId: data.user.id, location: addUserForm.location }),
+        });
+      }
+      setSuccess(`User "${addUserForm.name}" created successfully!`);
+      setAddUserForm({ name: "", email: "", pin: "", role: "Attendant", location: "", phone: "" });
+      setShowAddUser(false);
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message || "Failed to add user");
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      setError("");
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete user");
+      }
+      setSuccess("User deleted successfully!");
+      fetchData();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const getRoleColor = (role) => {
     switch (role) {
       case "SuperAdmin":
@@ -162,7 +236,76 @@ export default function ManageUsers() {
         subtitle="Manage farm staff and access roles"
         gradient="from-orange-600 to-orange-700"
         icon="👥"
+        actions={
+          <button
+            onClick={() => { setShowAddUser(!showAddUser); setError(""); }}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium"
+          >
+            {showAddUser ? <FaTimes /> : <FaUserPlus />}
+            {showAddUser ? "Cancel" : "Add User"}
+          </button>
+        }
       />
+
+      {/* Add User Form */}
+      <AnimatePresence>
+        {showAddUser && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2"><FaUserPlus /> Add New User</h3>
+            </div>
+            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Full Name *</label>
+                  <input type="text" value={addUserForm.name} onChange={(e) => setAddUserForm({ ...addUserForm, name: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500" placeholder="John Doe" required />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Email *</label>
+                  <input type="email" value={addUserForm.email} onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500" placeholder="user@farm.com" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">4-Digit PIN *</label>
+                  <input type="text" maxLength={4} value={addUserForm.pin} onChange={(e) => setAddUserForm({ ...addUserForm, pin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 text-center tracking-widest font-mono text-lg" placeholder="0000" required />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Role</label>
+                  <select value={addUserForm.role} onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500">
+                    <option value="SuperAdmin">👑 SuperAdmin</option>
+                    <option value="SubAdmin">🔑 SubAdmin</option>
+                    <option value="Manager">📋 Manager</option>
+                    <option value="Attendant">👤 Attendant</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Location</label>
+                  <select value={addUserForm.location} onChange={(e) => setAddUserForm({ ...addUserForm, location: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500">
+                    <option value="">No Location / All</option>
+                    {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">Phone</label>
+                  <input type="text" value={addUserForm.phone} onChange={(e) => setAddUserForm({ ...addUserForm, phone: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500" placeholder="Optional" />
+                </div>
+              </div>
+              <motion.button type="submit" disabled={addingUser} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                {addingUser ? <><FaSpinner className="animate-spin" /> Creating...</> : <><FaUserPlus /> Create User</>}
+              </motion.button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Summary Stats */}
       <StatsSummary
@@ -299,14 +442,16 @@ export default function ManageUsers() {
                           onChange={(e) => setEditingLocation(e.target.value)}
                           className="px-3 py-2 border-2 border-blue-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                         >
-                          <option value="">No Location</option>
+                          <option value="">All Locations</option>
                           {locations.map((loc) => (
                             <option key={loc._id} value={loc._id}>{loc.name}</option>
                           ))}
                         </select>
                       ) : (
                         <span className="text-gray-700">
-                          {user.location?.name ? (
+                          {user.role === "SuperAdmin" ? (
+                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold">🌐 All Locations</span>
+                          ) : user.location?.name ? (
                             <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">📍 {user.location.name}</span>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
@@ -342,15 +487,27 @@ export default function ManageUsers() {
                           </motion.button>
                         </div>
                       ) : (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleEditRole(user._id, user.role, user.location)}
-                          className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
-                        >
-                          <FaEdit />
-                          Edit
-                        </motion.button>
+                        <div className="flex gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleEditRole(user._id, user.role, user.location)}
+                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
+                          >
+                            <FaEdit />
+                            Edit
+                          </motion.button>
+                          {currentUser?.role === "SuperAdmin" && user._id !== currentUser.id && (
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
+                            >
+                              <FaTrash />
+                            </motion.button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </motion.tr>

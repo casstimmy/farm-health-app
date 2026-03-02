@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import AddAnimalForm from "@/components/animals/AddAnimalForm";
@@ -13,8 +13,47 @@ export default function ManageAnimals() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [initialAnimalData, setInitialAnimalData] = useState(null);
+  const [breedingRecordId, setBreedingRecordId] = useState(null);
 
-  const handleSuccess = () => {
+  // Auto-open Add Animal form when redirected from Breeding Register Kid
+  useEffect(() => {
+    if (router.query.registerKid === "true") {
+      const { breedingRecordId: brId, species, breed, sire, dam, origin, acquisitionType, location } = router.query;
+      setBreedingRecordId(brId || null);
+      setInitialAnimalData({
+        species: species || "Goat",
+        breed: breed || "",
+        sire: sire || "",
+        dam: dam || "",
+        origin: origin || "Born on Farm",
+        acquisitionType: acquisitionType || "Born",
+        location: location || "",
+        dob: new Date().toISOString().split("T")[0],
+        acquisitionDate: new Date().toISOString().split("T")[0],
+        status: "Alive",
+      });
+      setShowModal(true);
+      // Clean the URL without reloading
+      router.replace("/manage/animals", undefined, { shallow: true });
+    }
+  }, [router.query.registerKid]);
+
+  const handleSuccess = async () => {
+    // If this was a Register Kid flow, delete the breeding record
+    if (breedingRecordId) {
+      try {
+        const token = localStorage.getItem("token");
+        await fetch(`/api/breeding/${breedingRecordId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.warn("Kid registered but failed to remove breeding record:", err);
+      }
+      setBreedingRecordId(null);
+    }
+    setInitialAnimalData(null);
     setShowModal(false);
     setRefreshKey((k) => k + 1);
   };
@@ -36,11 +75,11 @@ export default function ManageAnimals() {
       {/* Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Add New Animal"
+        onClose={() => { setShowModal(false); setInitialAnimalData(null); setBreedingRecordId(null); }}
+        title={initialAnimalData ? "Register Kid / Add New Animal" : "Add New Animal"}
         size="2xl"
       >
-        <AddAnimalForm onSuccess={handleSuccess} />
+        <AddAnimalForm onSuccess={handleSuccess} animal={initialAnimalData} />
       </Modal>
 
       {/* Controls */}

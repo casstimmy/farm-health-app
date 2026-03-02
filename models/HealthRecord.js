@@ -58,6 +58,8 @@ const HealthRecordSchema = new mongoose.Schema(
     location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
     // Notes / Treatment Plan Summary
     notes: String,
+    // Link to Treatment record (for sync)
+    linkedTreatment: { type: mongoose.Schema.Types.ObjectId, ref: "Treatment", default: null },
   },
   { timestamps: true }
 );

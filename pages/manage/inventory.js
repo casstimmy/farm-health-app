@@ -272,6 +272,7 @@ export default function ManageInventory() {
     setEditValue({
       item: item.item || "",
       quantity: item.quantity ?? "",
+      unit: item.unit || "Unit",
       minStock: item.minStock ?? "",
       price: item.price ?? "",
       costPrice: item.costPrice ?? "",
@@ -295,6 +296,7 @@ export default function ManageInventory() {
       const payload = {
         item: editValue.item,
         quantity: Number(editValue.quantity) || 0,
+        unit: editValue.unit || "Unit",
         minStock: Number(editValue.minStock) || 0,
         price: Number(editValue.price) || 0,
         costPrice: Number(editValue.costPrice) || 0,
@@ -1130,6 +1132,7 @@ export default function ManageInventory() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Item Name</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Quantity</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Min Stock</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Price</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Cost Price</th>
@@ -1204,11 +1207,36 @@ export default function ManageInventory() {
                             isLowStock(item) ? "bg-yellow-200 text-yellow-900" :
                             "bg-blue-100 text-blue-800"
                           }`}>
-                            {item.quantity}
+                            {Number(item.quantity).toFixed(2)}
                           </span>
                           {isOutOfStock(item) && <span className="text-xs font-bold text-red-600">OUT</span>}
                           {!isOutOfStock(item) && isLowStock(item) && <span className="text-xs font-bold text-yellow-600">LOW</span>}
                         </div>
+                      )}
+                    </td>
+                    {/* Unit */}
+                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                      {editingId === item._id ? (
+                        <select
+                          value={editValue.unit || "Unit"}
+                          onChange={(e) => setEditValue({ ...editValue, unit: e.target.value })}
+                          className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
+                        >
+                          <option value="Unit">Unit</option>
+                          <option value="kg">kg</option>
+                          <option value="g">g</option>
+                          <option value="lbs">lbs</option>
+                          <option value="oz">oz</option>
+                          <option value="liters">liters</option>
+                          <option value="ml">ml</option>
+                          <option value="bales">bales</option>
+                          <option value="bags">bags</option>
+                          <option value="bottles">bottles</option>
+                          <option value="doses">doses</option>
+                          <option value="pcs">pcs</option>
+                        </select>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 rounded text-xs font-semibold text-gray-600 uppercase">{item.unit || "Unit"}</span>
                       )}
                     </td>
                     {/* Min Stock */}

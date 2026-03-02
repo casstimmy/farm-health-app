@@ -61,6 +61,8 @@ export default function Feeding() {
   const [groupSelectAll, setGroupSelectAll] = useState(false);
   const [distributionMethod, setDistributionMethod] = useState("equal");
   const [editingFeedIdx, setEditingFeedIdx] = useState(null);
+  // Paddock feeding mode
+  const [selectedPaddock, setSelectedPaddock] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -260,7 +262,7 @@ export default function Feeding() {
     }
 
     // New record(s)
-    const targetIds = feedingMode === "group" ? selectedGroupIds : [selectedAnimalId];
+    const targetIds = (feedingMode === "group" || feedingMode === "paddock") ? selectedGroupIds : [selectedAnimalId];
     if (targetIds.length === 0 || !targetIds[0]) {
       setError("Please select at least one animal.");
       return;
@@ -289,12 +291,12 @@ export default function Feeding() {
             let perAnimalOffered = totalQtyOffered;
             let perAnimalConsumed = totalQtyConsumed;
 
-            if (feedingMode === "group" && count > 1 && distributionMethod === "equal") {
+            if ((feedingMode === "group" || feedingMode === "paddock") && count > 1 && distributionMethod === "equal") {
               perAnimalOffered = +(totalQtyOffered / count).toFixed(4);
               perAnimalConsumed = +(totalQtyConsumed / count).toFixed(4);
             }
 
-            if (feedingMode === "group" && distributionMethod === "byWeight" && count > 1) {
+            if ((feedingMode === "group" || feedingMode === "paddock") && distributionMethod === "byWeight" && count > 1) {
               const totalWeight = targetIds.reduce((sum, id) => {
                 const animal = aliveAnimals.find((a) => a._id === id);
                 return sum + (animal?.currentWeight || 1);
@@ -470,10 +472,10 @@ export default function Feeding() {
             {!editingId && (
               <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
                 <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2">🔄 Feeding Mode</h4>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setFeedingMode("individual")}
+                    onClick={() => { setFeedingMode("individual"); setSelectedPaddock(""); setSelectedGroupIds([]); }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       feedingMode === "individual" ? "bg-amber-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                     }`}
@@ -482,12 +484,21 @@ export default function Feeding() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFeedingMode("group")}
+                    onClick={() => { setFeedingMode("group"); setSelectedPaddock(""); }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       feedingMode === "group" ? "bg-amber-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                     }`}
                   >
                     <FaUsers size={12} /> Group Feeding
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFeedingMode("paddock"); setSelectedGroupIds([]); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      feedingMode === "paddock" ? "bg-amber-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                    }`}
+                  >
+                    🏠 By Paddock/Shed
                   </button>
                 </div>
               </div>
@@ -507,6 +518,68 @@ export default function Feeding() {
                       </option>
                     ))}
                   </select>
+                </div>
+              ) : feedingMode === "paddock" ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Select Paddock/Shed *</label>
+                    <select
+                      value={selectedPaddock}
+                      onChange={(e) => {
+                        const paddockName = e.target.value;
+                        setSelectedPaddock(paddockName);
+                        // Auto-select all alive animals at the user's location matching this paddock
+                        const paddockAnimals = aliveAnimals.filter(
+                          (a) => (a.paddock || "").toLowerCase() === paddockName.toLowerCase()
+                        );
+                        setSelectedGroupIds(paddockAnimals.map((a) => a._id));
+                      }}
+                      className="input-field"
+                    >
+                      <option value="">-- Select Paddock/Shed --</option>
+                      {(() => {
+                        // Collect paddocks from locations and also unique paddock values from animals
+                        const paddockSet = new Set();
+                        locations.forEach((loc) => {
+                          (loc.paddocks || []).forEach((p) => {
+                            if (p.name && p.isActive !== false) paddockSet.add(p.name);
+                          });
+                        });
+                        aliveAnimals.forEach((a) => {
+                          if (a.paddock) paddockSet.add(a.paddock);
+                        });
+                        return [...paddockSet].sort().map((p) => (
+                          <option key={p} value={p}>{p} ({aliveAnimals.filter(a => (a.paddock || "").toLowerCase() === p.toLowerCase()).length} animals)</option>
+                        ));
+                      })()}
+                    </select>
+                  </div>
+                  {selectedPaddock && (
+                    <div className="bg-white border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-blue-800 mb-2">
+                        🏠 {selectedPaddock} — {selectedGroupIds.length} animal(s) selected
+                      </p>
+                      <div className="max-h-32 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
+                        {aliveAnimals
+                          .filter((a) => (a.paddock || "").toLowerCase() === selectedPaddock.toLowerCase())
+                          .map((a) => (
+                            <label key={a._id} className="flex items-center gap-2 px-2 py-1 hover:bg-amber-50 rounded cursor-pointer text-sm">
+                              <input type="checkbox" checked={selectedGroupIds.includes(a._id)} onChange={() => handleToggleGroupAnimal(a._id)} className="w-4 h-4 text-amber-600 rounded" />
+                              <span className="truncate">{a.name || a.tagId} {a.currentWeight ? `(${a.currentWeight}kg)` : ""}</span>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-gray-700">Distribution:</span>
+                    <label className="flex items-center gap-1 text-sm cursor-pointer">
+                      <input type="radio" name="distribution" checked={distributionMethod === "equal"} onChange={() => setDistributionMethod("equal")} className="text-amber-600" /> Equal Split
+                    </label>
+                    <label className="flex items-center gap-1 text-sm cursor-pointer">
+                      <input type="radio" name="distribution" checked={distributionMethod === "byWeight"} onChange={() => setDistributionMethod("byWeight")} className="text-amber-600" /> By Body Weight
+                    </label>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -632,7 +705,7 @@ export default function Feeding() {
                             }} placeholder="Hay, Grain, Supplement..." className="input-field" />
                           </div>
                           <div>
-                            <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                            <label className="label">Qty Offered {(feedingMode === "group" || feedingMode === "paddock") && !editingId ? "(Total)" : ""}</label>
                             <input type="number" step="0.01" min="0" value={fi.quantityOffered} onChange={(e) => {
                               const val = e.target.value;
                               setFeedItems(prev => {
@@ -651,7 +724,7 @@ export default function Feeding() {
                             }} placeholder="e.g., 10" className="input-field" />
                           </div>
                           <div>
-                            <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
+                            <label className="label">Qty Consumed {(feedingMode === "group" || feedingMode === "paddock") && !editingId ? "(Total)" : ""}</label>
                             <input type="number" step="0.01" min="0" value={fi.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value, idx)} placeholder="e.g., 8" className="input-field" />
                           </div>
                           <div>
@@ -712,7 +785,7 @@ export default function Feeding() {
               </div>
 
               {/* Group summary */}
-              {feedingMode === "group" && !editingId && selectedGroupIds.length > 1 && (
+              {(feedingMode === "group" || feedingMode === "paddock") && !editingId && selectedGroupIds.length > 1 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 mt-4">
                   <strong>Group Summary:</strong> {selectedGroupIds.length} animals selected, {feedItems.filter(fi => fi.feedCategory).length} feed item(s).{" "}
                   {distributionMethod === "equal"
@@ -728,7 +801,7 @@ export default function Feeding() {
                 </button>
                 <button type="submit" disabled={formLoading} className="flex items-center gap-2 px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-60">
                   {formLoading ? <FaSpinner className="animate-spin" /> : <FaCheck />}
-                  {editingId ? "Update Record" : feedingMode === "group" ? `Feed ${selectedGroupIds.length} Animals` : "Save Record"}
+                  {editingId ? "Update Record" : (feedingMode === "group" || feedingMode === "paddock") ? `Feed ${selectedGroupIds.length} Animals` : "Save Record"}
                 </button>
               </div>
             </form>

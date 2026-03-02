@@ -610,7 +610,22 @@ export default function BreedingManagement() {
                     )}
                     {record.pregnancyStatus === "Delivered" && (
                       <button
-                        onClick={() => setShowRegisterKids(record)}
+                        onClick={() => {
+                          const doeAnimal = animals.find(a => a._id === (record.doe?._id || record.doe));
+                          const buckAnimal = animals.find(a => a._id === (record.buck?._id || record.buck));
+                          const params = new URLSearchParams({
+                            registerKid: "true",
+                            breedingRecordId: record._id,
+                            species: doeAnimal?.species || "Goat",
+                            breed: doeAnimal?.breed || "",
+                            sire: buckAnimal?._id || record.buck?._id || record.buck || "",
+                            dam: doeAnimal?._id || record.doe?._id || record.doe || "",
+                            origin: "Born on Farm",
+                            acquisitionType: "Born",
+                            location: record.location?._id || record.location || "",
+                          });
+                          router.push(`/manage/animals?${params.toString()}`);
+                        }}
                         className="flex-1 py-2 bg-pink-100 text-pink-700 rounded-lg text-sm font-semibold hover:bg-pink-200 flex items-center justify-center gap-1"
                       >
                         <FaBaby /> Register Kid

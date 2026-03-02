@@ -1,5 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import Treatment from "@/models/Treatment";
+import HealthRecord from "@/models/HealthRecord";
+import Animal from "@/models/Animal";
+import "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
 
 function isObjectIdString(value) {
@@ -36,7 +39,48 @@ async function handler(req, res) {
       if (!animal) {
         return res.status(400).json({ error: "animal (ObjectId) required" });
       }
+      // Default recoveryStatus to "Under Treatment" if not provided
+      if (!treatmentData.recoveryStatus) {
+        treatmentData.recoveryStatus = "Under Treatment";
+      }
       const treatment = await Treatment.create({ ...treatmentData, animal });
+
+      // Auto-create a linked HealthRecord
+      try {
+        const animalDoc = await Animal.findById(animal);
+        const healthRecordData = {
+          animal,
+          date: treatment.date,
+          animalTagId: animalDoc?.tagId || "",
+          animalGender: animalDoc?.gender || "",
+          animalBreed: animalDoc?.breed || "",
+          isRoutine: treatment.routine === "YES",
+          symptoms: treatment.symptoms || "",
+          possibleCause: treatment.possibleCause || "",
+          diagnosis: treatment.diagnosis || "",
+          prescribedDays: treatment.prescribedDays || 0,
+          preWeight: treatment.preWeight,
+          treatmentA: {
+            treatmentType: treatment.type || "",
+            medication: treatment.medication || null,
+            medicationName: treatment.medicationName || "",
+            dosage: treatment.dosage || "",
+            route: treatment.route || "",
+          },
+          treatedBy: treatment.treatedBy || "",
+          postObservation: treatment.postObservation || "",
+          observationTime: treatment.observationTime || "",
+          completionDate: treatment.completionDate || null,
+          recoveryStatus: treatment.recoveryStatus || "Under Treatment",
+          postWeight: treatment.postWeight,
+          notes: treatment.notes || "",
+          linkedTreatment: treatment._id,
+        };
+        await HealthRecord.create(healthRecordData);
+      } catch (hrErr) {
+        console.warn("Auto-create health record failed:", hrErr.message);
+      }
+
       res.status(201).json({ message: "Treatment record added", treatment });
     } catch (error) {
       res.status(500).json({ error: error.message });
