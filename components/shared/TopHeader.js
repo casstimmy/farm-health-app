@@ -53,8 +53,14 @@ const TopHeader = ({ userName, userRole }) => {
   return (
     <div className="flex justify-between items-center py-3 px-6 md:px-10 bg-gradient-to-r from-white via-gray-50 to-white shadow-md border-b-2 border-gray-100 h-20 flex-shrink-0">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
-          <span className="text-sm font-bold text-white">NAV</span>
+        <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+          {businessSettings.businessLogo ? (
+            <img src={businessSettings.businessLogo} alt="Logo" className="w-full h-full object-contain p-1 bg-white/80 rounded-xl" />
+          ) : (
+            <span className="text-sm font-bold text-white">
+              {getInitials(businessSettings.businessName || "Farm Health")}
+            </span>
+          )}
         </div>
         <div className="hidden sm:block">
           <h2 className="text-gray-900 text-xl md:text-2xl font-bold tracking-tight">

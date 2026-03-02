@@ -17,6 +17,7 @@ const SORT_FIELDS = [
   { value: "currentWeight", label: "Weight" },
   { value: "purchaseCost", label: "Purchase Cost" },
   { value: "projectedSalesPrice", label: "Projected Sales" },
+  { value: "salesPrice", label: "Sales Price" },
 ];
 
 export default function AnimalsList({
@@ -114,7 +115,7 @@ export default function AnimalsList({
   };
 
   const canDelete = useMemo(() => user?.role === "SuperAdmin", [user]);
-  const canSeePricing = useMemo(() => ["SuperAdmin", "Manager"].includes(user?.role), [user]);
+  const canSeePricing = useMemo(() => ["SuperAdmin", "SubAdmin", "Manager"].includes(user?.role), [user]);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   const handleEditClick = (animal) => {
@@ -323,8 +324,9 @@ export default function AnimalsList({
                 <th className="px-4 py-3 text-left text-xs font-bold text-white">Species</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-white">Status</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-white">Weight</th>
-                <th className="px-4 py-3 text-right text-xs font-bold text-white">Cost</th>
-                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Projected Sales</th>}
+                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Purchase</th>}
+                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Total Cost</th>}
+                {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Sales Price</th>}
               </tr>
             </thead>
             <tbody>
@@ -374,8 +376,26 @@ export default function AnimalsList({
                     <td className="px-4 py-3 text-xs">{animal.species || "—"}</td>
                     <td className="px-4 py-3 text-xs">{animal.status || "—"}</td>
                     <td className="px-4 py-3 text-xs text-right">{animal.currentWeight ? `${animal.currentWeight} kg` : "—"}</td>
-                    <td className="px-4 py-3 text-xs text-right">{animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}</td>
-                    {canSeePricing && <td className="px-4 py-3 text-xs text-right">{animal.projectedSalesPrice ? formatCurrency(animal.projectedSalesPrice, businessSettings.currency) : "—"}</td>}
+                    {canSeePricing && <td className="px-4 py-3 text-xs text-right">{animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}</td>}
+                    {canSeePricing && (
+                      <td className="px-4 py-3 text-xs text-right" title={`Purchase: ${formatCurrency(animal.purchaseCost || 0, businessSettings.currency)} + Feed: ${formatCurrency(animal.totalFeedCost || 0, businessSettings.currency)} + Meds: ${formatCurrency(animal.totalMedicationCost || 0, businessSettings.currency)}`}>
+                        {formatCurrency((animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0), businessSettings.currency)}
+                      </td>
+                    )}
+                    {canSeePricing && (
+                      <td className="px-4 py-3 text-xs text-right font-semibold">
+                        {(() => {
+                          const sp = animal.salesPrice || animal.projectedSalesPrice || 0;
+                          const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+                          const profit = sp - totalCost;
+                          return sp ? (
+                            <span className={profit >= 0 ? "text-green-700" : "text-red-600"}>
+                              {formatCurrency(sp, businessSettings.currency)}
+                            </span>
+                          ) : "—";
+                        })()}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

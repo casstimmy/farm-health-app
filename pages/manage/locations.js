@@ -9,7 +9,7 @@ import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
 
 const PADDOCK_TYPES = ["Paddock", "Shed", "Barn", "Pen", "Coop", "Stable", "Other"];
-const emptyPaddock = { name: "", type: "Paddock", capacity: 0, description: "" };
+const emptyPaddock = { name: "", type: "Paddock", customType: "", description: "" };
 const emptyLocation = { name: "", description: "", address: "", city: "", state: "" };
 
 export default function ManageLocations() {
@@ -145,14 +145,20 @@ export default function ManageLocations() {
 
   const handleAddPaddock = async (locationId) => {
     if (!paddockForm.name.trim()) { setError("Paddock/Shed name is required"); return; }
+    if (paddockForm.type === "Other" && !paddockForm.customType?.trim()) { setError("Please enter a custom type name"); return; }
     setPaddockLoading(true);
     clearMessages();
     try {
       const token = localStorage.getItem("token");
+      const paddockPayload = {
+        ...paddockForm,
+        type: paddockForm.type === "Other" ? (paddockForm.customType || "Other") : paddockForm.type,
+        customType: paddockForm.type === "Other" ? paddockForm.customType : "",
+      };
       const res = await fetch(`/api/locations/${locationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: "add-paddock", paddock: paddockForm }),
+        body: JSON.stringify({ action: "add-paddock", paddock: paddockPayload }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed to add paddock"); }
       setPaddockForm({ ...emptyPaddock });
@@ -167,14 +173,20 @@ export default function ManageLocations() {
 
   const handleUpdatePaddock = async (locationId, paddockId) => {
     if (!paddockForm.name.trim()) { setError("Paddock/Shed name is required"); return; }
+    if (paddockForm.type === "Other" && !paddockForm.customType?.trim()) { setError("Please enter a custom type name"); return; }
     setPaddockLoading(true);
     clearMessages();
     try {
       const token = localStorage.getItem("token");
+      const paddockPayload = {
+        ...paddockForm,
+        type: paddockForm.type === "Other" ? (paddockForm.customType || "Other") : paddockForm.type,
+        customType: paddockForm.type === "Other" ? paddockForm.customType : "",
+      };
       const res = await fetch(`/api/locations/${locationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: "update-paddock", paddockId, paddock: paddockForm }),
+        body: JSON.stringify({ action: "update-paddock", paddockId, paddock: paddockPayload }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed to update paddock"); }
       setPaddockForm({ ...emptyPaddock });
@@ -208,8 +220,8 @@ export default function ManageLocations() {
     setEditingPaddock({ locationId, paddockId: paddock._id });
     setPaddockForm({
       name: paddock.name || "",
-      type: paddock.type || "Paddock",
-      capacity: paddock.capacity || 0,
+      type: PADDOCK_TYPES.includes(paddock.type) ? paddock.type : "Other",
+      customType: PADDOCK_TYPES.includes(paddock.type) ? "" : (paddock.customType || paddock.type || ""),
       description: paddock.description || "",
     });
     setAddingPaddockTo(null);
@@ -390,15 +402,17 @@ export default function ManageLocations() {
                               const isEditingThis = editingPaddock?.paddockId === p._id && editingPaddock?.locationId === location._id;
                               return isEditingThis ? (
                                 <div key={p._id} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                     <input className="input-field text-xs" placeholder="Name *" value={paddockForm.name}
                                       onChange={(e) => setPaddockForm({ ...paddockForm, name: e.target.value })} />
                                     <select className="input-field text-xs" value={paddockForm.type}
-                                      onChange={(e) => setPaddockForm({ ...paddockForm, type: e.target.value })}>
+                                      onChange={(e) => setPaddockForm({ ...paddockForm, type: e.target.value, customType: e.target.value === "Other" ? paddockForm.customType : "" })}>
                                       {PADDOCK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                                     </select>
-                                    <input className="input-field text-xs" type="number" min="0" placeholder="Capacity" value={paddockForm.capacity}
-                                      onChange={(e) => setPaddockForm({ ...paddockForm, capacity: Number(e.target.value) })} />
+                                    {paddockForm.type === "Other" && (
+                                      <input className="input-field text-xs" placeholder="Custom type name *" value={paddockForm.customType || ""}
+                                        onChange={(e) => setPaddockForm({ ...paddockForm, customType: e.target.value })} />
+                                    )}
                                     <input className="input-field text-xs" placeholder="Notes" value={paddockForm.description}
                                       onChange={(e) => setPaddockForm({ ...paddockForm, description: e.target.value })} />
                                   </div>
@@ -412,24 +426,27 @@ export default function ManageLocations() {
                                   </div>
                                 </div>
                               ) : (
-                                <div key={p._id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                                <div key={p._id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 group hover:border-blue-300 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                                  onClick={() => startEditPaddock(location._id, p)}>
                                   <div className="flex items-center gap-3">
-                                    <span className="text-sm">{p.type === "Shed" ? "\uD83C\uDFDA\uFE0F" : p.type === "Barn" ? "\uD83C\uDFD7\uFE0F" : p.type === "Coop" ? "\uD83D\uDC14" : p.type === "Stable" ? "\uD83D\uDC34" : "\uD83C\uDF3F"}</span>
+                                    <span className="text-sm">{p.type === "Shed" ? "\uD83C\uDFDA\uFE0F" : p.type === "Barn" ? "\uD83C\uDFD7\uFE0F" : p.type === "Coop" ? "\uD83D\uDC14" : p.type === "Stable" ? "\uD83D\uDC34" : p.type === "Pen" ? "\uD83D\uDD33" : "\uD83C\uDF3F"}</span>
                                     <div>
                                       <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {p.type} {p.capacity ? `\u00B7 Capacity: ${p.capacity}` : ""}
-                                        {p.description ? ` \u00B7 ${p.description}` : ""}
+                                        {p.customType || p.type}
+                                        {p.description ? ` · ${p.description}` : ""}
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="flex gap-1">
-                                    <button onClick={() => startEditPaddock(location._id, p)}
-                                      className="p-1 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100">
-                                      <FaPen size={9} />
+                                  <div className="flex gap-1.5">
+                                    <button onClick={(e) => { e.stopPropagation(); startEditPaddock(location._id, p); }}
+                                      className="px-2 py-1 rounded-md border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                      title="Edit paddock">
+                                      <FaPen size={9} /> Edit
                                     </button>
-                                    <button onClick={() => handleDeletePaddock(location._id, p._id)}
-                                      className="p-1 rounded border border-red-200 bg-red-50 text-red-600 hover:bg-red-100">
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePaddock(location._id, p._id); }}
+                                      className="px-2 py-1 rounded-md border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity"
+                                      title="Delete paddock">
                                       <FaTrash size={9} />
                                     </button>
                                   </div>
@@ -440,15 +457,17 @@ export default function ManageLocations() {
                             {addingPaddockTo === location._id && (
                               <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-bold text-green-800">Add Paddock/Shed</p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                   <input className="input-field text-xs" placeholder="Name *" value={paddockForm.name}
                                     onChange={(e) => setPaddockForm({ ...paddockForm, name: e.target.value })} />
                                   <select className="input-field text-xs" value={paddockForm.type}
-                                    onChange={(e) => setPaddockForm({ ...paddockForm, type: e.target.value })}>
+                                    onChange={(e) => setPaddockForm({ ...paddockForm, type: e.target.value, customType: e.target.value === "Other" ? paddockForm.customType : "" })}>
                                     {PADDOCK_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                                   </select>
-                                  <input className="input-field text-xs" type="number" min="0" placeholder="Capacity" value={paddockForm.capacity}
-                                    onChange={(e) => setPaddockForm({ ...paddockForm, capacity: Number(e.target.value) })} />
+                                  {paddockForm.type === "Other" && (
+                                    <input className="input-field text-xs" placeholder="Custom type name *" value={paddockForm.customType || ""}
+                                      onChange={(e) => setPaddockForm({ ...paddockForm, customType: e.target.value })} />
+                                  )}
                                   <input className="input-field text-xs" placeholder="Notes" value={paddockForm.description}
                                     onChange={(e) => setPaddockForm({ ...paddockForm, description: e.target.value })} />
                                 </div>

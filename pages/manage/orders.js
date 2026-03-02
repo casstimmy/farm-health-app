@@ -76,6 +76,7 @@ export default function OrdersPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [animalSpeciesFilter, setAnimalSpeciesFilter] = useState({});
+  const [emailModal, setEmailModal] = useState({ show: false, orderId: null, status: null });
 
   useEffect(() => {
     if (roleLoading) return;
@@ -128,9 +129,19 @@ export default function OrdersPage() {
   };
 
   const updateItem = (index, field, value) => {
-    const next = [...form.items];
-    next[index] = { ...next[index], [field]: value };
-    setForm({ ...form, items: next });
+    setForm((prev) => {
+      const next = [...prev.items];
+      next[index] = { ...next[index], [field]: value };
+      return { ...prev, items: next };
+    });
+  };
+
+  const updateItemMulti = (index, updates) => {
+    setForm((prev) => {
+      const next = [...prev.items];
+      next[index] = { ...next[index], ...updates };
+      return { ...prev, items: next };
+    });
   };
 
   const addItem = () => setForm({ ...form, items: [...form.items, { ...emptyItem }] });
@@ -220,7 +231,7 @@ export default function OrdersPage() {
       }
 
       if (["Confirmed", "Processing", "Completed"].includes(newStatus)) {
-        sendStatusEmail(orderId, newStatus);
+        setEmailModal({ show: true, orderId, status: newStatus });
       }
 
       setSuccess("Order " + newStatus.toLowerCase() + " successfully!");
@@ -257,7 +268,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Order Management" subtitle="Create orders and manage fulfillment pipeline" gradient="from-indigo-600 to-indigo-700" icon="&#x1F9FE;" />
+      <PageHeader title="Order Management" subtitle="Create orders and manage fulfillment pipeline" gradient="from-indigo-600 to-indigo-700" icon="🧾" />
 
       {(loading || roleLoading) && <div className="bg-white rounded-xl border border-gray-200 p-10"><Loader message="Loading orders..." color="blue-600" /></div>}
 
@@ -274,13 +285,42 @@ export default function OrdersPage() {
         </motion.div>
       )}
 
+      {/* Email Notification Confirmation Modal */}
+      <AnimatePresence>
+        {emailModal.show && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4 border border-gray-200">
+              <div className="text-center mb-4">
+                <span className="text-4xl mb-2 block">📧</span>
+                <h3 className="text-lg font-bold text-gray-900">Send Email Notification?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Would you like to notify the customer about the order status change to <strong>{emailModal.status}</strong>?
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => { setEmailModal({ show: false, orderId: null, status: null }); }}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                  Skip
+                </button>
+                <button onClick={() => { sendStatusEmail(emailModal.orderId, emailModal.status); setEmailModal({ show: false, orderId: null, status: null }); setSuccess("Email notification sent!"); setTimeout(() => setSuccess(""), 3000); }}
+                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors">
+                  Send Email
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {!loading && !roleLoading && (
         <>
           <StatsSummary stats={[
-            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "&#x1F4E6;" },
-            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "&#x23F3;" },
-            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "&#x1F504;" },
-            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "&#x2705;" },
+            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📦" },
+            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳" },
+            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄" },
+            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅" },
           ]} />
 
           <div className="flex flex-col md:flex-row md:items-center gap-3">
@@ -357,9 +397,7 @@ export default function OrdersPage() {
                               <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
                               <select className="input-field" value={item.type || "Custom"} onChange={(e) => {
                                 const type = e.target.value;
-                                const next = [...form.items];
-                                next[idx] = { ...next[idx], type, description: "", unitPrice: 0 };
-                                setForm({ ...form, items: next });
+                                updateItemMulti(idx, { type, description: "", unitPrice: 0 });
                                 setAnimalSpeciesFilter((prev) => ({ ...prev, [idx]: "" }));
                               }}>
                                 <option value="Animal">Animal</option>
@@ -373,17 +411,15 @@ export default function OrdersPage() {
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Species & Animal</label>
                                 <select className="input-field text-xs" value={speciesForIdx} onChange={(e) => {
                                   setAnimalSpeciesFilter((prev) => ({ ...prev, [idx]: e.target.value }));
-                                  updateItem(idx, "description", "");
-                                  updateItem(idx, "unitPrice", 0);
+                                  updateItemMulti(idx, { description: "", unitPrice: 0 });
                                 }}>
                                   <option value="">All Species</option>
                                   {speciesList.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
                                 </select>
                                 <select className="input-field" value={item.description} onChange={(e) => {
                                   const val = e.target.value;
-                                  updateItem(idx, "description", val);
                                   const s = animals.find((x) => (x.tagId + " - " + (x.name || x.breed || "Animal")) === val);
-                                  if (s) updateItem(idx, "unitPrice", Number(s.projectedSalesPrice || s.purchaseCost || 0));
+                                  updateItemMulti(idx, { description: val, unitPrice: s ? Number(s.projectedSalesPrice || s.purchaseCost || 0) : 0 });
                                 }}>
                                   <option value="">Select animal</option>
                                   {filteredAnimals.map((a) => (
@@ -401,9 +437,10 @@ export default function OrdersPage() {
                                 ) : (
                                   <select className="input-field" value={item.description} onChange={(e) => {
                                     const val = e.target.value;
-                                    updateItem(idx, "description", val);
-                                    if (item.type === "Service") { const s = services.find((x) => x.name === val); if (s) updateItem(idx, "unitPrice", Number(s.price || 0)); }
-                                    if (item.type === "Product") { const s = inventoryItems.find((x) => x.item === val); if (s) updateItem(idx, "unitPrice", Number(s.salesPrice || s.price || 0)); }
+                                    let unitPrice = 0;
+                                    if (item.type === "Service") { const s = services.find((x) => x.name === val); if (s) unitPrice = Number(s.price || 0); }
+                                    if (item.type === "Product") { const s = inventoryItems.find((x) => x.item === val); if (s) unitPrice = Number(s.salesPrice || s.price || 0); }
+                                    updateItemMulti(idx, { description: val, unitPrice });
                                   }}>
                                     <option value="">Select item</option>
                                     {item.type === "Service" && services.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}

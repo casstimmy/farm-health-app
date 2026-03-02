@@ -18,7 +18,7 @@ export default function Login({
   businessName = "Farm Health",
 }) {
   const [selectedUser, setSelectedUser] = useState(null);
-  const [location, setLocation] = useState(locations?.[0] || "");
+  const [location, setLocation] = useState(locations?.[0]?.name || "");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +28,7 @@ export default function Login({
   const staffByRole = useMemo(() => {
     return {
       SuperAdmin: staffList.filter((s) => s.role === "SuperAdmin"),
+      SubAdmin: staffList.filter((s) => s.role === "SubAdmin"),
       Manager: staffList.filter((s) => s.role === "Manager"),
       Attendant: staffList.filter((s) => s.role === "Attendant"),
     };
@@ -211,6 +212,10 @@ export default function Login({
                             type="button"
                             onClick={() => {
                               setSelectedUser(user);
+                              // Auto-fill location from user's assigned location
+                              if (user.locationName) {
+                                setLocation(user.locationName);
+                              }
                               setPin("");
                               setError("");
                             }}
@@ -221,8 +226,17 @@ export default function Login({
                                 : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-200"
                             }`}
                           >
-                            <p className="font-medium text-sm">{user.name}</p>
-                            <p className={`text-[11px] ${selectedUser?.email === user.email ? "text-emerald-100" : "text-gray-400"}`}>{user.email}</p>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{user.name}</p>
+                                <p className={`text-[11px] ${selectedUser?.email === user.email ? "text-emerald-100" : "text-gray-400"}`}>{user.email}</p>
+                              </div>
+                              {user.locationName && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedUser?.email === user.email ? "bg-emerald-400/30 text-emerald-100" : "bg-gray-100 text-gray-500"}`}>
+                                  📍 {user.locationName}
+                                </span>
+                              )}
+                            </div>
                           </motion.button>
                         ))}
                       </div>
@@ -247,11 +261,14 @@ export default function Login({
                     className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     {locations.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
+                      <option key={loc.id || loc.name} value={loc.name}>
+                        {loc.name}
                       </option>
                     ))}
                   </select>
+                  {selectedUser?.locationName && (
+                    <p className="text-[11px] text-emerald-600 mt-1">📍 Auto-selected from staff assignment</p>
+                  )}
                 </motion.div>
               )}
 
@@ -380,7 +397,8 @@ export async function getServerSideProps() {
 
     // Fetch users directly from database
     const users = await User.find({ isActive: true })
-      .select("name email role")
+      .select("name email role location")
+      .populate("location", "name")
       .sort({ role: 1, name: 1 })
       .lean();
 
@@ -388,6 +406,8 @@ export async function getServerSideProps() {
       name: user.name,
       email: user.email,
       role: user.role,
+      locationId: user.location?._id?.toString() || "",
+      locationName: user.location?.name || "",
     }));
 
     // Fetch locations directly from database
@@ -395,9 +415,9 @@ export async function getServerSideProps() {
       .select("name")
       .lean();
 
-    const locations = locationDocs.length > 0 
-      ? locationDocs.map((loc) => loc.name)
-      : ["Default Farm"];
+    const locationsList = locationDocs.length > 0
+      ? locationDocs.map((loc) => ({ id: loc._id.toString(), name: loc.name }))
+      : [{ id: "", name: "Default Farm" }];
 
     // Fetch business settings for branding and hero image
     const settings = await BusinessSettings.findOne()
@@ -410,7 +430,7 @@ export async function getServerSideProps() {
     return {
       props: {
         staffList: JSON.parse(JSON.stringify(staffList)),
-        locations: JSON.parse(JSON.stringify(locations)),
+        locations: JSON.parse(JSON.stringify(locationsList)),
         loginHeroImage,
         businessLogo,
         businessName,
@@ -421,7 +441,7 @@ export async function getServerSideProps() {
     return { 
       props: { 
         staffList: [], 
-        locations: ["Default Farm"],
+        locations: [{ id: "", name: "Default Farm" }],
         loginHeroImage: "",
         businessLogo: "",
         businessName: "Farm Health",

@@ -17,9 +17,10 @@ const UserSchema = new mongoose.Schema({
   },
   role: { 
     type: String, 
-    enum: ["SuperAdmin", "Manager", "Attendant"], 
+    enum: ["SuperAdmin", "SubAdmin", "Manager", "Attendant"], 
     default: "Attendant" 
   },
+  location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date },
   avatar: { type: String, default: "" },
@@ -28,5 +29,6 @@ const UserSchema = new mongoose.Schema({
 
 // Index for faster lookups
 UserSchema.index({ email: 1, pin: 1 });
+UserSchema.index({ location: 1 });
 
 export default mongoose.models.User || mongoose.model("User", UserSchema);

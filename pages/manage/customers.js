@@ -47,10 +47,11 @@ export default function CustomersPage() {
   }, []);
 
   useEffect(() => {
-    if (roleLoading || !router.isReady) return;
+    if (roleLoading) return;
+    if (!router.isReady) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     if (!["SuperAdmin", "Manager"].includes(user.role)) { router.push("/"); return; }
     fetchData(token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,7 +114,7 @@ export default function CustomersPage() {
         throw new Error(data.error || "Failed to save customer");
       }
       resetForm();
-      fetchData();
+      await fetchData();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -145,7 +146,7 @@ export default function CustomersPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to delete customer");
-      fetchData();
+      await fetchData();
     } catch (err) {
       setError(err.message);
     }

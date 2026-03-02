@@ -35,6 +35,7 @@ export default function WeightTracking() {
   const [formWeight, setFormWeight] = useState("");
   const [formLocation, setFormLocation] = useState("");
   const [formNotes, setFormNotes] = useState("");
+  const [filterSpecies, setFilterSpecies] = useState("all");
 
   const [viewMode, setViewMode] = useState("overview");
   const [historyAnimalId, setHistoryAnimalId] = useState("");
@@ -76,6 +77,8 @@ export default function WeightTracking() {
   };
 
   const aliveAnimals = animals.filter((a) => a.status === "Alive" && !a.isArchived);
+  const speciesList = [...new Set(aliveAnimals.map((a) => a.species).filter(Boolean))];
+  const filteredAliveAnimals = filterSpecies === "all" ? aliveAnimals : aliveAnimals.filter((a) => a.species === filterSpecies);
 
   const animalWeightSummary = useMemo(() => {
     return aliveAnimals.map((animal) => {
@@ -101,6 +104,7 @@ export default function WeightTracking() {
   }, [aliveAnimals, allRecords]);
 
   const filtered = animalWeightSummary.filter((a) => {
+    if (filterSpecies !== "all" && a.species !== filterSpecies) return false;
     if (!searchTerm) return true;
     return a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || a.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) || a.breed?.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -127,7 +131,7 @@ export default function WeightTracking() {
   const gainers = animalWeightSummary.filter((a) => a.change > 0).length;
   const losers = animalWeightSummary.filter((a) => a.change < 0).length;
 
-  const resetForm = () => { setFormAnimalId(""); setFormDate(new Date().toISOString().split("T")[0]); setFormWeight(""); setFormLocation(""); setFormNotes(""); setEditingId(null); };
+  const resetForm = () => { setFormAnimalId(""); setFormDate(new Date().toISOString().split("T")[0]); setFormWeight(""); setFormLocation(user?.location || ""); setFormNotes(""); setEditingId(null); };
 
   const handleEdit = (record) => {
     setEditingId(record._id);
@@ -212,7 +216,8 @@ export default function WeightTracking() {
             <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
               <h4 className="font-bold text-purple-900 mb-3 flex items-center gap-2">⚖️ Weight Details</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div><label className="label">Animal *</label><select value={formAnimalId} onChange={(e) => setFormAnimalId(e.target.value)} className="input-field" required disabled={!!editingId}><option value="">-- Select Animal --</option>{aliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}</select></div>
+                <div><label className="label">Species Filter</label><select value={filterSpecies} onChange={(e) => { setFilterSpecies(e.target.value); setFormAnimalId(""); }} className="input-field"><option value="all">All Species</option>{speciesList.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div><label className="label">Animal *</label><select value={formAnimalId} onChange={(e) => setFormAnimalId(e.target.value)} className="input-field" required disabled={!!editingId}><option value="">-- Select Animal --</option>{filteredAliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}</select></div>
                 <div><label className="label">Date</label><input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="input-field" /></div>
                 <div><label className="label">Weight (kg) *</label><input type="number" step="0.1" min="0" value={formWeight} onChange={(e) => setFormWeight(e.target.value)} placeholder="e.g., 42.5" className="input-field" required /></div>
                 <div><label className="label">Location</label><select value={formLocation} onChange={(e) => setFormLocation(e.target.value)} className="input-field"><option value="">-- Select Location --</option>{locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}</select></div>
@@ -234,6 +239,7 @@ export default function WeightTracking() {
 
       <FilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Search by name, tag, or breed..."
         filters={[
+          { value: filterSpecies, onChange: setFilterSpecies, options: [{ value: "all", label: "All Species" }, ...speciesList.map((s) => ({ value: s, label: s }))] },
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
           { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
@@ -250,6 +256,7 @@ export default function WeightTracking() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Animal</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Tag</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Species</th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Breed</th>
                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Birth Wt</th>
                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Current Wt</th>
@@ -265,6 +272,7 @@ export default function WeightTracking() {
                     <motion.tr key={animal._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-sm font-semibold text-gray-900">{animal.name || "—"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{animal.tagId}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{animal.species || "—"}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{animal.breed || "—"}</td>
                       <td className="px-4 py-3 text-sm text-right text-gray-700">{animal.birthWeight ? `${animal.birthWeight} kg` : "—"}</td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">{animal.currentWeight ? `${animal.currentWeight} kg` : "—"}</td>
@@ -304,7 +312,7 @@ export default function WeightTracking() {
             <label className="label mb-0">Select Animal:</label>
             <select value={historyAnimalId} onChange={(e) => setHistoryAnimalId(e.target.value)} className="input-field md:w-80">
               <option value="all">All Animals</option>
-              {aliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}
+              {filteredAliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}
             </select>
             {historyAnimal && historyAnimalId !== "all" && (
               <div className="flex gap-4 text-sm text-gray-600">

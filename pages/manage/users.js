@@ -11,9 +11,11 @@ export default function ManageUsers() {
   const router = useRouter();
   const { user: currentUser, isLoading: roleLoading, isAdmin } = useRole();
   const [users, setUsers] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState("");
+  const [editingLocation, setEditingLocation] = useState("");
   const [savingUserId, setSavingUserId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -25,34 +27,40 @@ export default function ManageUsers() {
       return;
     }
 
-    // Check if current user is SuperAdmin
-    if (currentUser && !isAdmin()) {
+    // Check if current user is SuperAdmin or SubAdmin
+    if (currentUser && !["SuperAdmin", "SubAdmin"].includes(currentUser.role)) {
       router.push("/");
       return;
     }
 
-    fetchUsers();
+    fetchData();
   }, [currentUser, roleLoading]);
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/users", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setUsers(Array.isArray(data) ? data : []);
+      const [usersRes, locRes] = await Promise.all([
+        fetch("/api/users", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/locations", { headers: { "Authorization": `Bearer ${token}` } }),
+      ]);
+      const usersData = await usersRes.json();
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      if (locRes.ok) {
+        const locsData = await locRes.json();
+        setLocations(Array.isArray(locsData) ? locsData : []);
+      }
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching data:", error);
       setError("Failed to fetch users");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditRole = (userId, currentRole) => {
+  const handleEditRole = (userId, currentRole, currentLocation) => {
     setEditingUserId(userId);
     setEditingRole(currentRole);
+    setEditingLocation(currentLocation?._id || currentLocation || "");
     setError("");
     setSuccess("");
   };
@@ -60,6 +68,7 @@ export default function ManageUsers() {
   const handleCancelEdit = () => {
     setEditingUserId(null);
     setEditingRole("");
+    setEditingLocation("");
   };
 
   const handleSaveRole = async (userId) => {
@@ -76,7 +85,8 @@ export default function ManageUsers() {
         },
         body: JSON.stringify({
           userId,
-          role: editingRole
+          role: editingRole,
+          location: editingLocation || null,
         })
       });
 
@@ -88,9 +98,10 @@ export default function ManageUsers() {
 
       const updatedUser = await res.json();
       setUsers(users.map(u => u._id === userId ? updatedUser : u));
-      setSuccess("User role updated successfully!");
+      setSuccess("User updated successfully!");
       setEditingUserId(null);
       setEditingRole("");
+      setEditingLocation("");
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
@@ -106,6 +117,8 @@ export default function ManageUsers() {
     switch (role) {
       case "SuperAdmin":
         return "bg-red-100 text-red-800";
+      case "SubAdmin":
+        return "bg-orange-100 text-orange-800";
       case "Manager":
         return "bg-blue-100 text-blue-800";
       case "Attendant":
@@ -119,6 +132,8 @@ export default function ManageUsers() {
     switch (role) {
       case "SuperAdmin":
         return "👑";
+      case "SubAdmin":
+        return "🔑";
       case "Manager":
         return "📋";
       case "Attendant":
@@ -130,6 +145,7 @@ export default function ManageUsers() {
 
   const roleCounts = {
     superAdmin: users.filter(u => u.role === "SuperAdmin").length,
+    subAdmin: users.filter(u => u.role === "SubAdmin").length,
     manager: users.filter(u => u.role === "Manager").length,
     attendant: users.filter(u => u.role === "Attendant").length,
   };
@@ -166,6 +182,14 @@ export default function ManageUsers() {
             borderColor: "border-red-200",
             textColor: "text-red-700",
             icon: "👑",
+          },
+          {
+            label: "Sub Admins",
+            value: roleCounts.subAdmin,
+            bgColor: "bg-orange-50",
+            borderColor: "border-orange-200",
+            textColor: "text-orange-700",
+            icon: "🔑",
           },
           {
             label: "Managers",
@@ -223,6 +247,7 @@ export default function ManageUsers() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Location</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Joined</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -257,12 +282,35 @@ export default function ManageUsers() {
                           className="px-3 py-2 border-2 border-green-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
                         >
                           <option value="SuperAdmin">👑 SuperAdmin</option>
+                          <option value="SubAdmin">🔑 SubAdmin</option>
                           <option value="Manager">📋 Manager</option>
                           <option value="Attendant">👤 Attendant</option>
                         </select>
                       ) : (
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>
                           {getRoleIcon(user.role)} {user.role}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {editingUserId === user._id ? (
+                        <select
+                          value={editingLocation}
+                          onChange={(e) => setEditingLocation(e.target.value)}
+                          className="px-3 py-2 border-2 border-blue-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          <option value="">No Location</option>
+                          {locations.map((loc) => (
+                            <option key={loc._id} value={loc._id}>{loc.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-gray-700">
+                          {user.location?.name ? (
+                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">📍 {user.location.name}</span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
                         </span>
                       )}
                     </td>
@@ -297,7 +345,7 @@ export default function ManageUsers() {
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => handleEditRole(user._id, user.role)}
+                          onClick={() => handleEditRole(user._id, user.role, user.location)}
                           className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
                         >
                           <FaEdit />
@@ -331,7 +379,7 @@ export default function ManageUsers() {
             >
               <p className="text-gray-600 text-sm font-semibold">Administrators</p>
               <p className="text-4xl font-black text-red-600 mt-2">
-                {users.filter(u => u.role === "SuperAdmin").length}
+                {users.filter(u => ["SuperAdmin", "SubAdmin"].includes(u.role)).length}
               </p>
             </motion.div>
             <motion.div
@@ -342,7 +390,7 @@ export default function ManageUsers() {
             >
               <p className="text-gray-600 text-sm font-semibold">Managers & Attendants</p>
               <p className="text-4xl font-black text-purple-600 mt-2">
-                {users.filter(u => u.role !== "SuperAdmin").length}
+                {users.filter(u => !["SuperAdmin", "SubAdmin"].includes(u.role)).length}
               </p>
             </motion.div>
           </div>

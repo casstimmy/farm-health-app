@@ -13,7 +13,7 @@ import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
 
-const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
+const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Paddock", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
 
 const initialFormState = {
   date: new Date().toISOString().split("T")[0],
@@ -27,6 +27,7 @@ const emptyFeedItem = {
   inventoryItem: "",
   quantityOffered: "",
   quantityConsumed: "",
+  unit: "kg",
   unitCost: "",
   totalCost: "",
 };
@@ -184,6 +185,7 @@ export default function Feeding() {
         inventoryItem: fi.inventoryItem?._id || fi.inventoryItem || "",
         quantityOffered: fi.quantityOffered || "",
         quantityConsumed: fi.quantityConsumed || "",
+        unit: fi.unit || "kg",
         unitCost: fi.unitCost || "",
         totalCost: fi.totalCost || "",
       })));
@@ -194,6 +196,7 @@ export default function Feeding() {
         inventoryItem: record.inventoryItem?._id || record.inventoryItem || "",
         quantityOffered: record.quantityOffered || "",
         quantityConsumed: record.quantityConsumed || "",
+        unit: record.unit || "kg",
         unitCost: record.unitCost || "",
         totalCost: record.totalCost || "",
       }]);
@@ -217,6 +220,7 @@ export default function Feeding() {
           inventoryItem: fi.inventoryItem || undefined,
           quantityOffered: parseFloat(fi.quantityOffered) || 0,
           quantityConsumed: parseFloat(fi.quantityConsumed) || 0,
+          unit: fi.unit || "kg",
           unitCost: parseFloat(fi.unitCost) || 0,
           totalCost: parseFloat(fi.totalCost) || 0,
         }));
@@ -309,6 +313,7 @@ export default function Feeding() {
               inventoryItem: fi.inventoryItem || undefined,
               quantityOffered: perAnimalOffered,
               quantityConsumed: perAnimalConsumed,
+              unit: fi.unit || "kg",
               unitCost: totalUC,
               totalCost: perCost,
             };
@@ -407,7 +412,7 @@ export default function Feeding() {
         icon="🌾"
         actions={
           <button
-            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState }); setFeedItems([{ ...emptyFeedItem }]); setEditingFeedIdx(null); }}
+            onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState, location: user?.location || "" }); setFeedItems([{ ...emptyFeedItem }]); setEditingFeedIdx(null); }}
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
           >
             {showForm ? <FaTimes /> : <FaPlus />}
@@ -573,7 +578,7 @@ export default function Feeding() {
                           return (
                             <div key={idx} className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 shadow-sm">
                               <span className="text-sm font-semibold text-gray-900">{fi.feedCategory}</span>
-                              {fi.quantityConsumed && <span className="text-xs text-gray-500">• {fi.quantityConsumed} units</span>}
+                              {fi.quantityConsumed && <span className="text-xs text-gray-500">• {fi.quantityConsumed} {fi.unit || "kg"}</span>}
                               {fi.totalCost && parseFloat(fi.totalCost) > 0 && <span className="text-xs text-orange-600 font-medium">• {formatCurrency(parseFloat(fi.totalCost), businessSettings.currency)}</span>}
                               <button type="button" onClick={() => setEditingFeedIdx(idx)} className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded transition-colors" title="Edit">
                                 <FaEdit size={11} />
@@ -629,14 +634,43 @@ export default function Feeding() {
                           <div>
                             <label className="label">Qty Offered {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
                             <input type="number" step="0.01" min="0" value={fi.quantityOffered} onChange={(e) => {
-                              const updated = [...feedItems];
-                              updated[idx] = { ...updated[idx], quantityOffered: e.target.value };
-                              setFeedItems(updated);
+                              const val = e.target.value;
+                              setFeedItems(prev => {
+                                const updated = [...prev];
+                                const item = { ...updated[idx], quantityOffered: val };
+                                // Auto-fill consumed if empty or was same as previous offered
+                                if (!item.quantityConsumed || item.quantityConsumed === updated[idx].quantityOffered) {
+                                  item.quantityConsumed = val;
+                                  const uc = parseFloat(item.unitCost) || 0;
+                                  const qty = parseFloat(val) || 0;
+                                  item.totalCost = (uc * qty).toFixed(2);
+                                }
+                                updated[idx] = item;
+                                return updated;
+                              });
                             }} placeholder="e.g., 10" className="input-field" />
                           </div>
                           <div>
                             <label className="label">Qty Consumed {feedingMode === "group" && !editingId ? "(Total)" : ""}</label>
                             <input type="number" step="0.01" min="0" value={fi.quantityConsumed} onChange={(e) => recalcTotal("quantityConsumed", e.target.value, idx)} placeholder="e.g., 8" className="input-field" />
+                          </div>
+                          <div>
+                            <label className="label">Unit</label>
+                            <select value={fi.unit || "kg"} onChange={(e) => {
+                              const updated = [...feedItems];
+                              updated[idx] = { ...updated[idx], unit: e.target.value };
+                              setFeedItems(updated);
+                            }} className="input-field">
+                              <option value="kg">kg</option>
+                              <option value="g">g</option>
+                              <option value="lbs">lbs</option>
+                              <option value="oz">oz</option>
+                              <option value="liters">liters</option>
+                              <option value="ml">ml</option>
+                              <option value="bales">bales</option>
+                              <option value="scoops">scoops</option>
+                              <option value="units">units</option>
+                            </select>
                           </div>
                           <div>
                             <label className="label">Unit Cost</label>
@@ -756,8 +790,8 @@ export default function Feeding() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered ?? record.quantityOffered ?? "—"}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed ?? record.quantityConsumed ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered ?? record.quantityOffered ?? "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed ?? record.quantityConsumed ?? "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.feedingMethod || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>

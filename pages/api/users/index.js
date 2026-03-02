@@ -6,7 +6,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const users = await User.find().select("-password -pin").sort({ createdAt: -1 }).lean();
+      const users = await User.find().select("-password -pin").populate("location", "name").sort({ createdAt: -1 }).lean();
       res.status(200).json(users);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -21,9 +21,9 @@ async function handler(req, res) {
 
       // Validate role if being updated
       if (updateData.role) {
-        const validRoles = ["SuperAdmin", "Manager", "Attendant"];
+        const validRoles = ["SuperAdmin", "SubAdmin", "Manager", "Attendant"];
         if (!validRoles.includes(updateData.role)) {
-          return res.status(400).json({ error: "Invalid role. Must be one of: SuperAdmin, Manager, Attendant" });
+          return res.status(400).json({ error: "Invalid role. Must be one of: SuperAdmin, SubAdmin, Manager, Attendant" });
         }
 
         // Prevent removing all SuperAdmins
@@ -42,7 +42,7 @@ async function handler(req, res) {
         userId,
         updateData,
         { new: true }
-      ).select("-password");
+      ).select("-password").populate("location", "name");
 
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
