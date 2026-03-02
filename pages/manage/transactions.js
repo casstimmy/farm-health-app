@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { FaPlus, FaTimes, FaTrash, FaSpinner, FaCheck, FaChartPie, FaChartBar, FaEdit } from "react-icons/fa";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
@@ -85,7 +85,7 @@ export default function Transactions() {
       paymentMethod: record.paymentMethod || "Cash",
       vendor: record.vendor || "",
       invoiceNumber: record.invoiceNumber || "",
-      date: record.date ? new Date(record.date).toISOString().split("T")[0] : "",
+      date: formatDateForInput(record.date),
       location: record.location?._id || record.location || "",
       notes: record.notes || "",
     });

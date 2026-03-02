@@ -132,6 +132,7 @@ export default function ExpenseEntry() {
 
       setSuccess("Expense recorded successfully!");
       setFormData({ ...initialForm, recordedBy: currentUser?.name || "", location: currentUser?.location || "" });
+      invalidateCache("api/expenses");
       fetchExpenses();
       setTimeout(() => setSuccess(""), 4000);
     } catch (err) {

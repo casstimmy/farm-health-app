@@ -15,11 +15,15 @@ import {
   FaMoneyBill,
   FaClipboard,
   FaTasks,
+  FaReceipt,
+  FaUserCircle,
+  FaBell,
 } from "react-icons/fa";
 
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState(0);
   const router = useRouter();
   const { pathname } = router;
   const submenuRef = useRef(null);
@@ -61,6 +65,26 @@ export default function Sidebar() {
       router.events.off("routeChangeError", handleStop);
     };
   }, [router]);
+
+  // Fetch pending tasks for notification badge
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token || !user) return;
+        const res = await fetch("/api/tasks", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          const tasks = Array.isArray(data) ? data : [];
+          const myTasks = tasks.filter(t => t.status !== "Completed" && (t.assignedTo === user.name || t.assignedTo === user._id));
+          setPendingTasks(myTasks.length);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const baseLink =
     "px-2 py-3.5 text-gray-600 transition-all duration-300 hover:bg-green-50 hover:text-green-600 flex items-center justify-center flex-col text-xs cursor-pointer border-l-4 border-transparent hover:border-green-500 rounded-r-lg";
@@ -147,7 +171,6 @@ export default function Sidebar() {
       icon: <FaMoneyBill className="w-5 h-5" />,
       roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'],
       submenu: [
-        { href: "/manage/expenses", label: "💸 Record Expense", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
         { href: "/manage/transactions", label: "All Finance", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
         { href: "/manage/customers", label: "Customers", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
         { href: "/manage/orders", label: "Orders", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
@@ -200,6 +223,9 @@ export default function Sidebar() {
             {/* Tasks - Prominent Quick Access */}
             {renderMenuItem("/manage/tasks", <FaTasks className="w-5 h-5" />, "Tasks")}
 
+            {/* Record Expense - Quick Access */}
+            {renderMenuItem("/manage/expenses", <FaReceipt className="w-5 h-5" />, "Expense")}
+
             {/* Dynamic Menu Items */}
             {menuStructure.map(({ section, icon, submenu }) => {
               if (!submenu) return null;
@@ -248,15 +274,25 @@ export default function Sidebar() {
               );
             })}
 
-            {/* Logout Button */}
-            <li className="absolute bottom-4 left-2 right-2">
-              <button
-                onClick={handleLogout}
-                className="w-16 h-16 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all duration-300 border-2 border-red-200 font-semibold text-xs"
-                title="Logout"
-              >
-                📤
-              </button>
+            {/* User & Notifications */}
+            <li className="absolute bottom-4 left-2 right-2 space-y-2">
+              {/* Task Notification */}
+              <Link href="/manage/tasks" onClick={closeMenu}>
+                <div className="w-16 h-12 flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition-all duration-300 border-2 border-amber-200 relative cursor-pointer"
+                  title={pendingTasks > 0 ? `${pendingTasks} pending task${pendingTasks > 1 ? "s" : ""}` : "Tasks"}>
+                  <FaBell className="w-5 h-5" />
+                  {pendingTasks > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
+                      {pendingTasks > 9 ? "9+" : pendingTasks}
+                    </span>
+                  )}
+                </div>
+              </Link>
+              {/* User Icon */}
+              <div className="w-16 h-12 flex items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-all duration-300 border-2 border-green-200 cursor-pointer"
+                title={user?.name || "User"}>
+                <FaUserCircle className="w-6 h-6" />
+              </div>
             </li>
           </ul>
         </nav>

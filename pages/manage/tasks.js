@@ -8,6 +8,7 @@ import {
   FaCheckCircle, FaChevronDown, FaChevronUp, FaTrash, FaEdit,
 } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
+import { formatDateForInput } from "@/utils/formatting";
 import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
@@ -163,7 +164,7 @@ export default function TasksPage() {
       assignedTo: task.assignedTo?._id || "",
       location: task.location?._id || "",
       animal: task.animal?._id || "",
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "",
+      dueDate: formatDateForInput(task.dueDate),
       notes: task.notes || "",
       isRecurring: task.isRecurring || false,
       recurringInterval: task.recurringInterval || "",

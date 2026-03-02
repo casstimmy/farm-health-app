@@ -51,7 +51,7 @@ const HealthRecordSchema = new mongoose.Schema(
     completionDate: Date,
     recoveryStatus: {
       type: String,
-      enum: ["Under Treatment", "Improving", "Recovered", "Regressing", ""],
+      enum: ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased", "Regressing", ""],
     },
     postWeight: { type: Number, default: null },
     // Location

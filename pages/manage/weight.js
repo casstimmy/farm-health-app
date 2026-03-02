@@ -11,6 +11,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
+import { formatDateForInput } from "@/utils/formatting";
 
 export default function WeightTracking() {
   const router = useRouter();
@@ -136,7 +137,7 @@ export default function WeightTracking() {
   const handleEdit = (record) => {
     setEditingId(record._id);
     setFormAnimalId(record.animal?._id || record.animal || "");
-    setFormDate(record.date ? new Date(record.date).toISOString().split("T")[0] : "");
+    setFormDate(formatDateForInput(record.date));
     setFormWeight(record.weightKg || "");
     setFormLocation(record.location?._id || record.location || "");
     setFormNotes(record.notes || "");

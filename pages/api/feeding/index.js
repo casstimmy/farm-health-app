@@ -5,6 +5,26 @@ import "@/models/Inventory";
 import "@/models/Location";
 import { withAuth } from "@/utils/middleware";
 
+// Feed conversion efficiency: % of consumed feed converted to body weight
+// Using mid-range values for each species
+const FEED_CONVERSION_RATES = {
+  goat: 0.195,       // 17-22% → ~19.5%
+  sheep: 0.215,      // 18-25% → ~21.5%
+  cow: 0.13,         // 10-16% → ~13%
+  cattle: 0.13,
+  chicken: 0.60,     // 55-65% → ~60%
+  poultry: 0.60,
+  turkey: 0.38,      // 30-45% → ~37.5%
+  pig: 0.35,         // 28-40% → ~34%
+  swine: 0.35,
+  rabbit: 0.25,      // 20-30% → ~25%
+  fish: 0.55,        // 40-70% → ~55%
+  duck: 0.40,        // 30-50% → ~40%
+  horse: 0.08,       // 5-10% → ~7.5%
+  donkey: 0.08,
+  camel: 0.10,       // 8-12% → ~10%
+};
+
 async function handler(req, res) {
   await dbConnect();
 
@@ -65,6 +85,27 @@ async function handler(req, res) {
         totalQuantityConsumed,
         totalFeedCost,
       });
+
+      // Update animal's projected weight based on feed consumed and species conversion rate
+      if (totalQuantityConsumed > 0) {
+        const species = (animal.species || "").toLowerCase().trim();
+        const conversionRate = FEED_CONVERSION_RATES[species] || 0.15; // default 15%
+        const weightGain = +(totalQuantityConsumed * conversionRate).toFixed(2);
+        const currentWeight = animal.currentWeight || 0;
+        const newProjectedWeight = +(currentWeight + weightGain).toFixed(2);
+
+        await Animal.findByIdAndUpdate(animalId, {
+          $inc: { totalFeedCost: totalFeedCost },
+          projectedMaxWeight: newProjectedWeight,
+        });
+      } else {
+        // Still track feed cost even with 0 consumed
+        if (totalFeedCost > 0) {
+          await Animal.findByIdAndUpdate(animalId, {
+            $inc: { totalFeedCost: totalFeedCost },
+          });
+        }
+      }
 
       res.status(201).json({ message: "Feeding record added", feeding: record });
     } catch (error) {

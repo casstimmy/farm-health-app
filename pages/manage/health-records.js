@@ -16,7 +16,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput } from "@/utils/formatting";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Antibiotics", "Ext-Parasite", "Deworming", "Vitamin Dosing", "Hydration/Electrolyte", "Vaccination", "Int-Parasite", "Injection", "Oral", "Topical", "IV Drip", "Surgical", "Other"];
@@ -31,7 +31,7 @@ const emptyForm = {
   animal: "",
   date: new Date().toISOString().split("T")[0],
   time: "",
-  isRoutine: false,
+  isRoutine: true,
   symptoms: "",
   possibleCause: "",
   diagnosis: "",
@@ -132,7 +132,7 @@ export default function HealthRecords() {
     setSelectionMode("individual");
     setFormData({
       animal: record.animal?._id || record.animal || "",
-      date: record.date ? new Date(record.date).toISOString().split("T")[0] : "",
+      date: formatDateForInput(record.date),
       time: record.time || "",
       isRoutine: record.isRoutine || false,
       symptoms: record.symptoms || "",
@@ -161,7 +161,7 @@ export default function HealthRecords() {
       treatedBy: record.treatedBy || "",
       postObservation: record.postObservation || "",
       observationTime: record.observationTime || "",
-      completionDate: record.completionDate ? new Date(record.completionDate).toISOString().split("T")[0] : "",
+      completionDate: formatDateForInput(record.completionDate),
       recoveryStatus: record.recoveryStatus || "",
       postWeight: record.postWeight || "",
       notes: record.notes || "",
@@ -169,15 +169,29 @@ export default function HealthRecords() {
     setShowForm(true);
   };
 
-  // Build payload, stripping empty treatment objects
+  // Build payload, stripping empty treatment objects and empty medication refs
   const buildPayload = (data, animalId) => {
     const payload = { ...data, animal: animalId || data.animal };
-    if (!payload.treatmentA?.treatmentType && !payload.treatmentA?.medication) {
-      payload.treatmentA = undefined;
+    // Clean treatmentA: strip empty medication ObjectIds
+    if (payload.treatmentA) {
+      if (!payload.treatmentA.treatmentType && !payload.treatmentA.medication && !payload.treatmentA.medicationName) {
+        payload.treatmentA = undefined;
+      } else {
+        payload.treatmentA = { ...payload.treatmentA };
+        if (!payload.treatmentA.medication) payload.treatmentA.medication = null;
+      }
     }
-    if (!payload.needsMultipleTreatments || (!payload.treatmentB?.treatmentType && !payload.treatmentB?.medication)) {
+    // Clean treatmentB: strip if not needed or empty
+    if (!payload.needsMultipleTreatments || (!payload.treatmentB?.treatmentType && !payload.treatmentB?.medication && !payload.treatmentB?.medicationName)) {
       payload.treatmentB = undefined;
+    } else {
+      payload.treatmentB = { ...payload.treatmentB };
+      if (!payload.treatmentB.medication) payload.treatmentB.medication = null;
     }
+    // Clean numeric fields: convert empty strings to null
+    if (payload.prescribedDays === "" || payload.prescribedDays === undefined) payload.prescribedDays = 0;
+    if (payload.preWeight === "" || payload.preWeight === undefined) payload.preWeight = null;
+    if (payload.postWeight === "" || payload.postWeight === undefined) payload.postWeight = null;
     return payload;
   };
 
@@ -216,6 +230,7 @@ export default function HealthRecords() {
       } else {
         // Create mode - batch for group/paddock
         let created = 0;
+        let lastErr = "";
         for (const aid of animalIds) {
           const payload = buildPayload(formData, aid);
           const res = await fetch("/api/health-records", {
@@ -223,7 +238,15 @@ export default function HealthRecords() {
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify(payload),
           });
-          if (res.ok) created++;
+          if (res.ok) {
+            created++;
+          } else {
+            const d = await res.json().catch(() => ({}));
+            lastErr = d.error || "Unknown error";
+          }
+        }
+        if (created < animalIds.length) {
+          setError(`${animalIds.length - created} of ${animalIds.length} records failed: ${lastErr}`);
         }
         setSuccess(`${created} health record${created > 1 ? "s" : ""} created!`);
       }
@@ -269,7 +292,16 @@ export default function HealthRecords() {
   useEffect(() => {
     if (selectionMode === "paddock" && selectedPaddock) {
       const ids = animals
-        .filter(a => a.status === "Alive" && !a.isArchived && (a.paddock || "").toLowerCase() === selectedPaddock.toLowerCase())
+        .filter(a => {
+          if (a.status !== "Alive" || a.isArchived) return false;
+          if ((a.paddock || "").toLowerCase() !== selectedPaddock.toLowerCase()) return false;
+          // Also filter by location if set
+          if (formData.location) {
+            const animalLoc = a.location?._id || a.location || "";
+            if (animalLoc !== formData.location) return false;
+          }
+          return true;
+        })
         .map(a => a._id);
       setSelectedAnimals(ids);
     } else if (selectionMode === "location" && selectedGroupLocation) {
@@ -280,7 +312,7 @@ export default function HealthRecords() {
     } else if (selectionMode === "individual") {
       setSelectedAnimals([]);
     }
-  }, [selectionMode, selectedPaddock, selectedGroupLocation, animals]);
+  }, [selectionMode, selectedPaddock, selectedGroupLocation, animals, formData.location]);
 
   // Filter logic
   const filtered = useMemo(() => {
@@ -465,13 +497,40 @@ export default function HealthRecords() {
                     </div>
                   )}
                   {selectionMode === "paddock" && (
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 mb-1 block">Paddock/Shed *</label>
-                      <select value={selectedPaddock} onChange={(e) => setSelectedPaddock(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
-                        <option value="">Select paddock...</option>
-                        {paddockList.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 mb-1 block">Location *</label>
+                        <select value={formData.location} onChange={(e) => { handleChange("location", e.target.value); setSelectedPaddock(""); setSelectedAnimals([]); }}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
+                          <option value="">Select location...</option>
+                          {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 mb-1 block">Paddock/Shed *</label>
+                        <select value={selectedPaddock} onChange={(e) => setSelectedPaddock(e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500"
+                          disabled={!formData.location}>
+                          <option value="">{formData.location ? "Select paddock..." : "-- Select a location first --"}</option>
+                          {(() => {
+                            const paddockSet = new Set();
+                            const selectedLoc = locations.find(l => l._id === formData.location);
+                            if (selectedLoc) {
+                              (selectedLoc.paddocks || []).forEach(p => {
+                                if (p.name && p.isActive !== false) paddockSet.add(p.name);
+                              });
+                            }
+                            const locationAnimals = formData.location
+                              ? animals.filter(a => a.status === "Alive" && !a.isArchived && ((a.location?._id || a.location || "") === formData.location))
+                              : [];
+                            locationAnimals.forEach(a => { if (a.paddock) paddockSet.add(a.paddock); });
+                            return [...paddockSet].sort().map(p => {
+                              const count = locationAnimals.filter(a => (a.paddock || "").toLowerCase() === p.toLowerCase()).length;
+                              return <option key={p} value={p}>{p} ({count} animals)</option>;
+                            });
+                          })()}
+                        </select>
+                      </div>
                       {selectedAnimals.length > 0 && (
                         <p className="mt-2 text-sm text-teal-700 font-semibold">✅ {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
                       )}
@@ -480,7 +539,7 @@ export default function HealthRecords() {
                   {selectionMode === "location" && (
                     <div>
                       <label className="text-sm font-semibold text-gray-700 mb-1 block">Location *</label>
-                      <select value={selectedGroupLocation} onChange={(e) => setSelectedGroupLocation(e.target.value)}
+                      <select value={selectedGroupLocation} onChange={(e) => { setSelectedGroupLocation(e.target.value); handleChange("location", e.target.value); }}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
                         <option value="">Select location...</option>
                         {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}

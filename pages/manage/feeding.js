@@ -8,7 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
@@ -68,9 +68,6 @@ export default function Feeding() {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
     fetchAll();
-    const onFocus = () => fetchAll();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
   }, [router]);
 
   const fetchAll = async () => {
@@ -174,7 +171,7 @@ export default function Feeding() {
     setFeedingMode("individual");
     setSelectedAnimalId(record.animal?._id || record.animal || "");
     setFormData({
-      date: record.date ? new Date(record.date).toISOString().split("T")[0] : "",
+      date: formatDateForInput(record.date),
       feedingMethod: record.feedingMethod || "",
       location: record.location?._id || record.location || "",
       notes: record.notes || "",
@@ -447,7 +444,7 @@ export default function Feeding() {
         {[
           { label: "Total Records", value: totalRecords, color: "blue" },
           { label: "Today's Feedings", value: todayRecords, color: "green" },
-          { label: "Total Consumed", value: `${totalConsumed.toFixed(1)} units`, color: "amber" },
+          { label: "Total Consumed", value: `${totalConsumed.toFixed(2)} units`, color: "amber" },
           { label: "Total Feed Cost", value: formatCurrency(totalFeedCost, businessSettings.currency), color: "red" },
         ].map((s) => (
           <div key={s.label} className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4`}>
@@ -647,7 +644,7 @@ export default function Feeding() {
             </div>
 
             {/* Feed Details - Multiple Items */}
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName === "SELECT") e.preventDefault(); }}>
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items ({feedItems.filter(fi => fi.feedCategory?.trim()).length} added)</h4>
@@ -709,7 +706,7 @@ export default function Feeding() {
                     const idx = activeIdx;
                     if (!fi) return (
                       <button type="button" onClick={() => { addFeedItem(); setEditingFeedIdx(feedItems.length); }} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors w-full justify-center">
-                        <FaPlus size={12} /> Add Another Feed Item
+                        <FaPlus size={12} /> Add Mixed Feed Item
                       </button>
                     );
                     return (
@@ -805,7 +802,7 @@ export default function Feeding() {
                               setEditingFeedIdx(feedItems.length);
                             }
                           }} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
-                            <FaPlus size={10} /> Add Another
+                            <FaPlus size={10} /> Add To Mixed
                           </button>
                         </div>
                       </div>
@@ -899,8 +896,8 @@ export default function Feeding() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered ?? record.quantityOffered ?? "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed ?? record.quantityConsumed ?? "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered != null ? Number(record.totalQuantityOffered).toFixed(2) : record.quantityOffered != null ? Number(record.quantityOffered).toFixed(2) : "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed != null ? Number(record.totalQuantityConsumed).toFixed(2) : record.quantityConsumed != null ? Number(record.quantityConsumed).toFixed(2) : "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.feedingMethod || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>
