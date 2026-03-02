@@ -33,6 +33,8 @@ const initialForm = {
   paymentMethod: "Cash",
   description: "",
   notes: "",
+  location: "",
+  recordedBy: "",
 };
 
 export default function ExpenseEntry() {
@@ -46,12 +48,36 @@ export default function ExpenseEntry() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(true);
+  const [locations, setLocations] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
+    // Load user data and auto-fill
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      setCurrentUser(userData);
+      setFormData(prev => ({
+        ...prev,
+        recordedBy: userData.name || "",
+        location: userData.location || "",
+      }));
+    } catch { /* ignore */ }
     fetchExpenses();
+    fetchLocations();
   }, [router]);
+
+  const fetchLocations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setLocations(Array.isArray(data) ? data : []);
+      }
+    } catch { /* ignore */ }
+  };
 
   const fetchExpenses = async () => {
     try {
@@ -105,7 +131,7 @@ export default function ExpenseEntry() {
       }
 
       setSuccess("Expense recorded successfully!");
-      setFormData({ ...initialForm });
+      setFormData({ ...initialForm, recordedBy: currentUser?.name || "", location: currentUser?.location || "" });
       fetchExpenses();
       setTimeout(() => setSuccess(""), 4000);
     } catch (err) {
@@ -284,6 +310,28 @@ export default function ExpenseEntry() {
                       onChange={(e) => handleChange("description", e.target.value)}
                       placeholder="Optional details"
                       className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Location</label>
+                    <select
+                      value={formData.location}
+                      onChange={(e) => handleChange("location", e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">-- Select Location --</option>
+                      {locations.map((loc) => (
+                        <option key={loc._id} value={loc._id}>{loc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Recorded By</label>
+                    <input
+                      type="text"
+                      value={formData.recordedBy}
+                      className="input-field bg-gray-100"
+                      readOnly
                     />
                   </div>
                 </div>

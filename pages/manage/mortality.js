@@ -170,13 +170,17 @@ export default function MortalityTracking() {
   };
 
   const deleteRecord = async (recordId) => {
-    if (!confirm("Are you sure you want to delete this mortality record?")) return;
+    if (!confirm("Are you sure? This will delete the mortality record and move the animal to Archived Animals (data preserved forever).")) return;
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/mortality/${recordId}`, {
+      const res = await fetch(`/api/mortality/${recordId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.ok) {
+        setSuccess("Mortality record deleted. Animal moved to Archived Animals.");
+        setTimeout(() => setSuccess(""), 4000);
+      }
       fetchData();
     } catch (err) {
       console.error("Failed to delete:", err);

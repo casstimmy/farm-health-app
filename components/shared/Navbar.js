@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useContext, useEffect, useRef } from "react";
-import { FaBars, FaTimes, FaHome, FaLeaf, FaBoxes, FaUsers, FaSignOutAlt, FaCog, FaChevronDown, FaClipboardList, FaUserCircle, FaBell } from "react-icons/fa";
+import { FaBars, FaTimes, FaHome, FaLeaf, FaBoxes, FaUsers, FaSignOutAlt, FaCog, FaChevronDown, FaClipboardList, FaUserCircle, FaBell, FaMoneyBillWave } from "react-icons/fa";
 import { BusinessContext } from "@/context/BusinessContext";
 
 export default function Navbar() {
@@ -73,6 +73,7 @@ export default function Navbar() {
     { href: "/manage/animals", label: "Animals", icon: FaLeaf },
     { href: "/manage/inventory", label: "Inventory", icon: FaBoxes },
     { href: "/manage/tasks", label: "Tasks", icon: FaClipboardList },
+    { href: "/manage/expenses", label: "Expenses", icon: FaMoneyBillWave },
     { href: "/manage/users", label: "Users", icon: FaUsers },
   ];
 

@@ -119,7 +119,15 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Clear sire/dam when switching to Purchased or Donated
+      if (name === "acquisitionType" && (value === "Purchased" || value === "Donated")) {
+        updated.sire = "";
+        updated.dam = "";
+      }
+      return updated;
+    });
     // Clear field-specific error when user types
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: "" }));
@@ -253,6 +261,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       const token = localStorage.getItem("token");
       const submitData = {
         ...formData,
+        // Resolve custom species
+        species: formData.species === "_custom" ? (formData._customSpecies || "Goat") : formData.species,
         currentWeight: formData.currentWeight ? parseFloat(String(formData.currentWeight).replace(/,/g, "")) : 0,
         projectedMaxWeight: formData.projectedMaxWeight ? parseFloat(String(formData.projectedMaxWeight).replace(/,/g, "")) : 0,
         purchaseCost: formData.purchaseCost ? parseFloat(String(formData.purchaseCost).replace(/,/g, "")) : 0,
@@ -262,6 +272,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         dob: formData.dob || null,
         acquisitionDate: formData.acquisitionDate || null
       };
+      // Remove internal field
+      delete submitData._customSpecies;
 
       // determine if we're editing or creating
       const isEdit = animal && (animal._id || animal.id);
@@ -391,18 +403,46 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           {/* Species */}
           <div>
             <label className="label">Species</label>
-            <select
-              name="species"
-              value={formData.species}
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option>Goat</option>
-              <option>Sheep</option>
-              <option>Cow</option>
-              <option>Pig</option>
-              <option>Chicken</option>
-            </select>
+            {formData.species === "_custom" ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="species"
+                  value={formData._customSpecies || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, _customSpecies: e.target.value, species: e.target.value || "_custom" }))}
+                  className="input-field flex-1"
+                  placeholder="Enter species name..."
+                  autoFocus
+                />
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, species: "Goat", _customSpecies: "" }))} className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+              </div>
+            ) : (
+              <select
+                name="species"
+                value={formData.species}
+                onChange={(e) => {
+                  if (e.target.value === "_custom") {
+                    setFormData(prev => ({ ...prev, species: "_custom", _customSpecies: "" }));
+                  } else {
+                    handleChange(e);
+                  }
+                }}
+                className="input-field"
+              >
+                <option>Cow</option>
+                <option>Sheep</option>
+                <option>Goat</option>
+                <option>Pig</option>
+                <option>Ostrich</option>
+                <option>Turkey</option>
+                <option>Chicken</option>
+                <option>Rabbit</option>
+                <option>Fish</option>
+                <option>Snail</option>
+                <option>Birds</option>
+                <option value="_custom">+ Add Custom Species</option>
+              </select>
+            )}
           </div>
 
           {/* Breed */}
@@ -441,10 +481,11 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               className="input-field"
             >
               <option value="">Select Class</option>
+              <option value="Pedigree">Pedigree</option>
               <option value="Stud">Stud</option>
-              <option value="Female">Female</option>
-              <option value="Kid">Kid</option>
-              <option value="Adult">Adult</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Cull">Cull</option>
+              <option value="Wild">Wild</option>
             </select>
           </div>
 
@@ -509,41 +550,45 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             />
           </div>
 
-          {/* Sire ID */}
-          <div>
-            <label className="label">Sire (Father)</label>
-            <select
-              name="sire"
-              value={formData.sire}
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option value="">-- Select Sire --</option>
-              {maleAnimals.map((a) => (
-                <option key={a._id} value={a._id}>
-                  {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Sire ID - only show for Bred on farm */}
+          {(formData.acquisitionType === "Bred on farm" || formData.acquisitionType === "Other") && (
+            <div>
+              <label className="label">Sire (Father)</label>
+              <select
+                name="sire"
+                value={formData.sire}
+                onChange={handleChange}
+                className="input-field"
+              >
+                <option value="">-- Select Sire --</option>
+                {maleAnimals.map((a) => (
+                  <option key={a._id} value={a._id}>
+                    {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Dam ID */}
-          <div>
-            <label className="label">Dam (Mother)</label>
-            <select
-              name="dam"
-              value={formData.dam}
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option value="">-- Select Dam --</option>
-              {femaleAnimals.map((a) => (
-                <option key={a._id} value={a._id}>
-                  {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Dam ID - only show for Bred on farm */}
+          {(formData.acquisitionType === "Bred on farm" || formData.acquisitionType === "Other") && (
+            <div>
+              <label className="label">Dam (Mother)</label>
+              <select
+                name="dam"
+                value={formData.dam}
+                onChange={handleChange}
+                className="input-field"
+              >
+                <option value="">-- Select Dam --</option>
+                {femaleAnimals.map((a) => (
+                  <option key={a._id} value={a._id}>
+                    {a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.breed || ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

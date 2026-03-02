@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import MortalityRecord from "@/models/MortalityRecord";
+import Animal from "@/models/Animal";
 import { withAuth } from "@/utils/middleware";
 import mongoose from "mongoose";
 
@@ -51,11 +52,26 @@ async function handler(req, res) {
           .json({ error: "Forbidden: Only SuperAdmin can delete" });
       }
 
-      const deleted = await MortalityRecord.findByIdAndDelete(id);
-      if (!deleted) {
+      // Find the mortality record first
+      const record = await MortalityRecord.findById(id);
+      if (!record) {
         return res.status(404).json({ error: "Mortality record not found" });
       }
-      res.status(200).json({ message: "Mortality record deleted" });
+
+      // Archive the animal instead of leaving it as "Dead"
+      if (record.animal) {
+        await Animal.findByIdAndUpdate(record.animal, {
+          isArchived: true,
+          archivedAt: new Date(),
+          archivedReason: `Mortality - ${record.cause || "Unknown cause"}`,
+          status: "Dead",
+        });
+      }
+
+      // Delete the mortality record
+      await MortalityRecord.findByIdAndDelete(id);
+
+      res.status(200).json({ message: "Mortality record deleted. Animal moved to Archived Animals." });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

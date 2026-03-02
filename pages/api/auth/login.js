@@ -49,6 +49,7 @@ export default async function handler(req, res) {
           email: user.email,
           role: user.role,
           location: user.location || null,
+          locations: user.locations || [],
           avatar: user.avatar || "",
           phone: user.phone || ""
         }

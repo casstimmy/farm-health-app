@@ -521,6 +521,22 @@ export default function Feeding() {
                 </div>
               ) : feedingMode === "paddock" ? (
                 <div className="space-y-3">
+                  {/* Location selection for paddock mode */}
+                  <div>
+                    <label className="label">Select Location *</label>
+                    <select
+                      value={formData.location}
+                      onChange={(e) => {
+                        setFormData({ ...formData, location: e.target.value });
+                        setSelectedPaddock("");
+                        setSelectedGroupIds([]);
+                      }}
+                      className="input-field"
+                    >
+                      <option value="">-- Select Location --</option>
+                      {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                    </select>
+                  </div>
                   <div>
                     <label className="label">Select Paddock/Shed *</label>
                     <select
@@ -528,28 +544,43 @@ export default function Feeding() {
                       onChange={(e) => {
                         const paddockName = e.target.value;
                         setSelectedPaddock(paddockName);
-                        // Auto-select all alive animals at the user's location matching this paddock
-                        const paddockAnimals = aliveAnimals.filter(
+                        // Auto-select all alive animals matching this paddock (and location if set)
+                        const filteredAnimals = formData.location
+                          ? aliveAnimals.filter((a) => {
+                              const animalLoc = a.location?._id || a.location || "";
+                              return animalLoc === formData.location;
+                            })
+                          : aliveAnimals;
+                        const paddockAnimals = filteredAnimals.filter(
                           (a) => (a.paddock || "").toLowerCase() === paddockName.toLowerCase()
                         );
                         setSelectedGroupIds(paddockAnimals.map((a) => a._id));
                       }}
                       className="input-field"
+                      disabled={!formData.location}
                     >
-                      <option value="">-- Select Paddock/Shed --</option>
+                      <option value="">{formData.location ? "-- Select Paddock/Shed --" : "-- Select a location first --"}</option>
                       {(() => {
-                        // Collect paddocks from locations and also unique paddock values from animals
+                        // Filter paddocks to only those from the selected location
                         const paddockSet = new Set();
-                        locations.forEach((loc) => {
-                          (loc.paddocks || []).forEach((p) => {
+                        const selectedLoc = locations.find((l) => l._id === formData.location);
+                        if (selectedLoc) {
+                          (selectedLoc.paddocks || []).forEach((p) => {
                             if (p.name && p.isActive !== false) paddockSet.add(p.name);
                           });
-                        });
-                        aliveAnimals.forEach((a) => {
+                        }
+                        // Also include paddocks assigned to animals AT this location
+                        const locationAnimals = formData.location
+                          ? aliveAnimals.filter((a) => {
+                              const animalLoc = a.location?._id || a.location || "";
+                              return animalLoc === formData.location;
+                            })
+                          : aliveAnimals;
+                        locationAnimals.forEach((a) => {
                           if (a.paddock) paddockSet.add(a.paddock);
                         });
                         return [...paddockSet].sort().map((p) => (
-                          <option key={p} value={p}>{p} ({aliveAnimals.filter(a => (a.paddock || "").toLowerCase() === p.toLowerCase()).length} animals)</option>
+                          <option key={p} value={p}>{p} ({locationAnimals.filter(a => (a.paddock || "").toLowerCase() === p.toLowerCase()).length} animals)</option>
                         ));
                       })()}
                     </select>
@@ -561,7 +592,12 @@ export default function Feeding() {
                       </p>
                       <div className="max-h-32 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
                         {aliveAnimals
-                          .filter((a) => (a.paddock || "").toLowerCase() === selectedPaddock.toLowerCase())
+                          .filter((a) => {
+                            const matchesPaddock = (a.paddock || "").toLowerCase() === selectedPaddock.toLowerCase();
+                            if (!formData.location) return matchesPaddock;
+                            const animalLoc = a.location?._id || a.location || "";
+                            return matchesPaddock && animalLoc === formData.location;
+                          })
                           .map((a) => (
                             <label key={a._id} className="flex items-center gap-2 px-2 py-1 hover:bg-amber-50 rounded cursor-pointer text-sm">
                               <input type="checkbox" checked={selectedGroupIds.includes(a._id)} onChange={() => handleToggleGroupAnimal(a._id)} className="w-4 h-4 text-amber-600 rounded" />

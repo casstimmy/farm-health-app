@@ -113,7 +113,7 @@ export default function Finance() {
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error("Failed");
       setSuccess(editingId ? "Updated!" : "Record added!");
-      setShowForm(false); setEditingId(null); setFormData({ ...initialForm });
+      setShowForm(false); setEditingId(null); setFormData({ ...initialForm, location: user?.location || "" });
       fetchData(); setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
@@ -163,7 +163,7 @@ export default function Finance() {
   return (
     <div className="space-y-6">
       <PageHeader title="Finance" subtitle="Track income, expenses, and financial analytics" icon="💰"
-        actions={<button onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialForm }); }} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Add Record"}</button>}
+        actions={<button onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialForm, location: user?.location || "" }); }} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Add Record"}</button>}
       />
 
       {loading && (
@@ -174,26 +174,6 @@ export default function Finance() {
 
       {error && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="error-message flex items-center justify-between"><span>{error}</span><button onClick={() => setError("")} className="text-red-500"><FaTimes /></button></motion.div>}
       {success && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="success-message"><FaCheck className="inline mr-2" />{success}</motion.div>}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p></div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p></div>
-        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p></div>
-      </div>
-
-      {expensesByCategory.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Expenses by Category</h3>
-            <div className="flex gap-2">
-              <button onClick={() => setChartMode("pie")} className={`p-2 rounded-lg ${chartMode === "pie" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartPie size={16} /></button>
-              <button onClick={() => setChartMode("bar")} className={`p-2 rounded-lg ${chartMode === "bar" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartBar size={16} /></button>
-            </div>
-          </div>
-          <div className="h-72">{chartMode === "pie" ? <Pie data={pieData} options={pieOpts} /> : <Bar data={barData} options={barOpts} />}</div>
-        </div>
-      )}
 
       {showForm && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden">
@@ -227,6 +207,8 @@ export default function Finance() {
                     <option value="">-- Select Location --</option>
                     {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                   </select></div>
+                <div><label className="label">Recorded By</label>
+                  <input type="text" value={user?.name || "Unknown"} className="input-field bg-gray-100" readOnly /></div>
               </div>
             </div>
             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
@@ -240,6 +222,26 @@ export default function Finance() {
             </div>
           </form>
         </motion.div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p></div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p></div>
+        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p></div>
+      </div>
+
+      {expensesByCategory.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Expenses by Category</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setChartMode("pie")} className={`p-2 rounded-lg ${chartMode === "pie" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartPie size={16} /></button>
+              <button onClick={() => setChartMode("bar")} className={`p-2 rounded-lg ${chartMode === "bar" ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600"}`}><FaChartBar size={16} /></button>
+            </div>
+          </div>
+          <div className="h-72">{chartMode === "pie" ? <Pie data={pieData} options={pieOpts} /> : <Bar data={barData} options={barOpts} />}</div>
+        </div>
       )}
 
       <FilterBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Search records..."

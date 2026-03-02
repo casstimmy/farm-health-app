@@ -16,12 +16,13 @@ export default function ManageUsers() {
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState("");
   const [editingLocation, setEditingLocation] = useState("");
+  const [editingLocations, setEditingLocations] = useState([]);
   const [savingUserId, setSavingUserId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   // Add User form state
   const [showAddUser, setShowAddUser] = useState(false);
-  const [addUserForm, setAddUserForm] = useState({ name: "", email: "", pin: "", role: "Attendant", location: "", phone: "" });
+  const [addUserForm, setAddUserForm] = useState({ name: "", email: "", pin: "", role: "Attendant", location: "", locations: [], phone: "" });
   const [addingUser, setAddingUser] = useState(false);
 
   useEffect(() => {
@@ -62,9 +63,11 @@ export default function ManageUsers() {
   };
 
   const handleEditRole = (userId, currentRole, currentLocation) => {
+    const editUser = users.find(u => u._id === userId);
     setEditingUserId(userId);
     setEditingRole(currentRole);
     setEditingLocation(currentLocation?._id || currentLocation || "");
+    setEditingLocations((editUser?.locations || []).map(l => l._id || l));
     setError("");
     setSuccess("");
   };
@@ -73,6 +76,7 @@ export default function ManageUsers() {
     setEditingUserId(null);
     setEditingRole("");
     setEditingLocation("");
+    setEditingLocations([]);
   };
 
   const handleSaveRole = async (userId) => {
@@ -91,6 +95,7 @@ export default function ManageUsers() {
           userId,
           role: editingRole,
           location: editingLocation || null,
+          locations: editingLocations.length > 0 ? editingLocations : [],
         })
       });
 
@@ -106,6 +111,7 @@ export default function ManageUsers() {
       setEditingUserId(null);
       setEditingRole("");
       setEditingLocation("");
+      setEditingLocations([]);
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
@@ -145,16 +151,16 @@ export default function ManageUsers() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to register user");
       // If a location was selected, assign it
-      if (addUserForm.location && data.user?.id) {
+      if ((addUserForm.location || addUserForm.locations?.length) && data.user?.id) {
         const token = localStorage.getItem("token");
         await fetch("/api/users", {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: data.user.id, location: addUserForm.location }),
+          body: JSON.stringify({ userId: data.user.id, location: addUserForm.location, locations: addUserForm.locations || [] }),
         });
       }
       setSuccess(`User "${addUserForm.name}" created successfully!`);
-      setAddUserForm({ name: "", email: "", pin: "", role: "Attendant", location: "", phone: "" });
+      setAddUserForm({ name: "", email: "", pin: "", role: "Attendant", location: "", locations: [], phone: "" });
       setShowAddUser(false);
       fetchData();
       setTimeout(() => setSuccess(""), 3000);
@@ -292,6 +298,24 @@ export default function ManageUsers() {
                     {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                   </select>
                 </div>
+                {addUserForm.role === "SubAdmin" && (
+                  <div className="col-span-full">
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Assigned Locations (SubAdmin can manage multiple)</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border-2 border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto">
+                      {locations.map((loc) => (
+                        <label key={loc._id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-orange-50 rounded-lg cursor-pointer text-sm">
+                          <input type="checkbox" checked={(addUserForm.locations || []).includes(loc._id)}
+                            onChange={(e) => {
+                              const locs = addUserForm.locations || [];
+                              setAddUserForm({ ...addUserForm, locations: e.target.checked ? [...locs, loc._id] : locs.filter(l => l !== loc._id) });
+                            }}
+                            className="w-4 h-4 text-orange-600 rounded" />
+                          <span>{loc.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Phone</label>
                   <input type="text" value={addUserForm.phone} onChange={(e) => setAddUserForm({ ...addUserForm, phone: e.target.value })}
@@ -437,20 +461,43 @@ export default function ManageUsers() {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       {editingUserId === user._id ? (
-                        <select
-                          value={editingLocation}
-                          onChange={(e) => setEditingLocation(e.target.value)}
-                          className="px-3 py-2 border-2 border-blue-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        >
-                          <option value="">All Locations</option>
-                          {locations.map((loc) => (
-                            <option key={loc._id} value={loc._id}>{loc.name}</option>
-                          ))}
-                        </select>
+                        <div className="space-y-2">
+                          <select
+                            value={editingLocation}
+                            onChange={(e) => setEditingLocation(e.target.value)}
+                            className="px-3 py-2 border-2 border-blue-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 w-full"
+                          >
+                            <option value="">All Locations</option>
+                            {locations.map((loc) => (
+                              <option key={loc._id} value={loc._id}>{loc.name}</option>
+                            ))}
+                          </select>
+                          {editingRole === "SubAdmin" && (
+                            <div className="border-2 border-orange-300 rounded-lg p-2 max-h-32 overflow-y-auto bg-orange-50">
+                              <p className="text-xs font-semibold text-orange-800 mb-1">Multi-Locations:</p>
+                              {locations.map((loc) => (
+                                <label key={loc._id} className="flex items-center gap-1.5 px-1 py-0.5 hover:bg-orange-100 rounded cursor-pointer text-xs">
+                                  <input type="checkbox" checked={editingLocations.includes(loc._id)}
+                                    onChange={(e) => {
+                                      setEditingLocations(prev => e.target.checked ? [...prev, loc._id] : prev.filter(l => l !== loc._id));
+                                    }}
+                                    className="w-3.5 h-3.5 text-orange-600 rounded" />
+                                  <span>{loc.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-700">
                           {user.role === "SuperAdmin" ? (
                             <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold">🌐 All Locations</span>
+                          ) : user.locations && user.locations.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {user.locations.map((loc) => (
+                                <span key={loc._id || loc} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-semibold">📍 {loc.name || loc}</span>
+                              ))}
+                            </div>
                           ) : user.location?.name ? (
                             <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">📍 {user.location.name}</span>
                           ) : (

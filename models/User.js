@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema({
     default: "Attendant" 
   },
   location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
+  locations: [{ type: mongoose.Schema.Types.ObjectId, ref: "Location" }],
   isActive: { type: Boolean, default: true },
   lastLogin: { type: Date },
   avatar: { type: String, default: "" },
