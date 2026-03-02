@@ -415,6 +415,7 @@ export default function BreedingManagement() {
                   >
                     <option value="Natural">Natural</option>
                     <option value="AI">Artificial Insemination</option>
+                    <option value="IVF">In Vitro Fertilization</option>
                   </select>
                 </div>
                 <div>

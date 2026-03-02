@@ -4,7 +4,7 @@ export const BusinessContext = createContext();
 
 export function BusinessProvider({ children }) {
   const [businessSettings, setBusinessSettings] = useState({
-    businessName: "My Farm",
+    businessName: "",
     businessEmail: "",
     businessPhone: "",
     businessAddress: "",

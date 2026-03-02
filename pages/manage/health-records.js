@@ -217,7 +217,7 @@ export default function HealthRecords() {
     total: records.length,
     underTreatment: records.filter(r => r.recoveryStatus === "Under Treatment").length,
     improving: records.filter(r => r.recoveryStatus === "Improving").length,
-    recovered: records.filter(r => r.recoveryStatus === "Recovered").length,
+    healthy: records.filter(r => r.recoveryStatus === "Healthy").length,
   };
 
   const getMedName = (med) => {

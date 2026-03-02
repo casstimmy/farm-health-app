@@ -8,7 +8,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const customer = await Customer.findById(id).populate("location", "name").lean();
+      const customer = await Customer.findById(id).select("-password").populate("location", "name").lean({ virtuals: true });
       if (!customer) return res.status(404).json({ error: "Customer not found" });
       return res.status(200).json(customer);
     } catch (error) {
@@ -19,17 +19,25 @@ async function handler(req, res) {
   if (req.method === "PUT") {
     try {
       const payload = req.body || {};
+      const updateData = {
+        firstName: payload.firstName ?? undefined,
+        lastName: payload.lastName ?? undefined,
+        name: payload.name ?? (payload.firstName || payload.lastName
+          ? `${payload.firstName || ""} ${payload.lastName || ""}`.trim()
+          : undefined),
+        phone: payload.phone || "",
+        email: payload.email || "",
+        address: payload.address || "",
+        location: payload.location || null,
+        isActive: payload.isActive !== false,
+        notes: payload.notes || "",
+      };
+      // Remove undefined keys
+      Object.keys(updateData).forEach((k) => updateData[k] === undefined && delete updateData[k]);
+
       const customer = await Customer.findByIdAndUpdate(
         id,
-        {
-          name: payload.name,
-          phone: payload.phone || "",
-          email: payload.email || "",
-          address: payload.address || "",
-          location: payload.location || null,
-          isActive: payload.isActive !== false,
-          notes: payload.notes || "",
-        },
+        updateData,
         { new: true, runValidators: true }
       );
 

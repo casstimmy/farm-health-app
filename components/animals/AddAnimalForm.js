@@ -579,17 +579,37 @@ export default function AddAnimalForm({ onSuccess, animal }) {
             {fieldErrors.location && <p className="text-red-500 text-xs mt-1">{fieldErrors.location}</p>}
           </div>
 
-          {/* Paddock */}
+          {/* Paddock/Shed */}
           <div>
             <label className="label">Paddock/Shed</label>
-            <input
-              type="text"
-              name="paddock"
-              value={formData.paddock}
-              onChange={handleChange}
-              className="input-field"
-              placeholder="e.g., RP1"
-            />
+            {(() => {
+              const selectedLoc = locations.find((l) => l._id === formData.location);
+              const paddocks = selectedLoc?.paddocks || [];
+              return paddocks.length > 0 ? (
+                <select
+                  name="paddock"
+                  value={formData.paddock}
+                  onChange={handleChange}
+                  className="input-field"
+                >
+                  <option value="">Select Paddock/Shed</option>
+                  {paddocks.map((p) => (
+                    <option key={p._id} value={p.name}>
+                      {p.name} ({p.type}{p.capacity ? ` · Cap: ${p.capacity}` : ""})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  name="paddock"
+                  value={formData.paddock}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder={formData.location ? "No paddocks for this location" : "Select a location first"}
+                />
+              );
+            })()}
           </div>
 
           {/* Status */}
