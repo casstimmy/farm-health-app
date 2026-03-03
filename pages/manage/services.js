@@ -58,11 +58,13 @@ export default function ManageServices() {
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterActive, setFilterActive] = useState("all"); // all | active | shown
   const [form, setForm] = useState({ ...emptyForm });
   const [editingId, setEditingId] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
   const canEdit = user?.role === "SuperAdmin" || user?.role === "Manager";
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   useEffect(() => {
     fetchServices();
@@ -205,7 +207,8 @@ export default function ManageServices() {
       s.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.unit?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCategory = filterCategory === "all" || s.category === filterCategory;
-    return matchSearch && matchCategory;
+    const matchActive = filterActive === "all" || (filterActive === "active" ? s.isActive !== false : filterActive === "shown" ? s.showOnSite : true);
+    return matchSearch && matchCategory && matchActive;
   });
 
   // Stats
@@ -259,12 +262,19 @@ export default function ManageServices() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Services", value: totalServices, color: "blue" },
-          { label: "Active", value: activeServices, color: "green" },
-          { label: "Shown on Site", value: shownOnSite, color: "purple" },
-          { label: "Avg Price", value: hideAmounts ? "***" : formatCurrency(avgPrice, businessSettings.currency), color: "yellow" },
+          { label: "Total Services", value: totalServices, color: "blue", key: "all" },
+          { label: "Active", value: activeServices, color: "green", key: "active" },
+          { label: "Shown on Site", value: shownOnSite, color: "purple", key: "shown" },
+          { label: "Avg Price", value: hideAmounts ? "***" : formatCurrency(avgPrice, businessSettings.currency), color: "yellow", key: null },
         ].map((stat) => (
-          <div key={stat.label} className={`bg-${stat.color}-50 border border-${stat.color}-200 rounded-xl p-4`}>
+          <div
+            key={stat.label}
+            onClick={() => {
+              if (stat.key === "all") setFilterActive("all");
+              else if (stat.key) setFilterActive(filterActive === stat.key ? "all" : stat.key);
+            }}
+            className={`bg-${stat.color}-50 border border-${stat.color}-200 rounded-xl p-4 ${stat.key ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : ""} transition-all ${filterActive === stat.key && stat.key !== "all" ? "ring-2 ring-violet-500" : ""}`}
+          >
             <p className="text-sm text-gray-600">{stat.label}</p>
             <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
           </div>
@@ -505,22 +515,22 @@ export default function ManageServices() {
                     {/* Actions */}
                     {canEdit && (
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleEdit(service)}
-                            className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                            className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}
                             title="Edit service"
                           >
-                            <FaEdit size={14} />
+                            Edit
                           </button>
                           {user?.role === "SuperAdmin" && (
                             <button
                               onClick={() => handleDelete(service._id)}
                               disabled={deleting === service._id}
-                              className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                              className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50`}
                               title="Delete service"
                             >
-                              {deleting === service._id ? <FaSpinner className="animate-spin" size={14} /> : <FaTrash size={14} />}
+                              {deleting === service._id ? <FaSpinner className="animate-spin" size={10} /> : "Delete"}
                             </button>
                           )}
                         </div>

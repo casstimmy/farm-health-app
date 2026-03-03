@@ -57,6 +57,7 @@ export default function ManageInventory() {
     supplier: "",
   });
   const canEdit = user && ["SuperAdmin", "Manager"].includes(user.role);
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
   const [showConsumeModal, setShowConsumeModal] = useState(false);
   const [consumeItem, setConsumeItem] = useState(null);
   const [consumeLoading, setConsumeLoading] = useState(false);
@@ -1297,55 +1298,53 @@ export default function ManageInventory() {
                     {canEdit && (
                       <td className="px-6 py-4 text-sm">
                         {editingId === item._id ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <button
                               onClick={handleSaveEdit}
                               disabled={editSaving}
-                              className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-60"
-                              title="Save"
+                              className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}
                             >
-                              {editSaving ? <FaSpinner className="animate-spin" size={14} /> : <FaCheck size={14} />}
+                              {editSaving ? <FaSpinner className="animate-spin" size={10} /> : "Save"}
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-                              title="Cancel"
+                              className={`${actionBtnClass} border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100`}
                             >
-                              <FaTimes size={14} />
+                              Cancel
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <button
                               onClick={() => { setRestockItem(item); setRestockForm({ quantity: 0, notes: "", costPrice: item.costPrice || item.price || "" }); setShowRestockModal(true); }}
-                              className="p-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors"
+                              className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}
                               title="Restock Item"
                             >
-                              <FaBoxOpen size={14} />
+                              Restock
                             </button>
                             <button
                               onClick={() => openConsumeModal(item)}
                               disabled={item.quantity <= 0}
-                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className={`${actionBtnClass} border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-40 disabled:cursor-not-allowed`}
                               title="Use / Consume Stock"
                             >
-                              <FaMinus size={14} />
+                              Use
                             </button>
                             <button
                               onClick={() => handleEditItem(item)}
-                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                              className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}
                               title="Edit item"
                             >
-                              <FaEdit size={14} />
+                              Edit
                             </button>
                             {user?.role === "SuperAdmin" && (
                               <button
                                 onClick={() => handleDeleteItem(item._id)}
                                 disabled={deleting === item._id}
-                                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                                title="Delete item (SuperAdmin only)"
+                                className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50`}
+                                title="Delete item"
                               >
-                                {deleting === item._id ? <FaSpinner className="animate-spin" size={14} /> : <FaTrash size={14} />}
+                                {deleting === item._id ? <FaSpinner className="animate-spin" size={10} /> : "Delete"}
                               </button>
                             )}
                           </div>

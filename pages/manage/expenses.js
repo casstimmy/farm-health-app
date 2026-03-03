@@ -53,6 +53,7 @@ export default function ExpenseEntry() {
   const [showForm, setShowForm] = useState(true);
   const [locations, setLocations] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [filterPeriod, setFilterPeriod] = useState("all"); // all | today
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -213,12 +214,12 @@ export default function ExpenseEntry() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div onClick={() => setFilterPeriod(filterPeriod === "today" ? "all" : "today")} className={`bg-amber-50 border border-amber-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] ${filterPeriod === "today" ? "ring-2 ring-violet-500" : ""}`}>
           <p className="text-sm text-gray-600">Today&apos;s Expenses</p>
           <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(todayTotal, currency)}</p>
           <p className="text-xs text-gray-500">{todayExpenses.length} record{todayExpenses.length !== 1 ? "s" : ""}</p>
         </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <div onClick={() => setFilterPeriod("all")} className={`bg-gray-50 border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]`}>
           <p className="text-sm text-gray-600">Total Expenses</p>
           <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(totalAll, currency)}</p>
           <p className="text-xs text-gray-500">{expenses.length} record{expenses.length !== 1 ? "s" : ""}</p>
@@ -372,14 +373,14 @@ export default function ExpenseEntry() {
         )}
       </AnimatePresence>
 
-      {/* Today's Expenses Table */}
+      {/* Expenses Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
-            <FaReceipt className="text-amber-500" /> Today&apos;s Expenses
+            <FaReceipt className="text-amber-500" /> {filterPeriod === "today" ? "Today\u0027s Expenses" : "All Expenses"}
           </h3>
         </div>
-        {todayExpenses.length === 0 ? (
+        {(filterPeriod === "today" ? todayExpenses : expenses).length === 0 ? (
           <div className="text-center py-16">
             <span className="text-5xl mb-4 block">💸</span>
             <p className="text-gray-500 text-lg">No expenses recorded today</p>
@@ -398,7 +399,7 @@ export default function ExpenseEntry() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {todayExpenses.map((exp) => (
+                {(filterPeriod === "today" ? todayExpenses : expenses).map((exp) => (
                   <tr key={exp._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {new Date(exp.date).toLocaleDateString()}

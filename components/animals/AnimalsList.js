@@ -47,6 +47,7 @@ export default function AnimalsList({
   const [costBreakdown, setCostBreakdown] = useState(null); // {animal, x, y} for popup
   const [editingSalesPrice, setEditingSalesPrice] = useState(null); // animal _id
   const [salesPriceValue, setSalesPriceValue] = useState("");
+  const [marginPercent, setMarginPercent] = useState(30);
 
   const currentCursor = cursorStack[pageIndex] || null;
 
@@ -202,6 +203,13 @@ export default function AnimalsList({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAutoPrice = (animal) => {
+    const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+    const suggested = Math.round(totalCost * (1 + marginPercent / 100));
+    setEditingSalesPrice(animal._id);
+    setSalesPriceValue(suggested);
   };
 
   const handleImageClick = async (animal) => {
@@ -477,25 +485,35 @@ export default function AnimalsList({
                                 if (e.key === "Escape") { setEditingSalesPrice(null); setSalesPriceValue(""); }
                               }}
                             />
-                            <button onClick={() => handleSaveSalesPrice(animal._id)} className="text-green-600 hover:text-green-800"><FaCheck size={10} /></button>
-                            <button onClick={() => { setEditingSalesPrice(null); setSalesPriceValue(""); }} className="text-gray-400 hover:text-gray-600"><FaTimes size={10} /></button>
+                            <button onClick={() => handleSaveSalesPrice(animal._id)} className="text-green-600 hover:text-green-800" title="Save"><FaCheck size={10} /></button>
+                            <button onClick={() => { setEditingSalesPrice(null); setSalesPriceValue(""); }} className="text-gray-400 hover:text-gray-600" title="Cancel"><FaTimes size={10} /></button>
+                            <span className="flex items-center gap-0.5 ml-1 text-[10px] text-violet-600 border-l pl-1">
+                              <input type="number" value={marginPercent} onChange={(e) => { setMarginPercent(Number(e.target.value) || 0); }} className="border border-violet-300 rounded w-10 px-1 py-0.5 text-[10px] text-center" min="0" max="500" title="Margin %" />
+                              <span>%</span>
+                              <button onClick={() => handleAutoPrice(animal)} className="ml-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded hover:bg-violet-200 font-semibold whitespace-nowrap" title="Auto-calculate price from total cost + margin">Auto</button>
+                            </span>
                           </div>
                         ) : (
-                          <span
-                            className={`cursor-pointer hover:underline ${(() => {
-                              const sp = animal.salesPrice || animal.projectedSalesPrice || 0;
-                              const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
-                              return sp ? (sp - totalCost >= 0 ? "text-green-700" : "text-red-600") : "text-gray-400";
-                            })()}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingSalesPrice(animal._id);
-                              setSalesPriceValue(animal.salesPrice || animal.projectedSalesPrice || "");
-                            }}
-                            title="Click to edit sales price"
-                          >
-                            {(animal.salesPrice || animal.projectedSalesPrice) ? formatCurrency(animal.salesPrice || animal.projectedSalesPrice, businessSettings.currency) : "Set price"}
-                          </span>
+                          <div className="flex items-center justify-end gap-1">
+                            <span
+                              className={`cursor-pointer hover:underline ${(() => {
+                                const sp = animal.salesPrice || animal.projectedSalesPrice || 0;
+                                const totalCost = (animal.purchaseCost || 0) + (animal.totalFeedCost || 0) + (animal.totalMedicationCost || 0);
+                                return sp ? (sp - totalCost >= 0 ? "text-green-700" : "text-red-600") : "text-gray-400";
+                              })()}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSalesPrice(animal._id);
+                                setSalesPriceValue(animal.salesPrice || animal.projectedSalesPrice || "");
+                              }}
+                              title="Click to edit sales price"
+                            >
+                              {(animal.salesPrice || animal.projectedSalesPrice) ? formatCurrency(animal.salesPrice || animal.projectedSalesPrice, businessSettings.currency) : "Set price"}
+                            </span>
+                            {!animal.salesPrice && !animal.projectedSalesPrice && (
+                              <button onClick={(e) => { e.stopPropagation(); handleAutoPrice(animal); }} className="text-[10px] px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded hover:bg-violet-100 border border-violet-200 font-semibold" title="Auto-calculate price">Auto</button>
+                            )}
+                          </div>
                         )}
                       </td>
                     )}

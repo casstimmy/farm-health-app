@@ -13,6 +13,7 @@ export default function ManageUsers() {
   const [users, setUsers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterRole, setFilterRole] = useState("all");
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState("");
   const [editingLocation, setEditingLocation] = useState("");
@@ -341,6 +342,8 @@ export default function ManageUsers() {
             borderColor: "border-gray-200",
             textColor: "text-gray-900",
             icon: "👥",
+            filterKey: "all",
+            onClick: () => setFilterRole("all"),
           },
           {
             label: "Super Admins",
@@ -349,6 +352,8 @@ export default function ManageUsers() {
             borderColor: "border-red-200",
             textColor: "text-red-700",
             icon: "👑",
+            filterKey: "SuperAdmin",
+            onClick: () => setFilterRole(filterRole === "SuperAdmin" ? "all" : "SuperAdmin"),
           },
           {
             label: "Sub Admins",
@@ -357,6 +362,8 @@ export default function ManageUsers() {
             borderColor: "border-orange-200",
             textColor: "text-orange-700",
             icon: "🔑",
+            filterKey: "SubAdmin",
+            onClick: () => setFilterRole(filterRole === "SubAdmin" ? "all" : "SubAdmin"),
           },
           {
             label: "Managers",
@@ -365,6 +372,8 @@ export default function ManageUsers() {
             borderColor: "border-blue-200",
             textColor: "text-blue-700",
             icon: "📋",
+            filterKey: "Manager",
+            onClick: () => setFilterRole(filterRole === "Manager" ? "all" : "Manager"),
           },
           {
             label: "Attendants",
@@ -373,8 +382,11 @@ export default function ManageUsers() {
             borderColor: "border-green-200",
             textColor: "text-green-700",
             icon: "👤",
+            filterKey: "Attendant",
+            onClick: () => setFilterRole(filterRole === "Attendant" ? "all" : "Attendant"),
           },
         ]}
+        activeFilter={filterRole}
       />
 
       {/* Users Table */}
@@ -420,7 +432,7 @@ export default function ManageUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {users.map((user, index) => (
+                {users.filter(u => filterRole === "all" || u.role === filterRole).map((user, index) => (
                   <motion.tr
                     key={user._id}
                     initial={{ opacity: 0 }}

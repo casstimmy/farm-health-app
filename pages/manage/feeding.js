@@ -44,6 +44,7 @@ export default function Feeding() {
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
   const hideAmounts = shouldHideAmounts(user?.role);
+  const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
   const { animals: globalAnimals, fetchAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [records, setRecords] = useState([]);
@@ -450,12 +451,19 @@ export default function Feeding() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Records", value: totalRecords, color: "blue" },
-          { label: "Today's Feedings", value: todayRecords, color: "green" },
-          { label: "Total Consumed", value: `${totalConsumed.toFixed(2)} units`, color: "amber" },
-          { label: "Total Feed Cost", value: hideAmounts ? "***" : formatCurrency(totalFeedCost, businessSettings.currency), color: "red" },
+          { label: "Total Records", value: totalRecords, color: "blue", key: "all" },
+          { label: "Today's Feedings", value: todayRecords, color: "green", key: "today" },
+          { label: "Total Consumed", value: `${totalConsumed.toFixed(2)} units`, color: "amber", key: null },
+          { label: "Total Feed Cost", value: hideAmounts ? "***" : formatCurrency(totalFeedCost, businessSettings.currency), color: "red", key: null },
         ].map((s) => (
-          <div key={s.label} className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4`}>
+          <div
+            key={s.label}
+            onClick={() => {
+              if (s.key === "all") setFilterPeriod("all");
+              else if (s.key === "today") setFilterPeriod(filterPeriod === "today" ? "all" : "today");
+            }}
+            className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4 ${s.key ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : ""} transition-all ${filterPeriod === s.key && s.key !== "all" ? "ring-2 ring-violet-500" : ""}`}
+          >
             <p className="text-sm text-gray-600">{s.label}</p>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
@@ -926,12 +934,12 @@ export default function Feeding() {
                     <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{hideAmounts ? "***" : formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>
                     <td className="px-4 py-3 text-sm text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit">
-                          <FaEdit size={13} />
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => handleEdit(record)} className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`} title="Edit">
+                          Edit
                         </button>
-                        <button onClick={() => handleDelete(record._id)} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg" title="Delete">
-                          <FaTrash size={13} />
+                        <button onClick={() => handleDelete(record._id)} className={`${actionBtnClass} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`} title="Delete">
+                          Delete
                         </button>
                       </div>
                     </td>

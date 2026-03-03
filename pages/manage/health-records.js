@@ -89,6 +89,52 @@ export default function HealthRecords() {
     fetchAll();
   }, [router]);
 
+  // Handle prefill from task completion redirect
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query;
+    if (q.fromTask !== "true" || animals.length === 0) return;
+
+    const prefill = { ...emptyForm };
+    if (q.date) prefill.date = q.date;
+    if (q.treatedBy) prefill.treatedBy = q.treatedBy;
+    if (q.notes) prefill.notes = decodeURIComponent(q.notes);
+    if (q.treatmentType) prefill.treatmentA = { ...prefill.treatmentA, treatmentType: q.treatmentType };
+
+    // Set location if provided
+    if (q.location) {
+      const loc = locations.find(l => l.name === q.location || l._id === q.location);
+      if (loc) prefill.location = loc._id;
+    }
+
+    // If paddock specified, select all animals in that paddock
+    if (q.paddock && q.location) {
+      const loc = locations.find(l => l.name === q.location || l._id === q.location);
+      if (loc) {
+        const paddockAnimals = animals.filter(a => {
+          const animalLoc = a.location?._id || a.location;
+          return (animalLoc === loc._id || animalLoc === loc.name) && a.paddock === q.paddock;
+        });
+        if (paddockAnimals.length > 0) {
+          setSelectionMode("paddock");
+          setSelectedPaddock(q.paddock);
+          setSelectedAnimals(paddockAnimals.map(a => a._id));
+        }
+      }
+    } else if (q.animal) {
+      // Single animal
+      const animalMatch = animals.find(a => a._id === q.animal || a.tagId === q.animal);
+      if (animalMatch) prefill.animal = animalMatch._id;
+    }
+
+    setFormData(prefill);
+    setShowForm(true);
+    setEditId(null);
+
+    // Clean query params without re-triggering
+    router.replace("/manage/health-records", undefined, { shallow: true });
+  }, [router.isReady, router.query, animals, locations]);
+
   const fetchAll = async () => {
     try {
       setLoading(true);
@@ -443,11 +489,11 @@ export default function HealthRecords() {
       />
 
       <StatsSummary stats={[
-        { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
-        { label: "Under Treatment", value: stats.underTreatment, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "💊" },
-        { label: "Improving", value: stats.improving, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "📈" },
-        { label: "Recovered", value: stats.recovered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅" },
-      ]} />
+        { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "all" : "all") },
+        { label: "Under Treatment", value: stats.underTreatment, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "💊", filterKey: "Under Treatment", onClick: () => setFilterStatus(filterStatus === "Under Treatment" ? "all" : "Under Treatment") },
+        { label: "Improving", value: stats.improving, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "📈", filterKey: "Improving", onClick: () => setFilterStatus(filterStatus === "Improving" ? "all" : "Improving") },
+        { label: "Recovered", value: stats.recovered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Recovered", onClick: () => setFilterStatus(filterStatus === "Recovered" ? "all" : "Recovered") },
+      ]} activeFilter={filterStatus} />
 
       {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg font-semibold flex items-center justify-between">
         <span>⚠️ {error}</span><button onClick={() => setError("")}><FaTimes /></button>
@@ -721,10 +767,16 @@ export default function HealthRecords() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500" placeholder="Additional notes..." />
               </div>
 
-              <motion.button type="submit" disabled={saving} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="w-full py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
-                {saving ? <><FaSpinner className="animate-spin" /> Saving...</> : <><FaCheck /> {editId ? "Update Record" : `Save Health Record${selectedAnimals.length > 1 ? ` (${selectedAnimals.length} animals)` : ""}`}</>}
-              </motion.button>
+              <div className="flex gap-3">
+                <motion.button type="submit" disabled={saving} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                  {saving ? <><FaSpinner className="animate-spin" /> Saving...</> : <><FaCheck /> {editId ? "Update Record" : `Save Health Record${selectedAnimals.length > 1 ? ` (${selectedAnimals.length} animals)` : ""}`}</>}
+                </motion.button>
+                <motion.button type="button" onClick={closeForm} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="px-6 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-200 transition-colors flex items-center gap-2">
+                  <FaTimes /> Cancel
+                </motion.button>
+              </div>
             </form>
           </motion.div>
         )}

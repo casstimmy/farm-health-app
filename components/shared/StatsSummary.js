@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
  * StatsSummary Component
  * Displays summary cards in a grid layout with consistent styling
  */
-export default function StatsSummary({ stats = [] }) {
+export default function StatsSummary({ stats = [], activeFilter }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -12,15 +12,19 @@ export default function StatsSummary({ stats = [] }) {
       transition={{ staggerChildren: 0.1, delayChildren: 0.2 }}
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
     >
-      {stats.map((stat, idx) => (
+      {stats.map((stat, idx) => {
+        const isClickable = !!stat.onClick;
+        const isActive = activeFilter !== undefined && stat.filterKey !== undefined && activeFilter === stat.filterKey;
+        return (
         <motion.div
           key={idx}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.05 }}
+          onClick={stat.onClick || undefined}
           className={`${stat.bgColor || "bg-white"} rounded-2xl shadow-lg border-2 ${
-            stat.borderColor || "border-gray-100"
-          } p-6 hover:shadow-xl transition-all`}
+            isActive ? "ring-2 ring-offset-1 ring-violet-500 border-violet-400" : (stat.borderColor || "border-gray-100")
+          } p-6 hover:shadow-xl transition-all ${isClickable ? "cursor-pointer active:scale-[0.98]" : ""}`}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
@@ -39,7 +43,8 @@ export default function StatsSummary({ stats = [] }) {
             )}
           </div>
         </motion.div>
-      ))}
+        );
+      })}
     </motion.div>
   );
 }

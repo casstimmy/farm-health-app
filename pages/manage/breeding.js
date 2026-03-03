@@ -310,11 +310,12 @@ export default function BreedingManagement() {
       {/* Stats Summary */}
       <StatsSummary
         stats={[
-          { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
-          { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳" },
-          { label: "Confirmed Pregnant", value: stats.confirmed, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🤰" },
-          { label: "Successfully Delivered", value: stats.delivered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "🐣" },
+          { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus("all") },
+          { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
+          { label: "Confirmed Pregnant", value: stats.confirmed, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🤰", filterKey: "Confirmed", onClick: () => setFilterStatus(filterStatus === "Confirmed" ? "all" : "Confirmed") },
+          { label: "Successfully Delivered", value: stats.delivered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "🐣", filterKey: "Delivered", onClick: () => setFilterStatus(filterStatus === "Delivered" ? "all" : "Delivered") },
         ]}
+        activeFilter={filterStatus}
       />
 
       {/* Controls */}

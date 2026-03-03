@@ -138,7 +138,34 @@ export default function TasksPage() {
     } catch (err) { setError(err.message); } finally { setSubmitting(false); }
   };
 
-  const handleStatusChange = async (taskId, newStatus) => {
+  const handleStatusChange = async (taskId, newStatus, task = null) => {
+    // For Vaccination/Deworming recurring tasks marked Done, redirect to health records
+    if (newStatus === "Completed" && task && task.isRecurring && ["Vaccination", "Treatment"].includes(task.category)) {
+      // First update the task status
+      setUpdatingTask(taskId);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (!res.ok) throw new Error("Failed to update task");
+        // Build query params for health record prefill
+        const params = new URLSearchParams();
+        params.set("fromTask", "true");
+        params.set("taskTitle", task.title || "");
+        if (task.location?._id) params.set("location", task.location._id);
+        if (task.paddock) params.set("paddock", task.paddock);
+        if (task.animal?._id) params.set("animal", task.animal._id);
+        if (task.category === "Vaccination") params.set("treatmentType", "Vaccination");
+        if (task.category === "Treatment") params.set("treatmentType", "Deworming");
+        if (task.notes) params.set("notes", task.notes);
+        if (task.assignedTo?.name) params.set("treatedBy", task.assignedTo.name);
+        router.push(`/manage/health-records?${params.toString()}`);
+        return;
+      } catch (err) { setError(err.message); setUpdatingTask(null); return; }
+    }
     setUpdatingTask(taskId);
     try {
       const token = localStorage.getItem("token");
@@ -245,12 +272,12 @@ export default function TasksPage() {
 
       {!loading && !roleLoading && (
         <>
-          <StatsSummary stats={[
-            { label: "Total Tasks", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
-            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳" },
-            { label: "In Progress", value: stats.inProgress, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄" },
-            { label: "Overdue", value: stats.overdue, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "⚠️" },
-            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅" },
+          <StatsSummary activeFilter={filterStatus} stats={[
+            { label: "Total Tasks", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "active" : "all") },
+            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "active" : "Pending") },
+            { label: "In Progress", value: stats.inProgress, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄", filterKey: "In Progress", onClick: () => setFilterStatus(filterStatus === "In Progress" ? "active" : "In Progress") },
+            { label: "Overdue", value: stats.overdue, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "⚠️", filterKey: "Overdue", onClick: () => setFilterStatus(filterStatus === "Overdue" ? "active" : "Overdue") },
+            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "active" : "Completed") },
           ]} />
 
           {/* Controls */}
@@ -341,10 +368,13 @@ export default function TasksPage() {
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Related Animal</label>
                         <select className="input-field" value={form.animal} onChange={(e) => setForm({ ...form, animal: e.target.value })}>
-                          <option value="">None</option>
+                          <option value="">{form.location && form.paddock ? `All in paddock (${filteredAnimals.length} animals)` : "None"}</option>
                           {filteredAnimals.map((a) => <option key={a._id} value={a._id}>{a.tagId} - {a.name || a.breed || "Animal"}</option>)}
                         </select>
-                        {form.location && <p className="text-[10px] text-gray-400 mt-0.5">Showing animals at selected location{form.paddock ? ` / ${form.paddock}` : ""}</p>}
+                        {form.location && form.paddock && filteredAnimals.length > 0 && !form.animal && (
+                          <p className="text-[10px] text-green-600 mt-0.5 font-medium">✓ Task applies to all {filteredAnimals.length} animals in {form.paddock}</p>
+                        )}
+                        {form.location && !form.paddock && <p className="text-[10px] text-gray-400 mt-0.5">Select a paddock to auto-target all animals in it</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-4 flex-wrap">
@@ -466,7 +496,7 @@ export default function TasksPage() {
                           // Assigner doesn't see Start, they see Complete directly
                           if (isAssigner && !isAssignee) {
                             return (
-                              <button onClick={() => handleStatusChange(task._id, "Completed")} disabled={updatingTask === task._id}
+                              <button onClick={() => handleStatusChange(task._id, "Completed", task)} disabled={updatingTask === task._id}
                                 className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}>
                                 {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Done"}
                               </button>
@@ -480,7 +510,7 @@ export default function TasksPage() {
                           );
                         })()}
                         {(task.status === "In Progress" || task.status === "Overdue") && (
-                          <button onClick={() => handleStatusChange(task._id, "Completed")} disabled={updatingTask === task._id}
+                          <button onClick={() => handleStatusChange(task._id, "Completed", task)} disabled={updatingTask === task._id}
                             className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}>
                             {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Done"}
                           </button>

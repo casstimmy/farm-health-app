@@ -318,11 +318,11 @@ export default function OrdersPage() {
       {!loading && !roleLoading && (
         <>
           <StatsSummary stats={[
-            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📦" },
-            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳" },
-            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄" },
-            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅" },
-          ]} />
+            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📦", filterKey: "all", onClick: () => setFilterStatus("all") },
+            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
+            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄", filterKey: "Processing", onClick: () => setFilterStatus(filterStatus === "Processing" ? "all" : "Processing") },
+            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "all" : "Completed") },
+          ]} activeFilter={filterStatus} />
 
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <input type="text" placeholder="Search by order # or customer..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}

@@ -29,6 +29,7 @@ export default function WeightTracking() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
+  const [filterTrend, setFilterTrend] = useState("all"); // all | gaining | losing
   const [editingId, setEditingId] = useState(null);
 
   const [formAnimalId, setFormAnimalId] = useState("");
@@ -106,6 +107,8 @@ export default function WeightTracking() {
 
   const filtered = animalWeightSummary.filter((a) => {
     if (filterSpecies !== "all" && a.species !== filterSpecies) return false;
+    if (filterTrend === "gaining" && !(a.change > 0)) return false;
+    if (filterTrend === "losing" && !(a.change < 0)) return false;
     if (!searchTerm) return true;
     return a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || a.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) || a.breed?.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -205,8 +208,20 @@ export default function WeightTracking() {
       {success && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="success-message"><FaCheck className="inline mr-2" />{success}</motion.div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[{ label: "Avg Weight", value: `${avgWeight} kg`, color: "purple" }, { label: "Total Records", value: totalRecords, color: "blue" }, { label: "Gaining", value: gainers, color: "green" }, { label: "Losing", value: losers, color: "red" }].map((s) => (
-          <div key={s.label} className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4`}><p className="text-sm text-gray-600">{s.label}</p><p className="text-2xl font-bold text-gray-900">{s.value}</p></div>
+        {[
+          { label: "Avg Weight", value: `${avgWeight} kg`, color: "purple", key: "all" },
+          { label: "Total Records", value: totalRecords, color: "blue", key: "all" },
+          { label: "Gaining", value: gainers, color: "green", key: "gaining" },
+          { label: "Losing", value: losers, color: "red", key: "losing" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            onClick={() => s.key !== "all" ? setFilterTrend(filterTrend === s.key ? "all" : s.key) : setFilterTrend("all")}
+            className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] ${filterTrend === s.key && s.key !== "all" ? "ring-2 ring-violet-500" : ""}`}
+          >
+            <p className="text-sm text-gray-600">{s.label}</p>
+            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+          </div>
         ))}
       </div>
 

@@ -248,11 +248,12 @@ export default function MortalityTracking() {
       {/* Stats Summary */}
       <StatsSummary
         stats={[
-          { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
-          { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅" },
+          { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => { setFilterPeriod("all"); setFilterCause("all"); } },
+          { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅", filterKey: "month", onClick: () => setFilterPeriod(filterPeriod === "month" ? "all" : "month") },
           { label: "Est. Loss", value: hideAmounts ? "***" : formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
-          { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true },
+          { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true, filterKey: topCause ? topCause[0] : "", onClick: () => { if (topCause) setFilterCause(filterCause === topCause[0] ? "all" : topCause[0]); } },
         ]}
+        activeFilter={filterPeriod !== "all" ? filterPeriod : filterCause !== "all" ? filterCause : "all"}
       />
 
       {/* Controls */}

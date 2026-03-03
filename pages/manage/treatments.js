@@ -12,6 +12,10 @@ import { invalidateCache } from "@/utils/cache";
 
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
+const TREATMENT_TYPES = ["Antibiotics", "Ext-Parasite", "Deworming", "Vitamin Dosing", "Hydration/Electrolyte", "Vaccination", "Int-Parasite", "Injection", "Oral", "Topical", "IV Drip", "Surgical", "Other"];
+const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
+const editInputClass = "px-2 py-1.5 text-xs border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 bg-blue-50/30 transition-colors";
+
 export default function Treatments() {
     const [editIndex, setEditIndex] = useState(null);
     const [editableTreatment, setEditableTreatment] = useState({});
@@ -340,17 +344,22 @@ export default function Treatments() {
                         </div>
                       </td>
                       {/* Date */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className="input input-sm w-32" /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input type="date" name="date" value={editableTreatment.date ? editableTreatment.date.slice(0,10) : ""} onChange={handleEditChange} className={`${editInputClass} w-32`} /> : (treatment.date ? new Date(treatment.date).toLocaleDateString() : "-")}</td>
                       {/* Animal ID */}
                       <td className="px-4 py-3 font-medium text-gray-900">{animal.tagId || "-"}</td>
                       {/* Routine */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <select name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className="input input-sm"><option value="">-</option><option value="NO">NO</option><option value="YES">YES</option></select> : (treatment.routine || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <select name="routine" value={editableTreatment.routine || ""} onChange={handleEditChange} className={`${editInputClass} w-20`}><option value="">-</option><option value="NO">NO</option><option value="YES">YES</option></select> : (treatment.routine || "-")}</td>
                       {/* Symptoms */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="symptoms" value={editableTreatment.symptoms || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.symptoms || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="symptoms" value={editableTreatment.symptoms || ""} onChange={handleEditChange} className={`${editInputClass} w-24`} placeholder="Symptoms..." /> : (treatment.symptoms || "-")}</td>
                       {/* Diagnosis */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="diagnosis" value={editableTreatment.diagnosis || ""} onChange={handleEditChange} className="input input-sm w-24" /> : (treatment.diagnosis || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="diagnosis" value={editableTreatment.diagnosis || ""} onChange={handleEditChange} className={`${editInputClass} w-24`} placeholder="Diagnosis..." /> : (treatment.diagnosis || "-")}</td>
                       {/* Type */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className="input input-sm w-28" /> : (treatment.type || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? (
+                        <select name="type" value={editableTreatment.type || ""} onChange={handleEditChange} className={`${editInputClass} w-32`}>
+                          <option value="">Select type</option>
+                          {TREATMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      ) : (treatment.type || "-")}</td>
                       {/* Medication */}
                       <td className="px-4 py-3 text-gray-700">
                         {isEditing ? (
@@ -365,7 +374,7 @@ export default function Treatments() {
                                 medicationName: selected?.item || "",
                               }));
                             }}
-                            className="input input-sm w-40"
+                            className={`${editInputClass} w-40`}
                           >
                             <option value="">Select medication</option>
                             {medicationOptions.map((med) => (
@@ -375,9 +384,9 @@ export default function Treatments() {
                         ) : (treatment.medicationName || "-")}
                       </td>
                       {/* Dosage */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.dosage || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="dosage" value={editableTreatment.dosage || ""} onChange={handleEditChange} className={`${editInputClass} w-20`} placeholder="Dosage..." /> : (treatment.dosage || "-")}</td>
                       {/* Route */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.route || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <select name="route" value={editableTreatment.route || ""} onChange={handleEditChange} className={`${editInputClass} w-24`}><option value="">Route</option><option value="Oral">Oral</option><option value="IM">IM</option><option value="IV">IV</option><option value="SC">SC</option><option value="Topical">Topical</option><option value="Rectal">Rectal</option></select> : (treatment.route || "-")}</td>
                       {/* Treated by */}
                       <td className="px-4 py-3 text-gray-700">
                         {isEditing ? (
@@ -385,7 +394,7 @@ export default function Treatments() {
                             name="treatedBy"
                             value={editableTreatment.treatedBy || ""}
                             onChange={handleEditChange}
-                            className="input input-sm w-36"
+                            className={`${editInputClass} w-36`}
                           >
                             <option value="">Select staff</option>
                             {staffOptions.map((staff) => (
@@ -397,14 +406,29 @@ export default function Treatments() {
                         ) : (treatment.treatedBy || "-")}
                       </td>
                       {/* Pre-Weight */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.preWeight || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input type="number" name="preWeight" value={editableTreatment.preWeight || ""} onChange={handleEditChange} className={`${editInputClass} w-20`} placeholder="kg" /> : (treatment.preWeight || "-")}</td>
                       {/* Post-Weight */}
-                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input name="postWeight" value={editableTreatment.postWeight || ""} onChange={handleEditChange} className="input input-sm w-20" /> : (treatment.postWeight || "-")}</td>
+                      <td className="px-4 py-3 text-gray-700">{isEditing ? <input type="number" name="postWeight" value={editableTreatment.postWeight || ""} onChange={handleEditChange} className={`${editInputClass} w-20`} placeholder="kg" /> : (treatment.postWeight || "-")}</td>
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${treatment.recoveryStatus ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {treatment.recoveryStatus || "Pending"}
-                        </span>
+                        {isEditing ? (
+                          <select name="recoveryStatus" value={editableTreatment.recoveryStatus || ""} onChange={handleEditChange} className={`${editInputClass} w-36`}>
+                            <option value="">Pending</option>
+                            {RECOVERY_STATUS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        ) : (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            treatment.recoveryStatus === "Recovered" ? "bg-green-100 text-green-800" :
+                            treatment.recoveryStatus === "Improving" ? "bg-blue-100 text-blue-800" :
+                            treatment.recoveryStatus === "Deteriorating" ? "bg-red-100 text-red-800" :
+                            treatment.recoveryStatus === "Chronic" ? "bg-purple-100 text-purple-800" :
+                            treatment.recoveryStatus === "Deceased" ? "bg-gray-200 text-gray-800" :
+                            treatment.recoveryStatus === "Under Treatment" ? "bg-amber-100 text-amber-800" :
+                            "bg-amber-100 text-amber-800"
+                          }`}>
+                            {treatment.recoveryStatus || "Pending"}
+                          </span>
+                        )}
                       </td>
                     </motion.tr>
                   );
