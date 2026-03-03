@@ -16,7 +16,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
-import { formatCurrency, formatDateForInput } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/formatting";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Antibiotics", "Ext-Parasite", "Deworming", "Vitamin Dosing", "Hydration/Electrolyte", "Vaccination", "Int-Parasite", "Injection", "Oral", "Topical", "IV Drip", "Surgical", "Other"];
@@ -56,6 +56,7 @@ export default function HealthRecords() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [records, setRecords] = useState([]);
   const [animals, setAnimals] = useState([]);
@@ -976,7 +977,7 @@ export default function HealthRecords() {
                               <span>📋 {entry.records.length} record{entry.records.length !== 1 ? "s" : ""}</span>
                               {a.paddock && <span>🏠 {a.paddock}</span>}
                               {a.currentWeight > 0 && <span>⚖️ {a.currentWeight} kg</span>}
-                              <span>💊 Med Cost: {formatCurrency(entry.totalMedCost, businessSettings.currency)}</span>
+                              <span>💊 Med Cost: {hideAmounts ? "***" : formatCurrency(entry.totalMedCost, businessSettings.currency)}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0">

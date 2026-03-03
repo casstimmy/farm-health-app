@@ -32,6 +32,7 @@ const TaskSchema = new mongoose.Schema(
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
+    paddock: { type: String, default: "" },
     animal: { type: mongoose.Schema.Types.ObjectId, ref: "Animal", default: null },
     dueDate: { type: Date, default: null },
     completedAt: { type: Date, default: null },
@@ -40,7 +41,7 @@ const TaskSchema = new mongoose.Schema(
     isRecurring: { type: Boolean, default: false },
     recurringInterval: {
       type: String,
-      enum: ["Daily", "Weekly", "Biweekly", "Monthly", ""],
+      enum: ["Daily", "Weekly", "Biweekly", "Monthly", "Bi-Monthly", "Quarterly", "Yearly", ""],
       default: "",
     },
   },

@@ -25,6 +25,11 @@ const InventorySchema = new mongoose.Schema(
       default: null,
     },
     categoryName: String,
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
+      default: null,
+    },
     price: { type: Number, default: 0 },
     costPrice: { type: Number, default: 0 },
     marginPercent: { type: Number, default: 0 },

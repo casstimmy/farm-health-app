@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
-import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaUpload, FaTrash, FaMinus } from "react-icons/fa";
+import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaTrash, FaMinus, FaBoxOpen } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
 import Modal from "@/components/shared/Modal";
@@ -14,6 +14,7 @@ import Link from "next/link";
 export default function ManageInventory() {
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -28,10 +29,11 @@ export default function ManageInventory() {
   const [deleting, setDeleting] = useState(null);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importText, setImportText] = useState("");
-  const [importLoading, setImportLoading] = useState(false);
-  const [importError, setImportError] = useState("");
+  const [locations, setLocations] = useState([]);
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [restockItem, setRestockItem] = useState(null);
+  const [restockLoading, setRestockLoading] = useState(false);
+  const [restockForm, setRestockForm] = useState({ quantity: 0, notes: "", costPrice: "" });
   const [lookupOptions, setLookupOptions] = useState({
     classCategory: [],
     purpose: [],
@@ -77,12 +79,14 @@ export default function ManageInventory() {
     recommendedDosage: "",
     route: "",
     supplier: "",
+    location: "",
   });
 
   useEffect(() => {
     fetchInventory();
     fetchCategories();
     fetchLookupOptions();
+    fetchLocations();
   }, []);
 
   const fetchInventory = async () => {
@@ -137,6 +141,19 @@ export default function ManageInventory() {
       console.error("Error fetching medication lookups:", error);
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/locations", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setLocations(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error("Error fetching locations:", error);
     }
   };
 
@@ -208,6 +225,7 @@ export default function ManageInventory() {
         marginPercent: formData.marginPercent || 0,
         salesPrice: formData.salesPrice || 0,
         unit: formData.unit,
+        location: formData.location || null,
       };
 
       if (categoryName === "Medication") {
@@ -250,6 +268,7 @@ export default function ManageInventory() {
           recommendedDosage: "",
           route: "",
           supplier: "",
+          location: "",
         });
         setTimeout(() => {
           setShowForm(false);
@@ -385,66 +404,6 @@ export default function ManageInventory() {
       setError("Error deleting item");
     } finally {
       setDeleting(null);
-    }
-  };
-
-  const parseImportText = (text) => {
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (lines.length === 0) return [];
-
-    return lines.map((line) => {
-      const parts = line.split(/\t+/).map((p) => p.trim());
-      return {
-        name: parts[0] || "",
-        details: parts[1] || "",
-        expiration: parts[2] || "",
-        classCategory: parts[3] || "",
-        purpose: parts[4] || "",
-        recommendedDosage: parts[5] || "",
-        route: parts[6] || "",
-        supplier: parts[7] || "",
-      };
-    }).filter((item) => item.name);
-  };
-
-  const handleImport = async () => {
-    setImportError("");
-    const items = parseImportText(importText);
-    if (items.length === 0) {
-      setImportError("No valid rows found. Paste tab-separated rows with a medication name.");
-      return;
-    }
-
-    setImportLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/medications/import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ items })
-      });
-
-      if (res.ok) {
-        setShowImportModal(false);
-        setImportText("");
-        invalidateCache("api/inventory");
-        fetchInventory();
-      } else {
-        const data = await res.json();
-        setImportError(data.error || "Failed to import medications");
-      }
-    } catch (error) {
-      console.error("Error importing medications:", error);
-      setImportError("Error importing medications");
-    } finally {
-      setImportLoading(false);
     }
   };
 
@@ -714,6 +673,20 @@ export default function ManageInventory() {
                   }}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+                <select
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
+                >
+                  <option value="">-- Select Location --</option>
+                  {locations.map((loc) => (
+                    <option key={loc._id} value={loc._id}>{loc.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -1085,13 +1058,6 @@ export default function ManageInventory() {
 
       {/* Controls */}
       <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
-        >
-          <FaUpload /> Bulk Import Medications
-        </button>
         <Link
           href="/manage/inventory-categories"
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-semibold border"
@@ -1139,6 +1105,7 @@ export default function ManageInventory() {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Margin %</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Sales Price</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Consumed</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Location</th>
                   <th className="px-6 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Show on Site</th>
                   {canEdit && <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>}
                 </tr>
@@ -1263,7 +1230,7 @@ export default function ManageInventory() {
                           className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
                         />
                       ) : (
-                        formatCurrency(parseFloat(item.price || 0), businessSettings.currency)
+                        hideAmounts ? "***" : formatCurrency(parseFloat(item.price || 0), businessSettings.currency)
                       )}
                     </td>
                     {/* Cost Price */}
@@ -1277,7 +1244,7 @@ export default function ManageInventory() {
                           className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
                         />
                       ) : (
-                        formatCurrency(parseFloat(item.costPrice || 0), businessSettings.currency)
+                        hideAmounts ? "***" : formatCurrency(parseFloat(item.costPrice || 0), businessSettings.currency)
                       )}
                     </td>
                     {/* Margin % */}
@@ -1291,7 +1258,7 @@ export default function ManageInventory() {
                           className="w-20 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
                         />
                       ) : (
-                        item.marginPercent ? `${item.marginPercent}%` : "-"
+                        hideAmounts ? "***" : (item.marginPercent ? `${item.marginPercent}%` : "-")
                       )}
                     </td>
                     {/* Sales Price */}
@@ -1305,12 +1272,16 @@ export default function ManageInventory() {
                           className="w-24 px-2 py-1 border-2 border-blue-400 rounded focus:outline-none text-sm"
                         />
                       ) : (
-                        formatCurrency(parseFloat(item.salesPrice || 0), businessSettings.currency)
+                        hideAmounts ? "***" : formatCurrency(parseFloat(item.salesPrice || 0), businessSettings.currency)
                       )}
                     </td>
                     {/* Consumed */}
                     <td className="px-6 py-4 text-sm text-gray-700">
                       {item.totalConsumed || 0}
+                    </td>
+                    {/* Location */}
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {item.location?.name || "—"}
                     </td>
                     {/* Show on Site */}
                     <td className="px-6 py-4 text-sm text-center">
@@ -1345,6 +1316,13 @@ export default function ManageInventory() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => { setRestockItem(item); setRestockForm({ quantity: 0, notes: "", costPrice: item.costPrice || item.price || "" }); setShowRestockModal(true); }}
+                              className="p-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors"
+                              title="Restock Item"
+                            >
+                              <FaBoxOpen size={14} />
+                            </button>
                             <button
                               onClick={() => openConsumeModal(item)}
                               disabled={item.quantity <= 0}
@@ -1463,42 +1441,100 @@ export default function ManageInventory() {
         </div>
       </Modal>
 
+      {/* Restock Modal */}
       <Modal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        title="Bulk Import Medications"
-        size="2xl"
+        isOpen={showRestockModal}
+        onClose={() => { setShowRestockModal(false); setRestockItem(null); }}
+        title={`Restock — ${restockItem?.item || ""}`}
+        size="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Paste tab-separated rows with columns:
-            Name, Details, Expiration, Class/Category, Purpose, Recommended Dosage, Route, Supplier/Manufacturer
-          </p>
-          <textarea
-            rows={10}
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            className="w-full border-2 border-gray-200 rounded-lg p-3 text-sm"
-            placeholder="Jubail Penstrep 100ml\t\t02/2029\tAntibiotic\t\t\tIM\t"
-          />
-          {importError && (
-            <div className="error-message">{importError}</div>
+          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+            <span className="text-sm text-gray-600">Current Stock</span>
+            <span className="font-bold text-lg">{restockItem?.quantity || 0} {restockItem?.unit || ""}</span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Add *</label>
+            <input
+              type="number"
+              min="1"
+              value={restockForm.quantity}
+              onChange={(e) => setRestockForm({ ...restockForm, quantity: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400"
+              placeholder="Enter quantity to add"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price per Unit</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={restockForm.costPrice}
+              onChange={(e) => setRestockForm({ ...restockForm, costPrice: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400"
+              placeholder="Update cost price (optional)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <textarea
+              rows={2}
+              value={restockForm.notes}
+              onChange={(e) => setRestockForm({ ...restockForm, notes: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400"
+              placeholder="e.g., Supplier delivery, batch number..."
+            />
+          </div>
+
+          {restockForm.quantity > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+              <strong>New stock level:</strong> {Number(restockItem?.quantity || 0) + Number(restockForm.quantity)} {restockItem?.unit || ""}
+            </div>
           )}
-          <div className="flex gap-3">
+
+          <div className="flex justify-end gap-3 pt-2">
             <button
-              type="button"
-              onClick={() => setShowImportModal(false)}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold"
+              onClick={() => { setShowRestockModal(false); setRestockItem(null); }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg"
             >
               Cancel
             </button>
             <button
-              type="button"
-              onClick={handleImport}
-              disabled={importLoading}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-60"
+              onClick={async () => {
+                if (!restockItem || !restockForm.quantity || Number(restockForm.quantity) <= 0) return;
+                setRestockLoading(true);
+                try {
+                  const token = localStorage.getItem("token");
+                  const newQty = Number(restockItem.quantity || 0) + Number(restockForm.quantity);
+                  const payload = { quantity: newQty };
+                  if (restockForm.costPrice) payload.costPrice = Number(restockForm.costPrice);
+                  const res = await fetch(`/api/inventory/${restockItem._id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(payload),
+                  });
+                  if (!res.ok) throw new Error("Failed to restock");
+                  setSuccess(`✓ Restocked ${restockForm.quantity} ${restockItem.unit || "units"} of ${restockItem.item}`);
+                  setShowRestockModal(false);
+                  setRestockItem(null);
+                  invalidateCache("api/inventory");
+                  fetchInventory();
+                  setTimeout(() => setSuccess(""), 3000);
+                } catch (err) {
+                  setError(err.message);
+                } finally {
+                  setRestockLoading(false);
+                }
+              }}
+              disabled={restockLoading || !restockForm.quantity || Number(restockForm.quantity) <= 0}
+              className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
             >
-              {importLoading ? "Importing..." : "Import"}
+              {restockLoading ? <FaSpinner className="animate-spin" size={12} /> : <FaBoxOpen size={12} />}
+              Restock
             </button>
           </div>
         </div>

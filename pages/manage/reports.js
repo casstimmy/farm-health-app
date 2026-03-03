@@ -7,11 +7,14 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { PERIOD_OPTIONS } from "@/utils/filterHelpers";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
+import { useRole } from "@/hooks/useRole";
 
 export default function Reports() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
   const [locations, setLocations] = useState([]);
@@ -76,7 +79,7 @@ export default function Reports() {
     return Number(summary.totalIncome || 0) - Number(summary.totalExpenses || 0);
   }, [summary]);
 
-  const f = (val) => formatCurrency(val || 0, businessSettings.currency);
+  const f = (val) => hideAmounts ? "***" : formatCurrency(val || 0, businessSettings.currency);
 
   return (
     <div className="space-y-8">

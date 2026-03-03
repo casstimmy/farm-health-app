@@ -1,11 +1,10 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
-import { verifyToken } from "@/utils/auth";
+import { withAuth } from "@/utils/middleware";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await dbConnect();
-  const decoded = verifyToken(req);
-  if (!decoded) return res.status(401).json({ error: "Unauthorized" });
+  const decoded = req.user;
 
   if (req.method === "GET") {
     try {
@@ -62,3 +61,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: "Method not allowed" });
 }
+
+export default withAuth(handler);

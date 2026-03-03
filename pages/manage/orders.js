@@ -8,7 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { BusinessContext } from "@/context/BusinessContext";
 
 const STATUS_FLOW = {
@@ -59,6 +59,7 @@ export default function OrdersPage() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user, isLoading: roleLoading } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -466,7 +467,7 @@ export default function OrdersPage() {
                       <button type="button" onClick={addItem} className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50">+ Add Item</button>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                      <p className="font-bold text-gray-700 text-lg">Total: {formatCurrency(orderTotal, businessSettings.currency)}</p>
+                      <p className="font-bold text-gray-700 text-lg">Total: {hideAmounts ? "***" : formatCurrency(orderTotal, businessSettings.currency)}</p>
                       <div className="flex gap-2">
                         <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 text-sm">Cancel</button>
                         <button type="submit" disabled={submitting} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2">
@@ -515,7 +516,7 @@ export default function OrdersPage() {
                           <td className="px-4 py-3 text-center">
                             <span className={"inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold " + (PAYMENT_BADGE[order.paymentStatus] || "bg-gray-100 text-gray-700")}>{order.paymentStatus}</span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-semibold">{formatCurrency(total, businessSettings.currency)}</td>
+                          <td className="px-4 py-3 text-sm text-right font-semibold">{hideAmounts ? "***" : formatCurrency(total, businessSettings.currency)}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-1 flex-wrap">
                               {statusInfo && (
@@ -559,11 +560,11 @@ export default function OrdersPage() {
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-indigo-100">
                                       <p className="text-xs text-gray-500 font-semibold">Total</p>
-                                      <p className="text-sm font-bold">{formatCurrency(total, businessSettings.currency)}</p>
+                                      <p className="text-sm font-bold">{hideAmounts ? "***" : formatCurrency(total, businessSettings.currency)}</p>
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-indigo-100">
                                       <p className="text-xs text-gray-500 font-semibold">Balance</p>
-                                      <p className={"text-sm font-bold " + ((total - paid) > 0 ? "text-orange-600" : "text-green-600")}>{formatCurrency(total - paid, businessSettings.currency)}</p>
+                                      <p className={("text-sm font-bold ") + ((total - paid) > 0 ? "text-orange-600" : "text-green-600")}>{hideAmounts ? "***" : formatCurrency(total - paid, businessSettings.currency)}</p>
                                     </div>
                                   </div>
                                   <div className="bg-white rounded-lg border border-indigo-100 overflow-hidden">
@@ -581,8 +582,8 @@ export default function OrdersPage() {
                                           <tr key={i}>
                                             <td className="px-3 py-2 text-sm">{itm.description || itm.name || "\u2014"}</td>
                                             <td className="px-3 py-2 text-sm text-right">{itm.quantity}</td>
-                                            <td className="px-3 py-2 text-sm text-right">{formatCurrency(Number(itm.unitPrice || itm.price || 0), businessSettings.currency)}</td>
-                                            <td className="px-3 py-2 text-sm text-right font-semibold">{formatCurrency(Number(itm.quantity || 0) * Number(itm.unitPrice || itm.price || 0), businessSettings.currency)}</td>
+                                            <td className="px-3 py-2 text-sm text-right">{hideAmounts ? "***" : formatCurrency(Number(itm.unitPrice || itm.price || 0), businessSettings.currency)}</td>
+                                            <td className="px-3 py-2 text-sm text-right font-semibold">{hideAmounts ? "***" : formatCurrency(Number(itm.quantity || 0) * Number(itm.unitPrice || itm.price || 0), businessSettings.currency)}</td>
                                           </tr>
                                         ))}
                                       </tbody>

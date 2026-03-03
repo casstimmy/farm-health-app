@@ -8,12 +8,15 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useAnimalData } from "@/context/AnimalDataContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
+import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 
 export default function MortalityTracking() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const { animals: globalAnimals, fetchAnimals: fetchGlobalAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [mortalityRecords, setMortalityRecords] = useState([]);
@@ -247,7 +250,7 @@ export default function MortalityTracking() {
         stats={[
           { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋" },
           { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅" },
-          { label: "Est. Loss", value: formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
+          { label: "Est. Loss", value: hideAmounts ? "***" : formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
           { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true },
         ]}
       />
@@ -539,7 +542,7 @@ export default function MortalityTracking() {
                       {record.daysSick || "-"}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-700 font-semibold">
-                      {record.estimatedValue ? formatCurrency(Number(record.estimatedValue), businessSettings.currency) : record.valueLost ? formatCurrency(Number(record.valueLost), businessSettings.currency) : "-"}
+                      {hideAmounts ? "***" : (record.estimatedValue ? formatCurrency(Number(record.estimatedValue), businessSettings.currency) : record.valueLost ? formatCurrency(Number(record.valueLost), businessSettings.currency) : "-")}
                     </td>
                     <td className="px-6 py-4 text-gray-600 text-sm">
                       {record.disposalMethod || "-"}

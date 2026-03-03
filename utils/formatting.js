@@ -18,6 +18,22 @@ export const formatCurrency = (value = 0, currency = "NGN") => {
   return `${symbol}${Number(value).toLocaleString("en-US")}`;
 };
 
+/**
+ * Returns true if the given role should NOT see monetary values.
+ * Used to hide prices/costs from Attendant role.
+ */
+export const shouldHideAmounts = (role) => {
+  return role === "Attendant";
+};
+
+/**
+ * Formats currency but returns "***" if the role should not see amounts.
+ */
+export const formatCurrencyByRole = (value = 0, currency = "NGN", role = "") => {
+  if (shouldHideAmounts(role)) return "***";
+  return formatCurrency(value, currency);
+};
+
 export const formatNumber = (value = 0) => {
   return Number(value).toLocaleString("en-US");
 };

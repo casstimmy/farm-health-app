@@ -8,12 +8,19 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency, formatDateForInput } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
 
 const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Paddock", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
+
+// Feed conversion efficiency: % of consumed feed converted to body weight
+const FEED_CONVERSION_RATES = {
+  goat: 0.195, sheep: 0.215, cow: 0.13, cattle: 0.13,
+  chicken: 0.60, poultry: 0.60, turkey: 0.38, pig: 0.35, swine: 0.35,
+  rabbit: 0.25, fish: 0.55, duck: 0.40, horse: 0.08, donkey: 0.08, camel: 0.10,
+};
 
 const initialFormState = {
   date: new Date().toISOString().split("T")[0],
@@ -36,6 +43,7 @@ export default function Feeding() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const { animals: globalAnimals, fetchAnimals } = useAnimalData();
   const [animals, setAnimals] = useState([]);
   const [records, setRecords] = useState([]);
@@ -445,7 +453,7 @@ export default function Feeding() {
           { label: "Total Records", value: totalRecords, color: "blue" },
           { label: "Today's Feedings", value: todayRecords, color: "green" },
           { label: "Total Consumed", value: `${totalConsumed.toFixed(2)} units`, color: "amber" },
-          { label: "Total Feed Cost", value: formatCurrency(totalFeedCost, businessSettings.currency), color: "red" },
+          { label: "Total Feed Cost", value: hideAmounts ? "***" : formatCurrency(totalFeedCost, businessSettings.currency), color: "red" },
         ].map((s) => (
           <div key={s.label} className={`bg-${s.color}-50 border border-${s.color}-200 rounded-xl p-4`}>
             <p className="text-sm text-gray-600">{s.label}</p>
@@ -644,7 +652,7 @@ export default function Feeding() {
             </div>
 
             {/* Feed Details - Multiple Items */}
-            <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName === "SELECT") e.preventDefault(); }}>
+            <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") e.preventDefault(); }}>
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items ({feedItems.filter(fi => fi.feedCategory?.trim()).length} added)</h4>
@@ -665,11 +673,14 @@ export default function Feeding() {
                       </select>
                     </div>
                     <div>
-                      <label className="label">Location</label>
-                      <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field">
+                      <label className="label">Location {feedingMode === "paddock" && formData.location ? "🔒" : ""}</label>
+                      <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field" disabled={feedingMode === "paddock" && !!formData.location}>
                         <option value="">-- Select Location --</option>
                         {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                       </select>
+                      {feedingMode === "paddock" && formData.location && (
+                        <p className="text-xs text-amber-600 mt-1">Auto-filled from paddock selection</p>
+                      )}
                     </div>
                   </div>
 
@@ -685,7 +696,7 @@ export default function Feeding() {
                             <div key={idx} className="flex items-center gap-2 bg-white border border-green-300 rounded-lg px-3 py-2 shadow-sm">
                               <span className="text-sm font-semibold text-gray-900">{fi.feedCategory}</span>
                               {fi.quantityConsumed && <span className="text-xs text-gray-500">• {fi.quantityConsumed} {fi.unit || "kg"}</span>}
-                              {fi.totalCost && parseFloat(fi.totalCost) > 0 && <span className="text-xs text-orange-600 font-medium">• {formatCurrency(parseFloat(fi.totalCost), businessSettings.currency)}</span>}
+                              {!hideAmounts && fi.totalCost && parseFloat(fi.totalCost) > 0 && <span className="text-xs text-orange-600 font-medium">• {formatCurrency(parseFloat(fi.totalCost), businessSettings.currency)}</span>}
                               <button type="button" onClick={() => setEditingFeedIdx(idx)} className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded transition-colors" title="Edit">
                                 <FaEdit size={11} />
                               </button>
@@ -869,7 +880,7 @@ export default function Feeding() {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Animal</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Feed Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Conversion</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Offered</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Consumed</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Method</th>
@@ -884,23 +895,36 @@ export default function Feeding() {
                     <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.date ? new Date(record.date).toLocaleDateString() : "—"}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-gray-900">{record.animal?.name || record.animal?.tagId || "—"}</td>
                     <td className="px-4 py-3 text-sm">
-                      {record.feedItems && record.feedItems.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {record.feedItems.map((fi, fidx) => (
-                            <span key={fidx} className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap">
-                              {fi.feedTypeName || "—"}
+                      {(() => {
+                        const species = (record.animal?.species || "").toLowerCase().trim();
+                        const rate = FEED_CONVERSION_RATES[species] || 0.15;
+                        const consumed = record.totalQuantityConsumed || record.quantityConsumed || 0;
+                        const projectedKg = +(consumed * rate).toFixed(2);
+                        const cost = record.totalFeedCost || record.totalCost || 0;
+                        return (
+                          <div className="space-y-0.5">
+                            <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-bold">
+                              {(rate * 100).toFixed(1)}%
                             </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                            {consumed > 0 && (
+                              <div className="text-xs text-gray-500">
+                                +{projectedKg}kg gain
+                              </div>
+                            )}
+                            {!hideAmounts && cost > 0 && projectedKg > 0 && (
+                              <div className="text-xs text-orange-600">
+                                {formatCurrency(+(cost / projectedKg).toFixed(2), businessSettings.currency)}/kg
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-700">{record.totalQuantityOffered != null ? Number(record.totalQuantityOffered).toFixed(2) : record.quantityOffered != null ? Number(record.quantityOffered).toFixed(2) : "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{record.totalQuantityConsumed != null ? Number(record.totalQuantityConsumed).toFixed(2) : record.quantityConsumed != null ? Number(record.quantityConsumed).toFixed(2) : "—"}{record.feedItems?.[0]?.unit ? ` ${record.feedItems[0].unit}` : ""}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.feedingMethod || "—"}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-orange-700">{hideAmounts ? "***" : formatCurrency(record.totalFeedCost || record.totalCost || 0, businessSettings.currency)}</td>
                     <td className="px-4 py-3 text-sm text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit">

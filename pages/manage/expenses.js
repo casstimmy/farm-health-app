@@ -7,7 +7,8 @@ import { FaPlus, FaTimes, FaCheck, FaSpinner, FaMoneyBillWave, FaReceipt } from 
 import PageHeader from "@/components/shared/PageHeader";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
+import { useRole } from "@/hooks/useRole";
 import { getCachedData, invalidateCache } from "@/utils/cache";
 
 const EXPENSE_CATEGORIES = [
@@ -40,6 +41,8 @@ const initialForm = {
 export default function ExpenseEntry() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
+  const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const currency = businessSettings?.currency || "NGN";
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -212,18 +215,18 @@ export default function ExpenseEntry() {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <p className="text-sm text-gray-600">Today&apos;s Expenses</p>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(todayTotal, currency)}</p>
+          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(todayTotal, currency)}</p>
           <p className="text-xs text-gray-500">{todayExpenses.length} record{todayExpenses.length !== 1 ? "s" : ""}</p>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
           <p className="text-sm text-gray-600">Total Expenses</p>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalAll, currency)}</p>
+          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(totalAll, currency)}</p>
           <p className="text-xs text-gray-500">{expenses.length} record{expenses.length !== 1 ? "s" : ""}</p>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 col-span-2 md:col-span-1">
           <p className="text-sm text-gray-600">Recent Entries</p>
           <p className="text-2xl font-bold text-gray-900">{expenses.slice(0, 1)[0]?.title || "—"}</p>
-          <p className="text-xs text-gray-500">{expenses[0] ? formatCurrency(expenses[0].amount, currency) : "No entries yet"}</p>
+          <p className="text-xs text-gray-500">{expenses[0] ? (hideAmounts ? "***" : formatCurrency(expenses[0].amount, currency)) : "No entries yet"}</p>
         </div>
       </div>
 
@@ -407,7 +410,7 @@ export default function ExpenseEntry() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-orange-600">
-                      {formatCurrency(exp.amount, currency)}
+                      {hideAmounts ? "***" : formatCurrency(exp.amount, currency)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{exp.paymentMethod}</td>
                   </tr>

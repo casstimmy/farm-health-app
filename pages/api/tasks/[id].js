@@ -1,11 +1,10 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
-import { verifyToken } from "@/utils/auth";
+import { withAuth } from "@/utils/middleware";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await dbConnect();
-  const decoded = verifyToken(req);
-  if (!decoded) return res.status(401).json({ error: "Unauthorized" });
+  const decoded = req.user;
 
   const { id } = req.query;
 
@@ -54,6 +53,9 @@ export default async function handler(req, res) {
           case "Weekly": nextDue.setDate(nextDue.getDate() + 7); break;
           case "Biweekly": nextDue.setDate(nextDue.getDate() + 14); break;
           case "Monthly": nextDue.setMonth(nextDue.getMonth() + 1); break;
+          case "Bi-Monthly": nextDue.setMonth(nextDue.getMonth() + 2); break;
+          case "Quarterly": nextDue.setMonth(nextDue.getMonth() + 3); break;
+          case "Yearly": nextDue.setFullYear(nextDue.getFullYear() + 1); break;
         }
         await Task.create({
           title: task.title,
@@ -63,6 +65,7 @@ export default async function handler(req, res) {
           assignedTo: task.assignedTo?._id || task.assignedTo,
           assignedBy: task.assignedBy?._id || task.assignedBy,
           location: task.location?._id || task.location,
+          paddock: task.paddock || "",
           animal: task.animal?._id || task.animal,
           dueDate: nextDue,
           isRecurring: true,
@@ -93,3 +96,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: "Method not allowed" });
 }
+
+export default withAuth(handler);

@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Inventory from "@/models/Inventory";
 import Medication from "@/models/Medication";
+import "@/models/Location";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
@@ -9,7 +10,7 @@ async function handler(req, res) {
   if (req.method === "GET") {
     try {
       // All authenticated users can view inventory
-      const inventory = await Inventory.find().sort({ dateAdded: -1 }).lean();
+      const inventory = await Inventory.find().sort({ dateAdded: -1 }).populate("location", "name").lean();
       res.status(200).json(inventory);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -35,6 +36,7 @@ async function handler(req, res) {
         marginPercent: inventoryData.marginPercent || 0,
         salesPrice: inventoryData.salesPrice || 0,
         unit: inventoryData.unit,
+        location: inventoryData.location || null,
         medication: inventoryData.medication || undefined,
         dateAdded: inventoryData.dateAdded || new Date(),
       });

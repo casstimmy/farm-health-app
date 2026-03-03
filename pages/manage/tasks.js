@@ -38,7 +38,7 @@ const CATEGORY_ICON = {
 
 const initialForm = {
   title: "", description: "", category: "General", priority: "Medium",
-  assignedTo: "", location: "", animal: "", dueDate: "", notes: "",
+  assignedTo: "", location: "", paddock: "", animal: "", dueDate: "", notes: "",
   isRecurring: false, recurringInterval: "",
 };
 
@@ -107,6 +107,7 @@ export default function TasksPage() {
       if (payload.dueDate) payload.dueDate = new Date(payload.dueDate).toISOString();
       if (!payload.assignedTo) delete payload.assignedTo;
       if (!payload.location) delete payload.location;
+      if (!payload.paddock) delete payload.paddock;
       if (!payload.animal) delete payload.animal;
 
       const url = editingId ? `/api/tasks/${editingId}` : "/api/tasks";
@@ -163,6 +164,7 @@ export default function TasksPage() {
       priority: task.priority || "Medium",
       assignedTo: task.assignedTo?._id || "",
       location: task.location?._id || "",
+      paddock: task.paddock || "",
       animal: task.animal?._id || "",
       dueDate: formatDateForInput(task.dueDate),
       notes: task.notes || "",
@@ -303,11 +305,25 @@ export default function TasksPage() {
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
-                        <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
+                        <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value, paddock: "" })}>
                           <option value="">No location</option>
                           {locations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
                         </select>
                       </div>
+                      {form.location && (() => {
+                        const loc = locations.find(l => l._id === form.location);
+                        const paddocks = loc?.paddocks || [];
+                        if (paddocks.length === 0) return null;
+                        return (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Paddock / Shed</label>
+                            <select className="input-field" value={form.paddock} onChange={(e) => setForm({ ...form, paddock: e.target.value })}>
+                              <option value="">None</option>
+                              {paddocks.map((p) => <option key={p._id} value={p.name}>{p.name} ({p.type})</option>)}
+                            </select>
+                          </div>
+                        );
+                      })()}
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Related Animal</label>
                         <select className="input-field" value={form.animal} onChange={(e) => setForm({ ...form, animal: e.target.value })}>
@@ -327,6 +343,9 @@ export default function TasksPage() {
                           <option value="Weekly">Weekly</option>
                           <option value="Biweekly">Biweekly</option>
                           <option value="Monthly">Monthly</option>
+                          <option value="Bi-Monthly">Bi-Monthly</option>
+                          <option value="Quarterly">Quarterly</option>
+                          <option value="Yearly">Yearly</option>
                         </select>
                       )}
                     </div>
@@ -450,7 +469,7 @@ export default function TasksPage() {
                               </div>
                               <div className="bg-white rounded-lg p-3 border border-violet-100">
                                 <p className="text-xs text-gray-500 font-semibold">Location</p>
-                                <p className="text-sm font-bold">{task.location?.name || "—"}</p>
+                                <p className="text-sm font-bold">{task.location?.name || "—"}{task.paddock ? ` → ${task.paddock}` : ""}</p>
                               </div>
                               <div className="bg-white rounded-lg p-3 border border-violet-100">
                                 <p className="text-xs text-gray-500 font-semibold">Due Date</p>

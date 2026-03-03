@@ -6,7 +6,7 @@ import {
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
 import { invalidateCache } from "@/utils/cache";
@@ -49,6 +49,7 @@ const emptyForm = {
 export default function ManageServices() {
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -261,7 +262,7 @@ export default function ManageServices() {
           { label: "Total Services", value: totalServices, color: "blue" },
           { label: "Active", value: activeServices, color: "green" },
           { label: "Shown on Site", value: shownOnSite, color: "purple" },
-          { label: "Avg Price", value: formatCurrency(avgPrice, businessSettings.currency), color: "yellow" },
+          { label: "Avg Price", value: hideAmounts ? "***" : formatCurrency(avgPrice, businessSettings.currency), color: "yellow" },
         ].map((stat) => (
           <div key={stat.label} className={`bg-${stat.color}-50 border border-${stat.color}-200 rounded-xl p-4`}>
             <p className="text-sm text-gray-600">{stat.label}</p>
@@ -465,7 +466,7 @@ export default function ManageServices() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                      {formatCurrency(parseFloat(service.price || 0), businessSettings.currency)}
+                      {hideAmounts ? "***" : formatCurrency(parseFloat(service.price || 0), businessSettings.currency)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">{service.unit || "—"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">{service.description || "—"}</td>

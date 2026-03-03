@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { FaPlus, FaTimes, FaTrash, FaSpinner, FaCheck, FaChartPie, FaChartBar, FaEdit } from "react-icons/fa";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency, formatDateForInput } from "@/utils/formatting";
+import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
@@ -34,6 +34,7 @@ export default function Transactions() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user, isLoading: roleLoading } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [allFinance, setAllFinance] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -166,9 +167,9 @@ export default function Transactions() {
       {success && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="success-message"><FaCheck className="inline mr-2" />{success}</motion.div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{formatCurrency(totalIncome, businessSettings.currency)}</p><p className="text-xs text-gray-500 mt-1">This month: {formatCurrency(thisMonthIncome, businessSettings.currency)}</p></div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{formatCurrency(totalExpense, businessSettings.currency)}</p><p className="text-xs text-gray-500 mt-1">This month: {formatCurrency(thisMonthExpenses, businessSettings.currency)}</p></div>
-        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{formatCurrency(netPL, businessSettings.currency)}</p></div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Income</p><p className="text-xl font-bold text-green-700">{hideAmounts ? "***" : formatCurrency(totalIncome, businessSettings.currency)}</p><p className="text-xs text-gray-500 mt-1">This month: {hideAmounts ? "***" : formatCurrency(thisMonthIncome, businessSettings.currency)}</p></div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-gray-600">Total Expenses</p><p className="text-xl font-bold text-red-700">{hideAmounts ? "***" : formatCurrency(totalExpense, businessSettings.currency)}</p><p className="text-xs text-gray-500 mt-1">This month: {hideAmounts ? "***" : formatCurrency(thisMonthExpenses, businessSettings.currency)}</p></div>
+        <div className={`border rounded-xl p-4 ${netPL >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}><p className="text-sm text-gray-600">Net P&L</p><p className={`text-xl font-bold ${netPL >= 0 ? "text-blue-700" : "text-orange-700"}`}>{hideAmounts ? "***" : formatCurrency(netPL, businessSettings.currency)}</p></div>
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4"><p className="text-sm text-gray-600">Records</p><p className="text-xl font-bold text-purple-700">{allFinance.length}</p><p className="text-xs text-gray-500 mt-1">{income.length} income | {expenses.length} expense</p></div>
       </div>
 
@@ -259,7 +260,7 @@ export default function Transactions() {
                         <td className="px-4 py-3 text-sm text-gray-700">{record.vendor || "—"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{record.paymentMethod || "—"}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{record.location?.name || "—"}</td>
-                        <td className={`px-4 py-3 text-sm text-right font-bold ${record.type?.toLowerCase() === "income" ? "text-green-700" : "text-red-700"}`}>{record.type?.toLowerCase() === "income" ? "+" : "-"}{formatCurrency(record.amount || 0, businessSettings.currency)}</td>
+                        <td className={`px-4 py-3 text-sm text-right font-bold ${record.type?.toLowerCase() === "income" ? "text-green-700" : "text-red-700"}`}>{record.type?.toLowerCase() === "income" ? "+" : "-"}{hideAmounts ? "***" : formatCurrency(record.amount || 0, businessSettings.currency)}</td>
                         <td className="px-4 py-3 text-sm text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => handleEdit(record)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit"><FaEdit size={13} /></button>

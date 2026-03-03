@@ -8,7 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { BusinessContext } from "@/context/BusinessContext";
-import { formatCurrency } from "@/utils/formatting";
+import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { getCachedData, invalidateCache } from "@/utils/cache";
 
@@ -27,6 +27,7 @@ export default function InventoryLossPage() {
   const router = useRouter();
   const { businessSettings } = useContext(BusinessContext);
   const { user } = useRole();
+  const hideAmounts = shouldHideAmounts(user?.role);
   const [records, setRecords] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +208,7 @@ export default function InventoryLossPage() {
           </div>
           <div className="bg-red-50 rounded-xl p-4 border border-red-200 text-center">
             <p className="text-sm text-gray-600">Total Financial Loss</p>
-            <p className="text-2xl font-bold text-red-700">{formatCurrency(totalLoss, businessSettings.currency)}</p>
+            <p className="text-2xl font-bold text-red-700">{hideAmounts ? "***" : formatCurrency(totalLoss, businessSettings.currency)}</p>
           </div>
         </div>
       </div>
@@ -381,8 +382,8 @@ export default function InventoryLossPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 font-semibold">{record.quantity}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{formatCurrency(record.unitCost || 0, businessSettings.currency)}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-red-700">{formatCurrency(record.totalLoss || 0, businessSettings.currency)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{hideAmounts ? "***" : formatCurrency(record.unitCost || 0, businessSettings.currency)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-red-700">{hideAmounts ? "***" : formatCurrency(record.totalLoss || 0, businessSettings.currency)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.date ? new Date(record.date).toLocaleDateString() : "N/A"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.reason || "—"}</td>
                     {canDelete && (
