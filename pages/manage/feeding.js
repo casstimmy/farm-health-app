@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { FaPlus, FaTimes, FaSpinner, FaCheck, FaUsers, FaUser, FaEdit, FaTrash } from "react-icons/fa";
@@ -12,6 +12,7 @@ import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/f
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Paddock", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
 
@@ -72,6 +73,14 @@ export default function Feeding() {
   const [editingFeedIdx, setEditingFeedIdx] = useState(null);
   // Paddock feeding mode
   const [selectedPaddock, setSelectedPaddock] = useState("");
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -547,7 +556,7 @@ export default function Feeding() {
                       className="input-field"
                     >
                       <option value="">-- Select Location --</option>
-                      {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                      {userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                     </select>
                   </div>
                   <div>
@@ -684,7 +693,7 @@ export default function Feeding() {
                       <label className="label">Location {feedingMode === "paddock" && formData.location ? "🔒" : ""}</label>
                       <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field" disabled={feedingMode === "paddock" && !!formData.location}>
                         <option value="">-- Select Location --</option>
-                        {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                        {userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                       </select>
                       {feedingMode === "paddock" && formData.location && (
                         <p className="text-xs text-amber-600 mt-1">Auto-filled from paddock selection</p>
@@ -869,7 +878,7 @@ export default function Feeding() {
         filters={[
           { value: filterType, onChange: setFilterType, options: [{ value: "all", label: "All Feed Types" }, ...feedTypes.map((t) => ({ value: t, label: t }))] },
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
       />
 

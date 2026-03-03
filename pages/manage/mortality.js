@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaSkull, FaCalendar, FaSpinner, FaTimes, FaCheck, FaExclamationTriangle } from "react-icons/fa";
@@ -11,6 +11,7 @@ import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 export default function MortalityTracking() {
   const router = useRouter();
@@ -42,6 +43,14 @@ export default function MortalityTracking() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   const causeOptions = [
     "Disease",
@@ -263,7 +272,7 @@ export default function MortalityTracking() {
         placeholder="Search by animal name or tag..."
         filters={[
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
           { value: filterCause, onChange: setFilterCause, options: [{ value: "all", label: "All Causes" }, ...causeOptions.map((c) => ({ value: c, label: c }))] },
         ]}
         showAddButton={true}
@@ -411,7 +420,7 @@ export default function MortalityTracking() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-gray-500"
                 >
                   <option value="">Select location...</option>
-                  {locations.map((l) => (
+                  {userLocations.map((l) => (
                     <option key={l._id} value={l._id}>{l.name}</option>
                   ))}
                 </select>
@@ -463,30 +472,6 @@ export default function MortalityTracking() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Dead Animals Summary */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <FaSkull className="text-red-600" />
-          Animals with Dead Status
-        </h3>
-        {animals.filter(a => a.status === "Dead").length === 0 ? (
-          <p className="text-gray-500">No animals with dead status found.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {animals.filter(a => a.status === "Dead").map(animal => (
-              <div key={animal._id} className="p-4 border border-red-200 rounded-lg bg-red-50">
-                <p className="font-semibold text-gray-900">{animal.name || "N/A"}</p>
-                <p className="text-sm text-gray-600">Tag ID: {animal.tagId}</p>
-                <p className="text-sm text-gray-600">Species: {animal.species}</p>
-                {animal.weightDate && (
-                  <p className="text-xs text-gray-500 mt-2">Last weighed: {new Date(animal.weightDate).toLocaleDateString()}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Records List */}
       {loading ? (

@@ -64,11 +64,11 @@ export const menuItemVisibility = {
   // SuperAdmin: Full access to everything
   SuperAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'roles', 'transactions', 'reports', 'locations', 'business-setup', 'customers', 'orders', 'blog'],
   
-  // SubAdmin: Like Manager but location-scoped, can manage users at their location
-  SubAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
+  // SubAdmin: Like Manager but location-scoped, finance with location access
+  SubAdmin: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
   
   // Manager: Can manage animals, operations, transactions, and view reports
-  Manager: ['animals', 'operations', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
+  Manager: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
   
   // Attendant: Can only view animals and record operations
   Attendant: ['animals', 'operations', 'health-records', 'treatments', 'inventory', 'feeding', 'weight'],

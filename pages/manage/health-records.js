@@ -17,6 +17,7 @@ import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/formatting";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Antibiotics", "Ext-Parasite", "Deworming", "Vitamin Dosing", "Hydration/Electrolyte", "Vaccination", "Int-Parasite", "Injection", "Oral", "Topical", "IV Drip", "Surgical", "Other"];
@@ -82,6 +83,14 @@ export default function HealthRecords() {
   const [selectedGroupLocation, setSelectedGroupLocation] = useState("");
   const [selectedAnimals, setSelectedAnimals] = useState([]);
   const [deleting, setDeleting] = useState(null);
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -550,7 +559,7 @@ export default function HealthRecords() {
                         <select value={formData.location} onChange={(e) => { handleChange("location", e.target.value); setSelectedPaddock(""); setSelectedAnimals([]); }}
                           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
                           <option value="">Select location...</option>
-                          {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                          {userLocations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                         </select>
                       </div>
                       <div>
@@ -589,7 +598,7 @@ export default function HealthRecords() {
                       <select value={selectedGroupLocation} onChange={(e) => { setSelectedGroupLocation(e.target.value); handleChange("location", e.target.value); }}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
                         <option value="">Select location...</option>
-                        {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                        {userLocations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                       </select>
                       {selectedAnimals.length > 0 && (
                         <p className="mt-2 text-sm text-teal-700 font-semibold">✅ {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
@@ -640,7 +649,7 @@ export default function HealthRecords() {
                     <select value={formData.location} onChange={(e) => handleChange("location", e.target.value)}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500">
                       <option value="">Select location...</option>
-                      {locations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
+                      {userLocations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-7">
@@ -805,7 +814,7 @@ export default function HealthRecords() {
         placeholder="Search by tag, diagnosis, symptoms..."
         filters={[
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map(l => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map(l => ({ value: l._id, label: l.name }))] },
           { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, ...RECOVERY_STATUS.map(s => ({ value: s, label: s }))] },
         ]}
       />

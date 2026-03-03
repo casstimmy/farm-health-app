@@ -408,16 +408,20 @@ export default function Home() {
             <KPI label="On Treatment" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="💊" />
           </div>
 
-          {/* Financial Overview */}
-          <SectionTitle icon="💰" title="Financial Overview" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-            <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="📈" />
-            <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="📉" />
-            <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "📊" : "⚠️"} />
-            <KPI label="Projected Sales" value={fmtMoney(stats.totalProjectedSales, currency)} color="bg-blue-50 border-blue-200" icon="🎯" />
-            <KPI label="Feed Costs" value={fmtMoney(stats.totalFeedCost, currency)} color="bg-orange-50 border-orange-200" icon="🌾" />
-            <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="💀" />
-          </div>
+          {/* Financial Overview - SuperAdmin only */}
+          {user?.role === "SuperAdmin" && (
+            <>
+              <SectionTitle icon="💰" title="Financial Overview" />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+                <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="📈" />
+                <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="📉" />
+                <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "📊" : "⚠️"} />
+                <KPI label="Projected Sales" value={fmtMoney(stats.totalProjectedSales, currency)} color="bg-blue-50 border-blue-200" icon="🎯" />
+                <KPI label="Feed Costs" value={fmtMoney(stats.totalFeedCost, currency)} color="bg-orange-50 border-orange-200" icon="🌾" />
+                <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="💀" />
+              </div>
+            </>
+          )}
 
           {/* Breeding & Operations */}
           <SectionTitle icon="💕" title="Breeding & Operations" />
@@ -470,9 +474,11 @@ export default function Home() {
               ) : <NoData />}
             </ChartCard>
             <ChartCard title="Expenses by Category">
-              {Object.keys(stats.expByCat).length > 0 ? (
-                <Bar data={expenseChart} options={{ responsive: true, maintainAspectRatio: false, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }} />
-              ) : <NoData />}
+              {user?.role === "SuperAdmin" ? (
+                Object.keys(stats.expByCat).length > 0 ? (
+                  <Bar data={expenseChart} options={{ responsive: true, maintainAspectRatio: false, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }} />
+                ) : <NoData />
+              ) : <div className="flex items-center justify-center h-full text-gray-400 text-sm">SuperAdmin only</div>}
             </ChartCard>
           </div>
 

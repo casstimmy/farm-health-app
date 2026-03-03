@@ -12,6 +12,7 @@ import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatDateForInput } from "@/utils/formatting";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 export default function WeightTracking() {
   const router = useRouter();
@@ -41,6 +42,21 @@ export default function WeightTracking() {
 
   const [viewMode, setViewMode] = useState("overview");
   const [historyAnimalId, setHistoryAnimalId] = useState("");
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
+
+  // Auto-populate location when user has exactly one assigned location
+  useEffect(() => {
+    if (userLocations.length === 1 && !formLocation) {
+      setFormLocation(userLocations[0]._id);
+    }
+  }, [userLocations]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -236,7 +252,7 @@ export default function WeightTracking() {
                 <div><label className="label">Animal *</label><select value={formAnimalId} onChange={(e) => setFormAnimalId(e.target.value)} className="input-field" required disabled={!!editingId}><option value="">-- Select Animal --</option>{filteredAliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}</select></div>
                 <div><label className="label">Date</label><input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="input-field" /></div>
                 <div><label className="label">Weight (kg) *</label><input type="number" step="0.1" min="0" value={formWeight} onChange={(e) => setFormWeight(e.target.value)} placeholder="e.g., 42.5" className="input-field" required /></div>
-                <div><label className="label">Location</label><select value={formLocation} onChange={(e) => setFormLocation(e.target.value)} className="input-field"><option value="">-- Select Location --</option>{locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}</select></div>
+                <div><label className="label">Location</label><select value={formLocation} onChange={(e) => setFormLocation(e.target.value)} className="input-field"><option value="">-- Select Location --</option>{userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}</select></div>
                 <div className="md:col-span-2"><label className="label">Notes</label><input type="text" value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Optional notes" className="input-field" /></div>
               </div>
             </div>
@@ -257,7 +273,7 @@ export default function WeightTracking() {
         filters={[
           { value: filterSpecies, onChange: setFilterSpecies, options: [{ value: "all", label: "All Species" }, ...speciesList.map((s) => ({ value: s, label: s }))] },
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
       />
 

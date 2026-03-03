@@ -13,6 +13,7 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { invalidateCache } from "@/utils/cache";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 // Lazy-load Chart.js to reduce bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -51,6 +52,14 @@ export default function Finance() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [editingId, setEditingId] = useState(null);
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -206,7 +215,7 @@ export default function Finance() {
                 <div><label className="label">Location</label>
                   <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field">
                     <option value="">-- Select Location --</option>
-                    {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
+                    {userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                   </select></div>
                 <div><label className="label">Recorded By</label>
                   <input type="text" value={user?.name || "Unknown"} className="input-field bg-gray-100" readOnly /></div>
@@ -250,7 +259,7 @@ export default function Finance() {
           { value: filterCategory, onChange: setFilterCategory, options: [{ value: "all", label: "All Categories" }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))] },
           { value: filterType, onChange: setFilterType, options: [{ value: "all", label: "All Types" }, { value: "Income", label: "Income" }, { value: "Expense", label: "Expense" }] },
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
       />
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { FaBox, FaPlus, FaTimes, FaSpinner, FaEdit, FaCheck, FaTrash, FaMinus, FaBoxOpen } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
@@ -10,6 +10,7 @@ import Loader from "@/components/Loader";
 import Modal from "@/components/shared/Modal";
 import { getCachedData, invalidateCache } from "@/utils/cache";
 import Link from "next/link";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 export default function ManageInventory() {
   const { businessSettings } = useContext(BusinessContext);
@@ -82,6 +83,21 @@ export default function ManageInventory() {
     supplier: "",
     location: "",
   });
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
+
+  // Auto-populate location when user has exactly one assigned location
+  useEffect(() => {
+    if (userLocations.length === 1 && !formData.location) {
+      setFormData(prev => ({ ...prev, location: userLocations[0]._id }));
+    }
+  }, [userLocations]);
 
   useEffect(() => {
     fetchInventory();
@@ -684,7 +700,7 @@ export default function ManageInventory() {
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-600 focus:outline-none"
                 >
                   <option value="">-- Select Location --</option>
-                  {locations.map((loc) => (
+                  {userLocations.map((loc) => (
                     <option key={loc._id} value={loc._id}>{loc.name}</option>
                   ))}
                 </select>

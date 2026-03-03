@@ -8,6 +8,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
+import { getClientLocationIds } from "@/utils/locationAccess";
 import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { BusinessContext } from "@/context/BusinessContext";
 
@@ -78,6 +79,14 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [animalSpeciesFilter, setAnimalSpeciesFilter] = useState({});
   const [emailModal, setEmailModal] = useState({ show: false, orderId: null, status: null });
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     if (roleLoading) return;
@@ -360,7 +369,7 @@ export default function OrdersPage() {
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
                         <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}>
                           <option value="">Select location</option>
-                          {locations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
+                          {userLocations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
                         </select>
                       </div>
                       <div>

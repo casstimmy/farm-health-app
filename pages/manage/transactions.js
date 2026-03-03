@@ -13,6 +13,7 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { invalidateCache } from "@/utils/cache";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 // Lazy-load Chart.js to reduce bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -53,6 +54,14 @@ export default function Transactions() {
   const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -201,7 +210,7 @@ export default function Transactions() {
                 <div><label className="label">Payment Method</label><select value={formData.paymentMethod} onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })} className="input-field"><option value="Cash">Cash</option><option value="Bank Transfer">Bank Transfer</option><option value="Check">Check</option><option value="Mobile Money">Mobile Money</option></select></div>
                 <div><label className="label">Vendor</label><input type="text" value={formData.vendor} onChange={(e) => setFormData({ ...formData, vendor: e.target.value })} placeholder="e.g., ABC Store" className="input-field" /></div>
                 <div><label className="label">Invoice No.</label><input type="text" value={formData.invoiceNumber} onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })} placeholder="INV-001" className="input-field" /></div>
-                <div><label className="label">Location</label><select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field"><option value="">-- Select Location --</option>{locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}</select></div>
+                <div><label className="label">Location</label><select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field"><option value="">-- Select Location --</option>{userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}</select></div>
               </div>
             </div>
             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
@@ -221,7 +230,7 @@ export default function Transactions() {
           { value: filterCategory, onChange: (v) => { setFilterCategory(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Categories" }, ...EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))] },
           { value: filterType, onChange: (v) => { setFilterType(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Types" }, { value: "Income", label: "Income" }, { value: "Expense", label: "Expense" }] },
           { value: filterPeriod, onChange: (v) => { setFilterPeriod(v); setCurrentPage(1); }, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: (v) => { setFilterLocation(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: (v) => { setFilterLocation(v); setCurrentPage(1); }, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
         ]}
       />
 

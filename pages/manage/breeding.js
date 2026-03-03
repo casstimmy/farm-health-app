@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaHeart, FaCalendar, FaVenus, FaMars, FaChevronRight, FaSpinner, FaTimes, FaCheck, FaBaby } from "react-icons/fa";
@@ -8,10 +8,13 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
+import { useRole } from "@/hooks/useRole";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 export default function BreedingManagement() {
   const router = useRouter();
   const { fetchAnimals: fetchGlobalAnimals } = useAnimalData();
+  const { user } = useRole();
   const [animals, setAnimals] = useState([]);
   const [breedingRecords, setBreedingRecords] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -38,6 +41,14 @@ export default function BreedingManagement() {
   const [showRegisterKids, setShowRegisterKids] = useState(null);
   const [kidForm, setKidForm] = useState({ tagId: "", name: "", gender: "Female", dob: "", weight: "" });
   const [kidSaving, setKidSaving] = useState(false);
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -325,7 +336,7 @@ export default function BreedingManagement() {
         placeholder="Search by animal name..."
         filters={[
           { value: filterPeriod, onChange: setFilterPeriod, options: PERIOD_OPTIONS },
-          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))] },
+          { value: filterLocation, onChange: setFilterLocation, options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))] },
           { value: filterStatus, onChange: setFilterStatus, options: [{ value: "all", label: "All Status" }, { value: "Pending", label: "Pending" }, { value: "Confirmed", label: "Pregnant" }, { value: "Delivered", label: "Delivered" }, { value: "Not Pregnant", label: "Not Pregnant" }] },
         ]}
         showAddButton={true}
@@ -453,7 +464,7 @@ export default function BreedingManagement() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-pink-500"
                 >
                   <option value="">Select location...</option>
-                  {locations.map((l) => (
+                  {userLocations.map((l) => (
                     <option key={l._id} value={l._id}>{l.name}</option>
                   ))}
                 </select>

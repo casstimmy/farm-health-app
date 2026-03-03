@@ -9,6 +9,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { PERIOD_OPTIONS } from "@/utils/filterHelpers";
 import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 export default function Reports() {
   const router = useRouter();
@@ -21,6 +22,14 @@ export default function Reports() {
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [filterLocation, setFilterLocation] = useState("all");
   const [error, setError] = useState("");
+
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -99,7 +108,7 @@ export default function Reports() {
           {
             value: filterLocation,
             onChange: setFilterLocation,
-            options: [{ value: "all", label: "All Locations" }, ...locations.map((l) => ({ value: l._id, label: l.name }))],
+            options: [{ value: "all", label: "All Locations" }, ...userLocations.map((l) => ({ value: l._id, label: l.name }))],
           },
         ]}
       />

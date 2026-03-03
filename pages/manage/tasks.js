@@ -12,6 +12,7 @@ import { formatDateForInput } from "@/utils/formatting";
 import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 const CATEGORIES = ["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other"];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
@@ -65,6 +66,14 @@ export default function TasksPage() {
   const isManager = user && ["SuperAdmin", "SubAdmin", "Manager"].includes(user.role);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !user) return locations;
+    const allowedIds = getClientLocationIds(user);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, user]);
+
   // Filter animals based on selected location/paddock in the task form
   const filteredAnimals = useMemo(() => {
     if (!form.location) return animals;
@@ -80,7 +89,10 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (roleLoading) return;
-    if (!user) { router.push("/login"); return; }
+    // Check localStorage token to prevent premature redirect during hydration
+    const token = localStorage.getItem("token");
+    if (!token) { router.push("/login"); return; }
+    if (!user) return; // Wait for useRole to hydrate user from localStorage
     fetchData();
   }, [roleLoading, user]);
 
@@ -348,11 +360,11 @@ export default function TasksPage() {
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
                         <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value, paddock: "" })}>
                           <option value="">No location</option>
-                          {locations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
+                          {userLocations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
                         </select>
                       </div>
                       {form.location && (() => {
-                        const loc = locations.find(l => l._id === form.location);
+                        const loc = userLocations.find(l => l._id === form.location);
                         const paddocks = loc?.paddocks || [];
                         if (paddocks.length === 0) return null;
                         return (

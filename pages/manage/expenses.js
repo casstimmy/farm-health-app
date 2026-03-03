@@ -56,6 +56,21 @@ export default function ExpenseEntry() {
   const [currentUser, setCurrentUser] = useState(null);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]); // default today
 
+  // Filter locations by user's assigned locations
+  const userLocations = useMemo(() => {
+    if (!locations.length || !currentUser) return locations;
+    const allowedIds = getClientLocationIds(currentUser);
+    if (!allowedIds) return locations; // SuperAdmin sees all
+    return locations.filter(loc => allowedIds.includes(loc._id));
+  }, [locations, currentUser]);
+
+  // Auto-populate location when user has exactly one assigned location
+  useEffect(() => {
+    if (userLocations.length === 1 && !formData.location) {
+      setFormData(prev => ({ ...prev, location: userLocations[0]._id }));
+    }
+  }, [userLocations]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
@@ -367,7 +382,7 @@ export default function ExpenseEntry() {
                       className="input-field"
                     >
                       <option value="">-- Select Location --</option>
-                      {locations.map((loc) => (
+                      {userLocations.map((loc) => (
                         <option key={loc._id} value={loc._id}>{loc.name}</option>
                       ))}
                     </select>

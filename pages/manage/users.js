@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaUsers, FaSpinner, FaSave, FaTimes, FaEdit, FaPlus, FaUserPlus, FaTrash } from "react-icons/fa";
+import { FaUsers, FaSpinner, FaPlus, FaUserPlus } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
@@ -18,6 +18,7 @@ export default function ManageUsers() {
   const [editingRole, setEditingRole] = useState("");
   const [editingLocation, setEditingLocation] = useState("");
   const [editingLocations, setEditingLocations] = useState([]);
+  const [editingPin, setEditingPin] = useState("");
   const [savingUserId, setSavingUserId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,8 +34,8 @@ export default function ManageUsers() {
       return;
     }
 
-    // Check if current user is SuperAdmin or SubAdmin
-    if (currentUser && !["SuperAdmin", "SubAdmin"].includes(currentUser.role)) {
+    // Check if current user is SuperAdmin only
+    if (currentUser && currentUser.role !== "SuperAdmin") {
       router.push("/");
       return;
     }
@@ -69,6 +70,7 @@ export default function ManageUsers() {
     setEditingRole(currentRole);
     setEditingLocation(currentLocation?._id || currentLocation || "");
     setEditingLocations((editUser?.locations || []).map(l => l._id || l));
+    setEditingPin("");
     setError("");
     setSuccess("");
   };
@@ -78,26 +80,38 @@ export default function ManageUsers() {
     setEditingRole("");
     setEditingLocation("");
     setEditingLocations([]);
+    setEditingPin("");
   };
 
   const handleSaveRole = async (userId) => {
     try {
+      // Validate PIN if provided
+      if (editingPin && !/^\d{4}$/.test(editingPin)) {
+        setError("PIN must be exactly 4 digits.");
+        return;
+      }
       setSavingUserId(userId);
       setError("");
       const token = localStorage.getItem("token");
       
+      const body = {
+        userId,
+        role: editingRole,
+        location: editingLocation || null,
+        locations: editingLocations.length > 0 ? editingLocations : [],
+      };
+      // Only include pin if user entered a new one
+      if (editingPin) {
+        body.pin = editingPin;
+      }
+
       const res = await fetch("/api/users", {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          userId,
-          role: editingRole,
-          location: editingLocation || null,
-          locations: editingLocations.length > 0 ? editingLocations : [],
-        })
+        body: JSON.stringify(body)
       });
 
       if (!res.ok) {
@@ -113,6 +127,7 @@ export default function ManageUsers() {
       setEditingRole("");
       setEditingLocation("");
       setEditingLocations([]);
+      setEditingPin("");
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
@@ -455,16 +470,29 @@ export default function ManageUsers() {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       {editingUserId === user._id ? (
-                        <select
-                          value={editingRole}
-                          onChange={(e) => setEditingRole(e.target.value)}
-                          className="px-3 py-2 border-2 border-green-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-                        >
-                          <option value="SuperAdmin">👑 SuperAdmin</option>
-                          <option value="SubAdmin">🔑 SubAdmin</option>
-                          <option value="Manager">📋 Manager</option>
-                          <option value="Attendant">👤 Attendant</option>
-                        </select>
+                        <div className="space-y-2">
+                          <select
+                            value={editingRole}
+                            onChange={(e) => setEditingRole(e.target.value)}
+                            className="px-3 py-2 border-2 border-green-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+                          >
+                            <option value="SuperAdmin">👑 SuperAdmin</option>
+                            <option value="SubAdmin">🔑 SubAdmin</option>
+                            <option value="Manager">📋 Manager</option>
+                            <option value="Attendant">👤 Attendant</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={editingPin}
+                            onChange={(e) => setEditingPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            placeholder="New PIN (4 digits)"
+                            maxLength={4}
+                            className="px-3 py-2 border-2 border-amber-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 w-full"
+                          />
+                          {editingPin && !/^\d{4}$/.test(editingPin) && (
+                            <p className="text-xs text-red-500">PIN must be 4 digits</p>
+                          )}
+                        </div>
                       ) : (
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>
                           {getRoleIcon(user.role)} {user.role}
@@ -524,47 +552,36 @@ export default function ManageUsers() {
                     <td className="px-6 py-4 text-sm">
                       {editingUserId === user._id ? (
                         <div className="flex gap-2">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                          <button
                             onClick={() => handleSaveRole(user._id)}
                             disabled={savingUserId === user._id}
-                            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1 disabled:opacity-50"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 transition-colors disabled:opacity-50"
                           >
-                            {savingUserId === user._id ? <FaSpinner className="animate-spin" /> : <FaSave />}
-                            Save
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            {savingUserId === user._id ? "Saving..." : "Save"}
+                          </button>
+                          <button
                             onClick={handleCancelEdit}
                             disabled={savingUserId === user._id}
-                            className="px-3 py-1 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-xs flex items-center gap-1 disabled:opacity-50"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
                           >
-                            <FaTimes />
                             Cancel
-                          </motion.button>
+                          </button>
                         </div>
                       ) : (
                         <div className="flex gap-2">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                          <button
                             onClick={() => handleEditRole(user._id, user.role, user.location)}
-                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                           >
-                            <FaEdit />
                             Edit
-                          </motion.button>
+                          </button>
                           {currentUser?.role === "SuperAdmin" && user._id !== currentUser.id && (
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            <button
                               onClick={() => handleDeleteUser(user._id)}
-                              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold text-xs flex items-center gap-1"
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
                             >
-                              <FaTrash />
-                            </motion.button>
+                              Delete
+                            </button>
                           )}
                         </div>
                       )}

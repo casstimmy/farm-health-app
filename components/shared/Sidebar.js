@@ -194,16 +194,16 @@ export default function Sidebar() {
     {
       section: "Management",
       icon: <FaUsers className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin'],
+      roles: ['SuperAdmin'],
       submenu: [
-        { href: "/manage/users", label: "Users", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin'] },
+        { href: "/manage/users", label: "Users", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin'] },
         { href: "/manage/roles", label: "Roles & Permissions", icon: <FaCog className="w-4 h-4" />, roles: ['SuperAdmin'] },
       ],
     },
     {
       section: "Finance",
       icon: <FaMoneyBill className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'],
+      roles: ['SuperAdmin', 'SubAdmin', 'Manager'],
       submenu: [
         { href: "/manage/transactions", label: "All Finance", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
         { href: "/manage/customers", label: "Customers", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
@@ -214,11 +214,11 @@ export default function Sidebar() {
     {
       section: "Setup",
       icon: <FaCog className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin', 'Manager'],
+      roles: ['SuperAdmin'],
       submenu: [
-        { href: "/manage/locations", label: "📍 Locations", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/business-setup", label: "🏢 Business Setup", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/blog", label: "Blog Management", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
+        { href: "/manage/locations", label: "📍 Locations", icon: null, roles: ['SuperAdmin'] },
+        { href: "/manage/business-setup", label: "🏢 Business Setup", icon: null, roles: ['SuperAdmin'] },
+        { href: "/manage/blog", label: "Blog Management", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin'] },
         { href: "/manage/seed", label: "🌱 Seed Database", icon: null, roles: ['SuperAdmin'] },
       ],
     },
@@ -257,8 +257,8 @@ export default function Sidebar() {
             {/* Tasks - Prominent Quick Access */}
             {renderMenuItem("/manage/tasks", <FaTasks className="w-5 h-5" />, "Tasks")}
 
-            {/* Record Expense - Quick Access */}
-            {renderMenuItem("/manage/expenses", <FaReceipt className="w-5 h-5" />, "Expense")}
+            {/* Record Expense - Quick Access (Finance roles only) */}
+            {['SuperAdmin', 'SubAdmin', 'Manager'].includes(user?.role) && renderMenuItem("/manage/expenses", <FaReceipt className="w-5 h-5" />, "Expense")}
 
             {/* Dynamic Menu Items */}
             {menuStructure.map(({ section, icon, submenu }) => {
