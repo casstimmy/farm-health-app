@@ -44,6 +44,8 @@ const TaskSchema = new mongoose.Schema(
       enum: ["Daily", "Weekly", "Biweekly", "Monthly", "Bi-Monthly", "Quarterly", "Yearly", ""],
       default: "",
     },
+    reminderDaysBefore: { type: Number, default: 0 },
+    reminderSentAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

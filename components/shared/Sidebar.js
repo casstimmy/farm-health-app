@@ -17,16 +17,18 @@ import {
   FaTasks,
   FaReceipt,
   FaUserCircle,
-  FaBell,
 } from "react-icons/fa";
 
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const router = useRouter();
   const { pathname } = router;
   const submenuRef = useRef(null);
+  const notifRef = useRef(null);
   const { user, isLoading } = useRole();
 
   const toggleMenu = (menu) => {
@@ -66,25 +68,57 @@ export default function Sidebar() {
     };
   }, [router]);
 
-  // Fetch pending tasks for notification badge
+  // Fetch notifications for badge
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token || !user) return;
-        const res = await fetch("/api/tasks", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch("/api/notifications?unreadOnly=true", { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
-          const tasks = Array.isArray(data) ? data : [];
-          const myTasks = tasks.filter(t => t.status !== "Completed" && (t.assignedTo === user.name || t.assignedTo === user._id));
-          setPendingTasks(myTasks.length);
+          setNotificationCount(data.unreadCount || 0);
+          setNotifications(data.notifications || []);
         }
       } catch { /* ignore */ }
     };
-    fetchTasks();
-    const interval = setInterval(fetchTasks, 60000);
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutsideNotif = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    if (showNotifDropdown) {
+      document.addEventListener("mousedown", handleClickOutsideNotif);
+      return () => document.removeEventListener("mousedown", handleClickOutsideNotif);
+    }
+  }, [showNotifDropdown]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+      setNotificationCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch { /* ignore */ }
+  };
+
+  const handleNotifClick = (notif) => {
+    setShowNotifDropdown(false);
+    if (notif.link) {
+      router.push(notif.link);
+    }
+  };
 
   const baseLink =
     "px-2 py-3.5 text-gray-600 transition-all duration-300 hover:bg-green-50 hover:text-green-600 flex items-center justify-center flex-col text-xs cursor-pointer border-l-4 border-transparent hover:border-green-500 rounded-r-lg";
@@ -217,8 +251,8 @@ export default function Sidebar() {
       <aside className="w-20 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r-2 border-gray-200 shadow-lg flex-shrink-0 h-full overflow-y-auto">
         <nav className="mt-6">
           <ul className="space-y-1">
-            {/* Home */}
-            {renderMenuItem("/", <FaHome className="w-5 h-5" />, "Home")}
+            {/* Home - hidden for Attendants */}
+            {user?.role !== "Attendant" && renderMenuItem("/", <FaHome className="w-5 h-5" />, "Home")}
 
             {/* Tasks - Prominent Quick Access */}
             {renderMenuItem("/manage/tasks", <FaTasks className="w-5 h-5" />, "Tasks")}
@@ -275,23 +309,62 @@ export default function Sidebar() {
             })}
 
             {/* User & Notifications */}
-            <li className="absolute bottom-4 left-2 right-2 space-y-2">
-              {/* Task Notification */}
-              <Link href="/manage/tasks" onClick={closeMenu}>
-                <div className="w-16 h-12 flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition-all duration-300 border-2 border-amber-200 relative cursor-pointer"
-                  title={pendingTasks > 0 ? `${pendingTasks} pending task${pendingTasks > 1 ? "s" : ""}` : "Tasks"}>
-                  <FaBell className="w-5 h-5" />
-                  {pendingTasks > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md">
-                      {pendingTasks > 9 ? "9+" : pendingTasks}
+            <li className="absolute bottom-4 left-2 right-2 space-y-2" ref={notifRef}>
+              {/* User Icon with notification badge */}
+              <div className="relative">
+                <div
+                  className="w-16 h-12 flex items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-all duration-300 border-2 border-green-200 cursor-pointer relative"
+                  title={user?.name || "User"}
+                  onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                >
+                  <FaUserCircle className="w-6 h-6" />
+                  {notificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md animate-pulse">
+                      {notificationCount > 9 ? "9+" : notificationCount}
                     </span>
                   )}
                 </div>
-              </Link>
-              {/* User Icon */}
-              <div className="w-16 h-12 flex items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-all duration-300 border-2 border-green-200 cursor-pointer"
-                title={user?.name || "User"}>
-                <FaUserCircle className="w-6 h-6" />
+
+                {/* Notification Dropdown */}
+                {showNotifDropdown && (
+                  <div className="absolute left-full bottom-0 ml-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white">
+                      <p className="text-sm font-bold">Notifications</p>
+                      {notificationCount > 0 && (
+                        <button onClick={handleMarkAllRead} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <p className="text-sm">No notifications</p>
+                        </div>
+                      ) : (
+                        notifications.slice(0, 15).map((notif) => (
+                          <div
+                            key={notif._id}
+                            className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                              !notif.isRead ? "bg-blue-50/50" : ""
+                            }`}
+                            onClick={() => handleNotifClick(notif)}
+                          >
+                            <p className={`text-sm ${!notif.isRead ? "font-semibold text-gray-900" : "text-gray-700"}`}>
+                              {notif.title}
+                            </p>
+                            {notif.message && (
+                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                            )}
+                            <p className="text-[10px] text-gray-400 mt-1">
+                              {new Date(notif.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </li>
           </ul>

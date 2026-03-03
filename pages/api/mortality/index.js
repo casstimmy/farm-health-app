@@ -3,6 +3,7 @@ import MortalityRecord from "@/models/MortalityRecord";
 import "@/models/Animal";
 import "@/models/Location";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 import mongoose from "mongoose";
 
 async function handler(req, res) {
@@ -10,7 +11,8 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      let records = await MortalityRecord.find()
+      const locFilter = buildLocationFilter(req.user);
+      let records = await MortalityRecord.find(locFilter || {})
         .sort({ dateOfDeath: -1 })
         .populate("animal", "tagId name species breed gender")
         .populate("location", "name")

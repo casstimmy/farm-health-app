@@ -18,11 +18,36 @@ export default function Login({
   businessName = "Farm Health",
 }) {
   const [selectedUser, setSelectedUser] = useState(null);
-  const [location, setLocation] = useState(locations?.[0]?.name || "");
+  const [selectedLocationId, setSelectedLocationId] = useState(locations?.[0]?.id || "");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Compute available locations based on selected user's role
+  const availableLocations = useMemo(() => {
+    if (!selectedUser) return locations;
+    // SuperAdmin can access all locations
+    if (selectedUser.role === "SuperAdmin") return locations;
+    // Attendant: strictly their assigned location only
+    if (selectedUser.role === "Attendant") {
+      if (selectedUser.locationId) {
+        return locations.filter((l) => l.id === selectedUser.locationId);
+      }
+      return [];
+    }
+    // Manager/SubAdmin: only locations in their locations array (or single location)
+    const userLocIds = selectedUser.locationIds && selectedUser.locationIds.length > 0
+      ? selectedUser.locationIds
+      : selectedUser.locationId ? [selectedUser.locationId] : [];
+    if (userLocIds.length > 0) {
+      return locations.filter((l) => userLocIds.includes(l.id));
+    }
+    return [];
+  }, [selectedUser, locations]);
+
+  // Whether location selector should be disabled
+  const isLocationLocked = selectedUser && selectedUser.role === "Attendant";
 
   // Group users by role
   const staffByRole = useMemo(() => {
@@ -43,10 +68,12 @@ export default function Login({
       return;
     }
 
-    if (!location) {
+    if (!selectedLocationId) {
       setError("Please select a location.");
       return;
     }
+
+    const selectedLoc = locations.find((l) => l.id === selectedLocationId);
 
     if (pin.length !== 4) {
       setError("PIN must be 4 digits.");
@@ -75,9 +102,20 @@ export default function Login({
       }
 
       const { token, user } = data;
+      // Build user data with selected location info
+      const userData = {
+        ...user,
+        selectedLocationId,
+        selectedLocationName: selectedLoc?.name || "",
+      };
       localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ ...user, location }));
-      router.push("/");
+      localStorage.setItem("user", JSON.stringify(userData));
+      // Attendants go directly to Tasks page
+      if (user.role === "Attendant") {
+        router.push("/manage/tasks");
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError("Login failed. Please try again.");
       setPin("");
@@ -213,8 +251,20 @@ export default function Login({
                             onClick={() => {
                               setSelectedUser(user);
                               // Auto-fill location from user's assigned location
-                              if (user.locationName) {
-                                setLocation(user.locationName);
+                              if (user.role === "Attendant" && user.locationId) {
+                                setSelectedLocationId(user.locationId);
+                              } else if (["Manager", "SubAdmin"].includes(user.role)) {
+                                // Set first available location for Manager/SubAdmin
+                                const userLocIds = user.locationIds && user.locationIds.length > 0
+                                  ? user.locationIds
+                                  : user.locationId ? [user.locationId] : [];
+                                const firstAvail = locations.find((l) => userLocIds.includes(l.id));
+                                setSelectedLocationId(firstAvail?.id || user.locationId || "");
+                              } else {
+                                // SuperAdmin: keep current or set first
+                                if (user.locationId) {
+                                  setSelectedLocationId(user.locationId);
+                                }
                               }
                               setPin("");
                               setError("");
@@ -254,19 +304,29 @@ export default function Login({
                 >
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
                     <FaMapMarkerAlt size={12} className="text-emerald-600" /> Location
+                    {isLocationLocked && <span className="text-[10px] text-amber-600 ml-1">(Assigned)</span>}
                   </label>
                   <select
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={selectedLocationId}
+                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                    disabled={isLocationLocked}
+                    className={`w-full px-2.5 py-1.5 rounded-lg border text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      isLocationLocked ? "bg-gray-100 border-gray-200 cursor-not-allowed" : "bg-white border-gray-300"
+                    }`}
                   >
-                    {locations.map((loc) => (
-                      <option key={loc.id || loc.name} value={loc.name}>
+                    {availableLocations.length === 0 && (
+                      <option value="">No location assigned</option>
+                    )}
+                    {availableLocations.map((loc) => (
+                      <option key={loc.id || loc.name} value={loc.id}>
                         {loc.name}
                       </option>
                     ))}
                   </select>
-                  {selectedUser?.locationName && (
+                  {isLocationLocked && selectedUser?.locationName && (
+                    <p className="text-[11px] text-amber-600 mt-1">🔒 Location is locked for attendants</p>
+                  )}
+                  {!isLocationLocked && selectedUser?.locationName && (
                     <p className="text-[11px] text-emerald-600 mt-1">📍 Auto-selected from staff assignment</p>
                   )}
                 </motion.div>
@@ -397,17 +457,18 @@ export async function getServerSideProps() {
 
     // Fetch users directly from database
     const users = await User.find({ isActive: true })
-      .select("name email role location")
+      .select("name email role location locations")
       .populate("location", "name")
       .sort({ role: 1, name: 1 })
       .lean();
 
-    const staffList = users.map((user) => ({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      locationId: user.location?._id?.toString() || "",
-      locationName: user.location?.name || "",
+    const staffList = users.map((u) => ({
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      locationId: u.location?._id?.toString() || "",
+      locationName: u.location?.name || "",
+      locationIds: (u.locations || []).map((l) => l?.toString ? l.toString() : (l?._id?.toString() || "")),
     }));
 
     // Fetch locations directly from database

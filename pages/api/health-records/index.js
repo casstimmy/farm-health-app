@@ -3,6 +3,7 @@ import HealthRecord from "@/models/HealthRecord";
 import Animal from "@/models/Animal";
 import "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -13,6 +14,8 @@ async function handler(req, res) {
       const filter = {};
       if (animal) filter.animal = animal;
       if (recoveryStatus && recoveryStatus !== "all") filter.recoveryStatus = recoveryStatus;
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(filter, locFilter);
 
       const records = await HealthRecord.find(filter)
         .populate("animal", "tagId name species breed gender currentWeight")

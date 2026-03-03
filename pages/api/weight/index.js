@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import WeightRecord from "@/models/WeightRecord";
 import Animal from "@/models/Animal";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -37,15 +38,19 @@ async function handler(req, res) {
     try {
       const { animalId } = req.query;
 
+      const locFilter = buildLocationFilter(req.user);
+
       if (animalId) {
-        const records = await WeightRecord.find({ animal: animalId }).sort({
+        const findFilter = { animal: animalId };
+        if (locFilter) Object.assign(findFilter, locFilter);
+        const records = await WeightRecord.find(findFilter).sort({
           date: -1,
         }).lean();
         return res.status(200).json(records);
       }
 
       // Return all weight records if no animalId
-      const records = await WeightRecord.find()
+      const records = await WeightRecord.find(locFilter || {})
         .sort({ date: -1 })
         .populate("animal")
         .populate("location")

@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import Animal from "@/models/Animal";
-import { withRBACAuth } from "@/utils/middleware";
+import { withAuth, withRBACAuth } from "@/utils/middleware";
 
 async function handler(req, res) {
   await dbConnect();
@@ -99,4 +99,5 @@ async function handler(req, res) {
   }
 }
 
-export default withRBACAuth(["SuperAdmin", "Manager"])(handler);
+// All authenticated users can GET animal details; PUT/DELETE restricted in handler if needed
+export default withAuth(handler);

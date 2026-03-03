@@ -4,6 +4,7 @@ import Animal from "@/models/Animal";
 import "@/models/Inventory";
 import "@/models/Location";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 // Feed conversion efficiency: % of consumed feed converted to body weight
 // Using mid-range values for each species
@@ -116,8 +117,13 @@ async function handler(req, res) {
       const { animalId, compact } = req.query;
       const isCompact = compact === "true" || compact === "1";
 
+      // Build location filter
+      const locFilter = buildLocationFilter(req.user);
+
       if (animalId) {
-        const records = await FeedingRecord.find({ animal: animalId })
+        const findFilter = { animal: animalId };
+        if (locFilter) Object.assign(findFilter, locFilter);
+        const records = await FeedingRecord.find(findFilter)
           .sort({ date: -1 })
           .populate("feedItems.inventoryItem", "item unit")
           .lean();
@@ -125,7 +131,7 @@ async function handler(req, res) {
       }
 
       // Return all feeding records if no animalId
-      let query = FeedingRecord.find().sort({ date: -1 });
+      let query = FeedingRecord.find(locFilter || {}).sort({ date: -1 });
       if (isCompact) {
         query = query
           .select({

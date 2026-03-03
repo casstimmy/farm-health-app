@@ -39,7 +39,7 @@ const CATEGORY_ICON = {
 const initialForm = {
   title: "", description: "", category: "General", priority: "Medium",
   assignedTo: "", location: "", paddock: "", animal: "", dueDate: "", notes: "",
-  isRecurring: false, recurringInterval: "",
+  isRecurring: false, recurringInterval: "", reminderDaysBefore: "",
 };
 
 export default function TasksPage() {
@@ -62,8 +62,21 @@ export default function TasksPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingTask, setUpdatingTask] = useState(null);
 
-  const isManager = user && ["SuperAdmin", "Manager"].includes(user.role);
+  const isManager = user && ["SuperAdmin", "SubAdmin", "Manager"].includes(user.role);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
+
+  // Filter animals based on selected location/paddock in the task form
+  const filteredAnimals = useMemo(() => {
+    if (!form.location) return animals;
+    let result = animals.filter((a) => {
+      const animalLocId = typeof a.location === "object" ? a.location?._id : a.location;
+      return String(animalLocId) === String(form.location);
+    });
+    if (form.paddock) {
+      result = result.filter((a) => a.paddock === form.paddock);
+    }
+    return result;
+  }, [animals, form.location, form.paddock]);
 
   useEffect(() => {
     if (roleLoading) return;
@@ -170,6 +183,7 @@ export default function TasksPage() {
       notes: task.notes || "",
       isRecurring: task.isRecurring || false,
       recurringInterval: task.recurringInterval || "",
+      reminderDaysBefore: task.reminderDaysBefore || "",
     });
     setEditingId(task._id);
     setShowForm(true);
@@ -328,11 +342,12 @@ export default function TasksPage() {
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Related Animal</label>
                         <select className="input-field" value={form.animal} onChange={(e) => setForm({ ...form, animal: e.target.value })}>
                           <option value="">None</option>
-                          {animals.map((a) => <option key={a._id} value={a._id}>{a.tagId} - {a.name || a.breed || "Animal"}</option>)}
+                          {filteredAnimals.map((a) => <option key={a._id} value={a._id}>{a.tagId} - {a.name || a.breed || "Animal"}</option>)}
                         </select>
+                        {form.location && <p className="text-[10px] text-gray-400 mt-0.5">Showing animals at selected location{form.paddock ? ` / ${form.paddock}` : ""}</p>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                       <label className="flex items-center gap-2 text-sm">
                         <input type="checkbox" checked={form.isRecurring} onChange={(e) => setForm({ ...form, isRecurring: e.target.checked, recurringInterval: e.target.checked ? "Daily" : "" })} />
                         <span className="font-semibold text-gray-700">Recurring</span>
@@ -349,6 +364,23 @@ export default function TasksPage() {
                         </select>
                       )}
                     </div>
+                    {/* Reminder Before Due Date */}
+                    {form.dueDate && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">🔔 Reminder Before Due Date</label>
+                        <select className="input-field w-auto" value={form.reminderDaysBefore} onChange={(e) => setForm({ ...form, reminderDaysBefore: e.target.value })}>
+                          <option value="">No reminder</option>
+                          <option value="1">1 day before</option>
+                          <option value="2">2 days before</option>
+                          <option value="3">3 days before</option>
+                          <option value="5">5 days before</option>
+                          <option value="7">1 week before</option>
+                          <option value="14">2 weeks before</option>
+                          <option value="30">1 month before</option>
+                        </select>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Reminders will be sent daily from the selected date until due date</p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
                       <input className="input-field" placeholder="Additional notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
@@ -427,19 +459,33 @@ export default function TasksPage() {
 
                       {/* Quick actions */}
                       <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        {task.status === "Pending" && (
-                          <button onClick={() => handleStatusChange(task._id, "In Progress")} disabled={updatingTask === task._id}
-                            className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>
-                            {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Start"}
-                          </button>
-                        )}
+                        {/* Start button: only shown to the assigned person (not the assigner) */}
+                        {task.status === "Pending" && (() => {
+                          const isAssigner = user && task.assignedBy && (task.assignedBy._id === user.id || task.assignedBy._id === user._id);
+                          const isAssignee = user && task.assignedTo && (task.assignedTo._id === user.id || task.assignedTo._id === user._id);
+                          // Assigner doesn't see Start, they see Complete directly
+                          if (isAssigner && !isAssignee) {
+                            return (
+                              <button onClick={() => handleStatusChange(task._id, "Completed")} disabled={updatingTask === task._id}
+                                className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}>
+                                {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Done"}
+                              </button>
+                            );
+                          }
+                          return (
+                            <button onClick={() => handleStatusChange(task._id, "In Progress")} disabled={updatingTask === task._id}
+                              className={`${actionBtnClass} border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100`}>
+                              {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Start"}
+                            </button>
+                          );
+                        })()}
                         {(task.status === "In Progress" || task.status === "Overdue") && (
                           <button onClick={() => handleStatusChange(task._id, "Completed")} disabled={updatingTask === task._id}
                             className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}>
                             {updatingTask === task._id ? <FaSpinner className="animate-spin" size={10} /> : "Done"}
                           </button>
                         )}
-                        {task.status === "Completed" && (
+                        {task.status === "Completed" && isManager && (
                           <button onClick={() => handleStatusChange(task._id, "Pending")} disabled={updatingTask === task._id}
                             className={`${actionBtnClass} border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100`}>
                             Reopen

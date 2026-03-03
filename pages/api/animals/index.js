@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Animal from "@/models/Animal";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 const SORTABLE_FIELDS = new Set([
   "createdAt",
@@ -44,6 +45,10 @@ async function handler(req, res) {
       const filter = archived === "true"
         ? { isArchived: true }
         : { isArchived: { $ne: true } };
+
+      // Apply location-based access filter
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(filter, locFilter);
 
       if (status && status !== "all") {
         if (status === "Archived") {

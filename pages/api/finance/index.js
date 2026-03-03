@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Finance from "@/models/Finance";
 import "@/models/Location";
 import { withRBACAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -16,6 +17,8 @@ async function handler(req, res) {
           type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
         query.type = normalizedType;
       }
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(query, locFilter);
       const finances = await Finance.find(query).sort({ date: -1 }).populate("location").lean();
       res.status(200).json(finances);
     } catch (error) {

@@ -52,7 +52,14 @@ export default function Home() {
       router.push("/login");
       return;
     }
-    setUser(JSON.parse(userData));
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+
+    // Attendants should be redirected to Tasks page
+    if (parsedUser?.role === "Attendant") {
+      router.replace("/manage/tasks");
+      return;
+    }
 
     async function fetchData() {
       try {

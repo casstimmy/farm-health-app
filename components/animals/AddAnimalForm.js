@@ -5,9 +5,12 @@ import { motion } from "framer-motion";
 import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "react-icons/fa";
 import Loader from "../Loader";
 import { useAnimalData } from "@/context/AnimalDataContext";
+import { useRole } from "@/hooks/useRole";
 
 export default function AddAnimalForm({ onSuccess, animal }) {
     const { animals: allAnimals, addAnimalToCache } = useAnimalData();
+    const { user: currentUser } = useRole();
+    const isAttendant = currentUser?.role === "Attendant";
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     // Fetch all users for the Recorded By dropdown
@@ -771,7 +774,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         </div>
       </div>
 
-      {/* FINANCIAL INFO */}
+      {/* FINANCIAL INFO - Hidden for Attendant role */}
+      {!isAttendant && (
       <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4">
         <h3 className="font-bold text-emerald-900 mb-4">💰 Financial & Projections</h3>
         
@@ -851,6 +855,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           </div>
         </div>
       </div>
+      )}
 
       {/* NOTES */}
       <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">

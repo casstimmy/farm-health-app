@@ -3,6 +3,7 @@ import BreedingRecord from "@/models/BreedingRecord";
 import "@/models/Animal";
 import "@/models/Location";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 import mongoose from "mongoose";
 
 async function handler(req, res) {
@@ -10,7 +11,8 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      let records = await BreedingRecord.find()
+      const locFilter = buildLocationFilter(req.user);
+      let records = await BreedingRecord.find(locFilter || {})
         .sort({ matingDate: -1 })
         .populate("doe", "tagId name species breed")
         .populate("buck", "tagId name species breed")

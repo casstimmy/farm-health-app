@@ -1,6 +1,8 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
 import { withAuth } from "@/utils/middleware";
+import { createNotification } from "@/utils/notifications";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -10,6 +12,11 @@ async function handler(req, res) {
     try {
       const { status, assignedTo, category, priority } = req.query;
       const filter = {};
+
+      // Apply location-based access control
+      const locFilter = buildLocationFilter(decoded);
+      if (locFilter) Object.assign(filter, locFilter);
+
       if (status && status !== "all") filter.status = status;
       if (assignedTo && assignedTo !== "all") filter.assignedTo = assignedTo;
       if (category && category !== "all") filter.category = category;
@@ -41,7 +48,7 @@ async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      if (!["SuperAdmin", "Manager"].includes(decoded.role)) {
+      if (!["SuperAdmin", "Manager", "SubAdmin"].includes(decoded.role)) {
         return res.status(403).json({ error: "Only managers can create tasks" });
       }
       const task = await Task.create({
@@ -53,6 +60,24 @@ async function handler(req, res) {
         .populate("assignedBy", "name email")
         .populate("location", "name")
         .populate("animal", "tagId name");
+
+      // Notify the assigned user
+      if (task.assignedTo) {
+        try {
+          await createNotification({
+            userId: task.assignedTo,
+            title: `New Task: ${task.title}`,
+            message: `You have been assigned a new task. Priority: ${task.priority}. ${task.dueDate ? "Due: " + new Date(task.dueDate).toLocaleDateString() : ""}`,
+            type: "task_assigned",
+            relatedModel: "Task",
+            relatedId: task._id,
+            link: "/manage/tasks",
+          });
+        } catch (nErr) {
+          console.error("Failed to send task notification:", nErr.message);
+        }
+      }
+
       return res.status(201).json(populated);
     } catch (err) {
       return res.status(500).json({ error: err.message || "Failed to create task" });

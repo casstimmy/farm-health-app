@@ -3,6 +3,7 @@ import Inventory from "@/models/Inventory";
 import Medication from "@/models/Medication";
 import "@/models/Location";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -10,7 +11,8 @@ async function handler(req, res) {
   if (req.method === "GET") {
     try {
       // All authenticated users can view inventory
-      const inventory = await Inventory.find().sort({ dateAdded: -1 }).populate("location", "name").lean();
+      const locFilter = buildLocationFilter(req.user);
+      const inventory = await Inventory.find(locFilter || {}).sort({ dateAdded: -1 }).populate("location", "name").lean();
       res.status(200).json(inventory);
     } catch (error) {
       res.status(500).json({ error: error.message });

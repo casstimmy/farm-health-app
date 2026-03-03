@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
 import { withAuth } from "@/utils/middleware";
+import { createNotification } from "@/utils/notifications";
 
 async function handler(req, res) {
   await dbConnect();
