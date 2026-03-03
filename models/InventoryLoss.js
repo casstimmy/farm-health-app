@@ -31,6 +31,7 @@ const InventoryLossSchema = new mongoose.Schema(
     reason: String,
     reportedBy: String,
     notes: String,
+    location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },
   },
   { timestamps: true }
 );

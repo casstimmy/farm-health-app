@@ -1,10 +1,11 @@
 import dbConnect from "@/lib/mongodb";
 import Finance from "@/models/Finance";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 /**
  * Expense API - accessible to ALL authenticated users
- * GET: List expenses (recent 50)
+ * GET: List expenses (recent 200, filtered by user's locations)
  * POST: Create new expense
  */
 async function handler(req, res) {
@@ -12,10 +13,14 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     try {
-      const expenses = await Finance.find({ type: "Expense" })
+      const filter = { type: "Expense" };
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(filter, locFilter);
+
+      const expenses = await Finance.find(filter)
         .sort({ date: -1 })
-        .limit(50)
-        .populate("location")
+        .limit(200)
+        .populate("location", "name")
         .lean();
       res.status(200).json(expenses);
     } catch (error) {

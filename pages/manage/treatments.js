@@ -281,6 +281,7 @@ export default function Treatments() {
                   <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Pre-Weight</th>
                   <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Post-Weight</th>
                   <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Status</th>
+                  <th className="px-4 py-4 text-left font-semibold text-white whitespace-nowrap">Location</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -430,6 +431,8 @@ export default function Treatments() {
                           </span>
                         )}
                       </td>
+                      {/* Location */}
+                      <td className="px-4 py-3 text-gray-700 text-sm">{typeof treatment.location === "object" ? treatment.location?.name : "—"}</td>
                     </motion.tr>
                   );
                 })}

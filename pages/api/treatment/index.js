@@ -4,6 +4,7 @@ import HealthRecord from "@/models/HealthRecord";
 import Animal from "@/models/Animal";
 import "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 function isObjectIdString(value) {
   return typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
@@ -87,10 +88,14 @@ async function handler(req, res) {
     }
   } else if (req.method === "GET") {
     try {
-      // Return all treatments, populated with animal details
-      const treatments = await Treatment.find()
+      const filter = {};
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(filter, locFilter);
+
+      const treatments = await Treatment.find(filter)
         .sort({ date: -1, createdAt: -1 })
         .populate("animal", "tagId name species breed gender")
+        .populate("location", "name")
         .lean();
       res.status(200).json(treatments);
     } catch (error) {

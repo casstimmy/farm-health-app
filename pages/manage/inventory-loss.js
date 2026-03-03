@@ -356,6 +356,7 @@ export default function InventoryLossPage() {
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Total Loss</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
                 <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Reason</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Location</th>
                 {canDelete && <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Actions</th>}
               </tr>
             </thead>
@@ -386,14 +387,14 @@ export default function InventoryLossPage() {
                     <td className="px-6 py-4 text-sm font-bold text-red-700">{hideAmounts ? "***" : formatCurrency(record.totalLoss || 0, businessSettings.currency)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.date ? new Date(record.date).toLocaleDateString() : "N/A"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{record.reason || "—"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{typeof record.location === "object" ? record.location?.name : "—"}</td>
                     {canDelete && (
                       <td className="px-6 py-4 text-sm">
                         <button
                           onClick={() => handleDelete(record._id)}
-                          className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                          title="Delete"
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
                         >
-                          <FaTrash size={14} />
+                          Delete
                         </button>
                       </td>
                     )}

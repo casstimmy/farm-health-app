@@ -373,9 +373,10 @@ export default function Sidebar() {
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="fixed inset-0 backdrop-blur-lg bg-black bg-opacity-10 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="fixed inset-0 bg-white/75 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-green-600"></div>
+            <p className="text-sm font-medium text-gray-600">Loading...</p>
           </div>
         </div>
       )}

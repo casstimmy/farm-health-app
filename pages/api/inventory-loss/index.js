@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import InventoryLoss from "@/models/InventoryLoss";
 import Inventory from "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
+import { buildLocationFilter } from "@/utils/locationAccess";
 
 async function handler(req, res) {
   await dbConnect();
@@ -12,10 +13,13 @@ async function handler(req, res) {
       const filter = {};
       if (inventoryItem) filter.inventoryItem = inventoryItem;
       if (type) filter.type = type;
+      const locFilter = buildLocationFilter(req.user);
+      if (locFilter) Object.assign(filter, locFilter);
 
       const records = await InventoryLoss.find(filter)
         .sort({ date: -1 })
         .populate("inventoryItem", "item category unit")
+        .populate("location", "name")
         .lean();
       res.status(200).json(records);
     } catch (error) {

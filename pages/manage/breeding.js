@@ -580,6 +580,12 @@ export default function BreedingManagement() {
                     </div>
                   )}
 
+                  {record.location && (
+                    <div className="text-xs text-gray-500">
+                      📍 Location: <span className="font-semibold text-gray-700">{typeof record.location === "object" ? record.location?.name : record.location}</span>
+                    </div>
+                  )}
+
                   {record.pregnancyStatus !== "Delivered" && record.expectedDueDate && (
                     <div className={`text-center py-2 rounded-lg ${isOverdue ? "bg-red-50 text-red-700" : "bg-pink-50 text-pink-700"}`}>
                       {isOverdue

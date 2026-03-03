@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaTimes, FaCheck, FaSpinner, FaMoneyBillWave, FaReceipt } from "react-icons/fa";
@@ -10,6 +10,7 @@ import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { getCachedData, invalidateCache } from "@/utils/cache";
+import { getClientLocationIds } from "@/utils/locationAccess";
 
 const EXPENSE_CATEGORIES = [
   "Feed",
@@ -53,7 +54,7 @@ export default function ExpenseEntry() {
   const [showForm, setShowForm] = useState(true);
   const [locations, setLocations] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [filterPeriod, setFilterPeriod] = useState("all"); // all | today
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]); // default today
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -146,13 +147,49 @@ export default function ExpenseEntry() {
     }
   };
 
-  // Today's expenses
-  const todayExpenses = expenses.filter((e) => {
-    const d = new Date(e.date);
-    return d.toDateString() === new Date().toDateString();
-  });
-  const todayTotal = todayExpenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const totalAll = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  // Location-restricted expenses
+  const filteredExpenses = useMemo(() => {
+    const locIds = getClientLocationIds(user);
+    if (locIds === null) return expenses; // SuperAdmin sees all
+    return expenses.filter(e => {
+      const eLoc = typeof e.location === "object" ? e.location?._id : e.location;
+      return eLoc && locIds.includes(eLoc?.toString());
+    });
+  }, [expenses, user]);
+
+  // Date-filtered expenses
+  const dateExpenses = useMemo(() => {
+    if (!filterDate) return filteredExpenses;
+    return filteredExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.toISOString().split("T")[0] === filterDate;
+    });
+  }, [filteredExpenses, filterDate]);
+
+  const dateTotal = dateExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+
+  // Monthly total (current month)
+  const monthlyTotal = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    return filteredExpenses
+      .filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      })
+      .reduce((s, e) => s + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const monthlyCount = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    return filteredExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === month && d.getFullYear() === year;
+    }).length;
+  }, [filteredExpenses]);
 
   if (loading) {
     return (
@@ -214,20 +251,25 @@ export default function ExpenseEntry() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div onClick={() => setFilterPeriod(filterPeriod === "today" ? "all" : "today")} className={`bg-amber-50 border border-amber-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] ${filterPeriod === "today" ? "ring-2 ring-violet-500" : ""}`}>
-          <p className="text-sm text-gray-600">Today&apos;s Expenses</p>
-          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(todayTotal, currency)}</p>
-          <p className="text-xs text-gray-500">{todayExpenses.length} record{todayExpenses.length !== 1 ? "s" : ""}</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Expenses on {filterDate || "Selected Date"}</p>
+          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(dateTotal, currency)}</p>
+          <p className="text-xs text-gray-500">{dateExpenses.length} record{dateExpenses.length !== 1 ? "s" : ""}</p>
         </div>
-        <div onClick={() => setFilterPeriod("all")} className={`bg-gray-50 border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]`}>
-          <p className="text-sm text-gray-600">Total Expenses</p>
-          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(totalAll, currency)}</p>
-          <p className="text-xs text-gray-500">{expenses.length} record{expenses.length !== 1 ? "s" : ""}</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <p className="text-sm text-gray-600">Monthly Total ({new Date().toLocaleString("default", { month: "short", year: "numeric" })})</p>
+          <p className="text-2xl font-bold text-gray-900">{hideAmounts ? "***" : formatCurrency(monthlyTotal, currency)}</p>
+          <p className="text-xs text-gray-500">{monthlyCount} record{monthlyCount !== 1 ? "s" : ""}</p>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 col-span-2 md:col-span-1">
-          <p className="text-sm text-gray-600">Recent Entries</p>
-          <p className="text-2xl font-bold text-gray-900">{expenses.slice(0, 1)[0]?.title || "—"}</p>
-          <p className="text-xs text-gray-500">{expenses[0] ? (hideAmounts ? "***" : formatCurrency(expenses[0].amount, currency)) : "No entries yet"}</p>
+          <p className="text-sm text-gray-600">Filter Date</p>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="mt-1 w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+          />
+          <button onClick={() => setFilterDate(new Date().toISOString().split("T")[0])} className="text-xs text-amber-600 hover:text-amber-800 mt-1 font-medium">Reset to Today</button>
         </div>
       </div>
 
@@ -377,14 +419,14 @@ export default function ExpenseEntry() {
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-800 flex items-center gap-2">
-            <FaReceipt className="text-amber-500" /> {filterPeriod === "today" ? "Today\u0027s Expenses" : "All Expenses"}
+            <FaReceipt className="text-amber-500" /> Expenses for {filterDate || "Selected Date"}
           </h3>
         </div>
-        {(filterPeriod === "today" ? todayExpenses : expenses).length === 0 ? (
+        {dateExpenses.length === 0 ? (
           <div className="text-center py-16">
             <span className="text-5xl mb-4 block">💸</span>
-            <p className="text-gray-500 text-lg">No expenses recorded today</p>
-            <p className="text-gray-400 text-sm mt-1">Use the form above to add your first expense</p>
+            <p className="text-gray-500 text-lg">No expenses recorded for this date</p>
+            <p className="text-gray-400 text-sm mt-1">Use the form above to add an expense or change the filter date</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -396,10 +438,12 @@ export default function ExpenseEntry() {
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Category</th>
                   <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Payment</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Location</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Recorded By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(filterPeriod === "today" ? todayExpenses : expenses).map((exp) => (
+                {dateExpenses.map((exp) => (
                   <tr key={exp._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {new Date(exp.date).toLocaleDateString()}
@@ -414,6 +458,8 @@ export default function ExpenseEntry() {
                       {hideAmounts ? "***" : formatCurrency(exp.amount, currency)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{exp.paymentMethod}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{typeof exp.location === "object" ? exp.location?.name : "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{exp.recordedBy || "—"}</td>
                   </tr>
                 ))}
               </tbody>

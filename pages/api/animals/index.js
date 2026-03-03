@@ -94,11 +94,12 @@ async function handler(req, res) {
           totalFeedCost: 1,
           totalMedicationCost: 1,
           projectedSalesPrice: 1,
+          salesPrice: 1,
           marginPercent: 1,
           images: { $slice: 1 },
           createdAt: 1,
           updatedAt: 1,
-        });
+        }).populate("location", "name");
       } else {
         query = query
           .populate("sire", "tagId name")
@@ -140,16 +141,18 @@ async function handler(req, res) {
             status: 1,
             isArchived: 1,
             location: 1,
+            paddock: 1,
             currentWeight: 1,
             purchaseCost: 1,
             totalFeedCost: 1,
             totalMedicationCost: 1,
             projectedSalesPrice: 1,
+            salesPrice: 1,
             marginPercent: 1,
             images: { $slice: 1 },
             createdAt: 1,
             updatedAt: 1,
-          });
+          }).populate("location", "name");
         } else {
           cursorQuery = cursorQuery
             .populate("sire", "tagId name")

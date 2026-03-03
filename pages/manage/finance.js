@@ -292,9 +292,9 @@ export default function Finance() {
                     </td>
                     <td className="px-4 py-3 text-sm text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => handleEdit(r)} className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg" title="Edit"><FaEdit size={13} /></button>
-                        <button onClick={() => handleDelete(r._id)} disabled={deleting === r._id} className="p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg disabled:opacity-50" title="Delete">
-                          {deleting === r._id ? <FaSpinner className="animate-spin" size={13} /> : <FaTrash size={13} />}
+                        <button onClick={() => handleEdit(r)} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">Edit</button>
+                        <button onClick={() => handleDelete(r._id)} disabled={deleting === r._id} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50">
+                          {deleting === r._id ? "Deleting..." : "Delete"}
                         </button>
                       </div>
                     </td>

@@ -354,6 +354,7 @@ export default function AnimalsList({
                 <th className="px-4 py-3 text-left text-xs font-bold text-white">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-white">Species</th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-white">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-white">Location</th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-white">Weight</th>
                 {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Purchase</th>}
                 {canSeePricing && <th className="px-4 py-3 text-right text-xs font-bold text-white">Total Cost</th>}
@@ -407,6 +408,7 @@ export default function AnimalsList({
                     </td>
                     <td className="px-4 py-3 text-xs">{animal.species || "—"}</td>
                     <td className="px-4 py-3 text-xs">{animal.status || "—"}</td>
+                    <td className="px-4 py-3 text-xs">{typeof animal.location === "object" ? animal.location?.name : "—"}</td>
                     <td className="px-4 py-3 text-xs text-right">{animal.currentWeight ? `${animal.currentWeight} kg` : "—"}</td>
                     {canSeePricing && <td className="px-4 py-3 text-xs text-right">{animal.purchaseCost ? formatCurrency(animal.purchaseCost, businessSettings.currency) : "—"}</td>}
                     {canSeePricing && (

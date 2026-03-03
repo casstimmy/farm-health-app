@@ -510,6 +510,7 @@ export default function MortalityTracking() {
                   <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Days Sick</th>
                   <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">Value Lost</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Disposal</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Location</th>
                   <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -547,6 +548,9 @@ export default function MortalityTracking() {
                     </td>
                     <td className="px-6 py-4 text-gray-600 text-sm">
                       {record.disposalMethod || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">
+                      {typeof record.location === "object" ? record.location?.name : "-"}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button

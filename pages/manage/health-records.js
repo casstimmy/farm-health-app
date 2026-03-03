@@ -908,12 +908,12 @@ export default function HealthRecords() {
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-2 border-t border-gray-200">
                   <button onClick={() => { handleEdit(viewRecord); setViewRecord(null); }}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl font-semibold text-sm hover:bg-blue-200 transition">
-                    <FaEdit /> Edit Record
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl font-semibold text-sm hover:bg-blue-100 transition">
+                    Edit Record
                   </button>
                   <button onClick={() => { handleDelete(viewRecord._id); setViewRecord(null); }}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-100 text-red-700 rounded-xl font-semibold text-sm hover:bg-red-200 transition">
-                    <FaTrash /> Delete
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl font-semibold text-sm hover:bg-red-100 transition">
+                    Delete
                   </button>
                 </div>
               </div>
@@ -971,10 +971,10 @@ export default function HealthRecords() {
                           <td className="px-4 py-3"><StatusBadge status={r.recoveryStatus} /></td>
                           <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => handleEdit(r)} className="p-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs hover:bg-blue-200"><FaEdit size={12} /></button>
+                              <button onClick={() => handleEdit(r)} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">Edit</button>
                               <button onClick={() => handleDelete(r._id)} disabled={deleting === r._id}
-                                className="p-1.5 bg-red-100 text-red-700 rounded-lg text-xs hover:bg-red-200 disabled:opacity-50">
-                                {deleting === r._id ? <FaSpinner className="animate-spin" size={12} /> : <FaTrash size={12} />}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50">
+                                {deleting === r._id ? <FaSpinner className="animate-spin" size={12} /> : "Delete"}
                               </button>
                             </div>
                           </td>
@@ -1061,7 +1061,7 @@ export default function HealthRecords() {
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         <StatusBadge status={r.recoveryStatus} />
                                         <button onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
-                                          className="p-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"><FaEdit size={10} /></button>
+                                          className="px-2 py-1 text-xs font-semibold rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">Edit</button>
                                       </div>
                                     </div>
                                   ))}

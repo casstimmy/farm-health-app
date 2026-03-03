@@ -280,6 +280,7 @@ export default function WeightTracking() {
                     <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase">Proj. Max</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">% of Max</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Records</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase">Location</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -307,6 +308,7 @@ export default function WeightTracking() {
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-sm text-center text-gray-700">{animal.recordCount}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{typeof animal.location === "object" ? animal.location?.name : "—"}</td>
                       <td className="px-4 py-3 text-sm text-center">
                         <button
                           onClick={() => { setHistoryAnimalId(animal._id); setViewMode("history"); }}
