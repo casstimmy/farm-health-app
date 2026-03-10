@@ -17,8 +17,8 @@ import AddOptionModal from "@/components/tasks/AddOptionModal";
 import { TASK_TEMPLATES, CATEGORIES_DROPDOWN, PRIORITIES_DROPDOWN, getTaskTitles, getTaskTemplate, reminderToDays } from "@/lib/taskDefaults";
 import { getDropdownOptions } from "@/lib/dropdownOptions";
 
-const CATEGORIES = ["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other", ...CATEGORIES_DROPDOWN];
-const PRIORITIES = ["Low", "Medium", "High", "Urgent", ...PRIORITIES_DROPDOWN];
+const CATEGORIES = [...new Set(["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other", ...CATEGORIES_DROPDOWN])];
+const PRIORITIES = [...new Set(["Low", "Medium", "High", "Urgent", ...PRIORITIES_DROPDOWN])];
 const STATUSES = ["Pending", "In Progress", "Completed", "Overdue"];
 
 const PRIORITY_BADGE = {
@@ -90,7 +90,7 @@ export default function TasksPage() {
     }
   }, []);
 
-  const isManager = user && ["SuperAdmin", "SubAdmin", "Manager"].includes(user.role);
+  const isManager = user && ["SuperAdmin", "Admin", "Manager"].includes(user.role);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   // Filter locations by user's assigned locations
@@ -105,11 +105,11 @@ export default function TasksPage() {
   const filteredAnimals = useMemo(() => {
     if (!form.location) return animals;
     let result = animals.filter((a) => {
-      const animalLocId = typeof a.location === "object" ? a.location?._id : a.location;
-      return String(animalLocId) === String(form.location);
+      const animalLocId = a.location?._id || a.location;
+      return animalLocId && String(animalLocId) === String(form.location);
     });
     if (form.paddock) {
-      result = result.filter((a) => a.paddock === form.paddock);
+      result = result.filter((a) => String(a.paddock || "").toLowerCase() === String(form.paddock || "").toLowerCase());
     }
     return result;
   }, [animals, form.location, form.paddock]);
@@ -164,6 +164,7 @@ export default function TasksPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setError("Task title is required."); return; }
+    if (!form.assignedTo) { setError("Responsible Person is required."); return; }
     setSubmitting(true);
     setError("");
     try {
@@ -585,17 +586,22 @@ export default function TasksPage() {
                         <select
                           className="input-field"
                           value={form.assignedTo}
-                          onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
+                          onChange={(e) => {
+                            const selectedUserId = e.target.value;
+                            const selectedUser = users.find((u) => u._id === selectedUserId);
+                            const autoLocation = selectedUser?.location?._id || selectedUser?.location || "";
+                            setForm({ ...form, assignedTo: selectedUserId, location: autoLocation ? String(autoLocation) : form.location, paddock: autoLocation ? "" : form.paddock });
+                          }}
                           required
                         >
-                          <option value="">Unassigned</option>
+                          <option value="">-- Select Staff --</option>
                           {users.map((u) => (
                             <option key={u._id} value={u._id}>
                               {u.name} ({u.role})
                             </option>
                           ))}
                         </select>
-                        <p className="text-[10px] text-gray-400 mt-0.5">✓ Select from your staff</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">✓ Select from your staff — location will auto-fill</p>
                       </div>
 
                       {/* Due Date */}

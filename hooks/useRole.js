@@ -41,7 +41,7 @@ export function useRole(allowedRoles = []) {
   };
 
   const isAdmin = () => user?.role === 'SuperAdmin';
-  const isSubAdmin = () => user?.role === 'SubAdmin';
+  const isLocationAdmin = () => user?.role === 'Admin';
   const isManager = () => user?.role === 'Manager';
   const isAttendant = () => user?.role === 'Attendant';
 
@@ -51,7 +51,8 @@ export function useRole(allowedRoles = []) {
     hasRole,
     canAccess,
     isAdmin,
-    isSubAdmin,
+    isSubAdmin: isLocationAdmin,
+    isLocationAdmin,
     isManager,
     isAttendant,
   };
@@ -64,8 +65,8 @@ export const menuItemVisibility = {
   // SuperAdmin: Full access to everything
   SuperAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'roles', 'transactions', 'reports', 'locations', 'business-setup', 'customers', 'orders', 'blog'],
   
-  // SubAdmin: Like Manager but location-scoped, finance with location access
-  SubAdmin: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
+  // Admin: Like Manager but location-scoped, finance with location access
+  Admin: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
   
   // Manager: Can manage animals, operations, transactions, and view reports
   Manager: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],

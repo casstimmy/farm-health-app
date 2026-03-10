@@ -17,7 +17,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: { 
     type: String, 
-    enum: ["SuperAdmin", "SubAdmin", "Manager", "Attendant"], 
+    enum: ["SuperAdmin", "Admin", "Manager", "Attendant"], 
     default: "Attendant" 
   },
   location: { type: mongoose.Schema.Types.ObjectId, ref: "Location", default: null },

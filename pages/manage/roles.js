@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
@@ -20,7 +20,7 @@ export default function RolesPermissions() {
   // UI styling per role (not stored in DB)
   const ROLE_STYLES = {
     SuperAdmin: { color: "from-red-500 to-pink-500", bgColor: "bg-red-50", badgeColor: "bg-red-100 text-red-800" },
-    SubAdmin: { color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50", badgeColor: "bg-orange-100 text-orange-800" },
+    Admin: { color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50", badgeColor: "bg-orange-100 text-orange-800" },
     Manager: { color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-50", badgeColor: "bg-blue-100 text-blue-800" },
     Attendant: { color: "from-green-500 to-emerald-500", bgColor: "bg-green-50", badgeColor: "bg-green-100 text-green-800" },
   };
@@ -239,10 +239,10 @@ export default function RolesPermissions() {
                 </button>
               ) : (
                 <p className="text-xs text-gray-600 text-center">
-                  {role.name === "SuperAdmin" && "👑 System Administrator — All Locations"}
-                  {role.name === "SubAdmin" && "🔑 Location Admin — Assigned Location Only"}
-                  {role.name === "Manager" && "👔 Farm Manager"}
-                  {role.name === "Attendant" && "👷 Farm Attendant"}
+                  {role.name === "SuperAdmin" && "ðŸ‘‘ System Administrator â€” All Locations"}
+                  {role.name === "Admin" && "ðŸ”‘ Location Admin â€” Assigned Location Only"}
+                  {role.name === "Manager" && "ðŸ‘” Farm Manager"}
+                  {role.name === "Attendant" && "ðŸ‘· Farm Attendant"}
                 </p>
               )}
             </div>

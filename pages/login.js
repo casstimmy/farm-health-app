@@ -36,7 +36,7 @@ export default function Login({
       }
       return [];
     }
-    // Manager/SubAdmin: only locations in their locations array (or single location)
+    // Manager/Admin: only locations in their locations array (or single location)
     const userLocIds = selectedUser.locationIds && selectedUser.locationIds.length > 0
       ? selectedUser.locationIds
       : selectedUser.locationId ? [selectedUser.locationId] : [];
@@ -53,7 +53,7 @@ export default function Login({
   const staffByRole = useMemo(() => {
     return {
       SuperAdmin: staffList.filter((s) => s.role === "SuperAdmin"),
-      SubAdmin: staffList.filter((s) => s.role === "SubAdmin"),
+      Admin: staffList.filter((s) => s.role === "Admin"),
       Manager: staffList.filter((s) => s.role === "Manager"),
       Attendant: staffList.filter((s) => s.role === "Attendant"),
     };
@@ -253,8 +253,8 @@ export default function Login({
                               // Auto-fill location from user's assigned location
                               if (user.role === "Attendant" && user.locationId) {
                                 setSelectedLocationId(user.locationId);
-                              } else if (["Manager", "SubAdmin"].includes(user.role)) {
-                                // Set first available location for Manager/SubAdmin
+                              } else if (["Manager", "Admin"].includes(user.role)) {
+                                // Set first available location for Manager/Admin
                                 const userLocIds = user.locationIds && user.locationIds.length > 0
                                   ? user.locationIds
                                   : user.locationId ? [user.locationId] : [];

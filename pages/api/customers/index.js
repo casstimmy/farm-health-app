@@ -64,4 +64,4 @@ async function handler(req, res) {
   return res.status(405).json({ error: "Method not allowed" });
 }
 
-export default withRBACAuth(["SuperAdmin", "SubAdmin", "Manager"])(handler);
+export default withRBACAuth(["SuperAdmin", "Admin", "Manager"])(handler);

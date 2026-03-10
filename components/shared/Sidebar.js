@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useRole, canAccessMenuItem } from "@/hooks/useRole";
@@ -157,7 +157,7 @@ export default function Sidebar() {
           >
             {icon && <span className="w-4 h-4 flex-shrink-0">{icon}</span>}
             <span className="flex-1">{label}</span>
-            {isActive && <span className="text-green-600 text-lg font-bold">›</span>}
+            {isActive && <span className="text-green-600 text-lg font-bold">â€º</span>}
           </Link>
         </li>
       );
@@ -168,27 +168,27 @@ export default function Sidebar() {
     {
       section: "Animals",
       icon: <FaLeaf className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'],
+      roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'],
       submenu: [
         { href: "/manage/animals", label: "Animal List", icon: <FaLeaf className="w-4 h-4" /> },
-        { href: "/manage/archive", label: "📦 Archive", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/health-records", label: "Health Records", icon: <FaStethoscope className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
-        { href: "/manage/treatments", label: "Treatments", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
-        { href: "/manage/breeding", label: "💕 Breeding", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
-        { href: "/manage/mortality", label: "📊 Mortality", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
+        { href: "/manage/archive", label: "ðŸ“¦ Archive", icon: null, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/health-records", label: "Health Records", icon: <FaStethoscope className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
+        { href: "/manage/treatments", label: "Treatments", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
+        { href: "/manage/breeding", label: "ðŸ’• Breeding", icon: null, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
+        { href: "/manage/mortality", label: "ðŸ“Š Mortality", icon: null, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
       ],
     },
     {
       section: "Operations",
       icon: <FaBoxes className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'],
+      roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'],
       submenu: [
-        { href: "/manage/inventory", label: "Inventory", icon: <FaBoxes className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
-        { href: "/manage/inventory-categories", label: "Categories", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/inventory-loss", label: "Losses/Wastage", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/services", label: "🛠️ Services", icon: null, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/feeding", label: "Feeding", icon: <FaLeaf className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
-        { href: "/manage/weight", label: "Weight Tracking", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager', 'Attendant'] },
+        { href: "/manage/inventory", label: "Inventory", icon: <FaBoxes className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
+        { href: "/manage/inventory-categories", label: "Categories", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/inventory-loss", label: "Losses/Wastage", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/services", label: "ðŸ› ï¸ Services", icon: null, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/feeding", label: "Feeding", icon: <FaLeaf className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
+        { href: "/manage/weight", label: "Weight Tracking", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager', 'Attendant'] },
       ],
     },
     {
@@ -203,12 +203,12 @@ export default function Sidebar() {
     {
       section: "Finance",
       icon: <FaMoneyBill className="w-5 h-5" />,
-      roles: ['SuperAdmin', 'SubAdmin', 'Manager'],
+      roles: ['SuperAdmin', 'Admin', 'Manager'],
       submenu: [
-        { href: "/manage/transactions", label: "All Finance", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/customers", label: "Customers", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/orders", label: "Orders", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
-        { href: "/manage/reports", label: "Reports", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'SubAdmin', 'Manager'] },
+        { href: "/manage/transactions", label: "All Finance", icon: <FaMoneyBill className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/customers", label: "Customers", icon: <FaUsers className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/orders", label: "Orders", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
+        { href: "/manage/reports", label: "Reports", icon: <FaChartLine className="w-4 h-4" />, roles: ['SuperAdmin', 'Admin', 'Manager'] },
       ],
     },
     {
@@ -216,10 +216,10 @@ export default function Sidebar() {
       icon: <FaCog className="w-5 h-5" />,
       roles: ['SuperAdmin'],
       submenu: [
-        { href: "/manage/locations", label: "📍 Locations", icon: null, roles: ['SuperAdmin'] },
-        { href: "/manage/business-setup", label: "🏢 Business Setup", icon: null, roles: ['SuperAdmin'] },
+        { href: "/manage/locations", label: "ðŸ“ Locations", icon: null, roles: ['SuperAdmin'] },
+        { href: "/manage/business-setup", label: "ðŸ¢ Business Setup", icon: null, roles: ['SuperAdmin'] },
         { href: "/manage/blog", label: "Blog Management", icon: <FaClipboard className="w-4 h-4" />, roles: ['SuperAdmin'] },
-        { href: "/manage/seed", label: "🌱 Seed Database", icon: null, roles: ['SuperAdmin'] },
+        { href: "/manage/seed", label: "ðŸŒ± Seed Database", icon: null, roles: ['SuperAdmin'] },
       ],
     },
   ];
@@ -258,7 +258,7 @@ export default function Sidebar() {
             {renderMenuItem("/manage/tasks", <FaTasks className="w-5 h-5" />, "Tasks")}
 
             {/* Record Expense - Quick Access (Finance roles only) */}
-            {['SuperAdmin', 'SubAdmin', 'Manager'].includes(user?.role) && renderMenuItem("/manage/expenses", <FaReceipt className="w-5 h-5" />, "Expense")}
+            {['SuperAdmin', 'Admin', 'Manager'].includes(user?.role) && renderMenuItem("/manage/expenses", <FaReceipt className="w-5 h-5" />, "Expense")}
 
             {/* Dynamic Menu Items */}
             {menuStructure.map(({ section, icon, submenu }) => {
