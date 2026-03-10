@@ -14,7 +14,8 @@ import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
 import { getClientLocationIds } from "@/utils/locationAccess";
 import AddOptionModal from "@/components/tasks/AddOptionModal";
-import { TASK_TEMPLATES, CATEGORIES_DROPDOWN, PRIORITIES_DROPDOWN, getDropdownOptions, getTaskTitles, getTaskTemplate, reminderToDays } from "@/lib/taskDefaults";
+import { TASK_TEMPLATES, CATEGORIES_DROPDOWN, PRIORITIES_DROPDOWN, getTaskTitles, getTaskTemplate, reminderToDays } from "@/lib/taskDefaults";
+import { getDropdownOptions } from "@/lib/dropdownOptions";
 
 const CATEGORIES = ["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other", ...CATEGORIES_DROPDOWN];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent", ...PRIORITIES_DROPDOWN];
