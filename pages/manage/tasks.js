@@ -13,9 +13,11 @@ import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AddOptionModal from "@/components/tasks/AddOptionModal";
+import { TASK_TEMPLATES, CATEGORIES_DROPDOWN, PRIORITIES_DROPDOWN, getDropdownOptions, getTaskTitles, getTaskTemplate, reminderToDays } from "@/lib/taskDefaults";
 
-const CATEGORIES = ["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other"];
-const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const CATEGORIES = ["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other", ...CATEGORIES_DROPDOWN];
+const PRIORITIES = ["Low", "Medium", "High", "Urgent", ...PRIORITIES_DROPDOWN];
 const STATUSES = ["Pending", "In Progress", "Completed", "Overdue"];
 
 const PRIORITY_BADGE = {
@@ -38,7 +40,8 @@ const CATEGORY_ICON = {
 };
 
 const initialForm = {
-  title: "", description: "", category: "General", priority: "Medium",
+  title: "", description: "", taskGroup: "", isRoutine: false, frequency: "",
+  category: "General", priority: "Medium", reminderFormat: "",
   assignedTo: "", location: "", paddock: "", animal: "", dueDate: "", notes: "",
   isRecurring: false, recurringInterval: "", reminderDaysBefore: "",
 };
@@ -62,6 +65,29 @@ export default function TasksPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingTask, setUpdatingTask] = useState(null);
+
+  // Dropdown states
+  const [dropdownOptions, setDropdownOptions] = useState({
+    taskTitles: [],
+    taskGroups: [],
+    frequencies: [],
+    categories: [],
+    reminders: [],
+  });
+  const [addOptionModal, setAddOptionModal] = useState({ isOpen: false, fieldType: null, fieldLabel: null });
+  
+  // Hydrate dropdown options on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDropdownOptions({
+        taskTitles: getTaskTitles(),
+        taskGroups: getDropdownOptions("taskGroups"),
+        frequencies: getDropdownOptions("frequencies"),
+        categories: getDropdownOptions("categories"),
+        reminders: getDropdownOptions("reminders"),
+      });
+    }
+  }, []);
 
   const isManager = user && ["SuperAdmin", "SubAdmin", "Manager"].includes(user.role);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
@@ -121,6 +147,19 @@ export default function TasksPage() {
 
   const resetForm = () => { setForm(initialForm); setShowForm(false); setEditingId(null); };
 
+  // Open Add Option Modal
+  const openAddOptionModal = (fieldType, fieldLabel) => {
+    setAddOptionModal({ isOpen: true, fieldType, fieldLabel });
+  };
+
+  // Handle option added - refresh dropdown
+  const handleOptionAdded = (fieldType) => {
+    setDropdownOptions(prev => ({
+      ...prev,
+      [fieldType]: getDropdownOptions(fieldType),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setError("Task title is required."); return; }
@@ -134,6 +173,9 @@ export default function TasksPage() {
       if (!payload.location) delete payload.location;
       if (!payload.paddock) delete payload.paddock;
       if (!payload.animal) delete payload.animal;
+      if (!payload.taskGroup) delete payload.taskGroup;
+      if (!payload.frequency) delete payload.frequency;
+      if (!payload.reminderFormat) delete payload.reminderFormat;
 
       const url = editingId ? `/api/tasks/${editingId}` : "/api/tasks";
       const method = editingId ? "PUT" : "POST";
@@ -212,8 +254,12 @@ export default function TasksPage() {
     setForm({
       title: task.title || "",
       description: task.description || "",
+      taskGroup: task.taskGroup || "",
+      isRoutine: task.isRoutine || false,
+      frequency: task.frequency || "",
       category: task.category || "General",
       priority: task.priority || "Medium",
+      reminderFormat: task.reminderFormat || "",
       assignedTo: task.assignedTo?._id || "",
       location: task.location?._id || "",
       paddock: task.paddock || "",
@@ -226,6 +272,29 @@ export default function TasksPage() {
     });
     setEditingId(task._id);
     setShowForm(true);
+  };
+
+  // Handle task template selection - auto-fill fields
+  const handleTaskSelection = (taskTitle) => {
+    const template = getTaskTemplate(taskTitle);
+    if (!template) {
+      setForm(prev => ({ ...prev, title: taskTitle }));
+      return;
+    }
+
+    // Auto-fill from template
+    const reminderDays = reminderToDays(template.reminderDaysBefore);
+    setForm(prev => ({
+      ...prev,
+      title: template.title,
+      taskGroup: template.taskGroup || "",
+      isRoutine: template.isRoutine || false,
+      frequency: template.frequency || "",
+      category: template.category || "General",
+      priority: template.priority || "Medium",
+      reminderFormat: template.reminderDaysBefore || "",
+      reminderDaysBefore: reminderDays || "",
+    }));
   };
 
   const filteredTasks = useMemo(() => {
@@ -325,63 +394,277 @@ export default function TasksPage() {
                   </div>
                   <div className="p-5 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Task Title/Template Selection */}
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Title *</label>
-                        <input type="text" className="input-field" placeholder="Task title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-xs font-semibold text-gray-600  flex-1">Task Template</label>
+                          <button
+                            type="button"
+                            onClick={() => openAddOptionModal("taskTitles", "Task")}
+                            className="text-xs px-2 py-1 bg-violet-100 text-violet-700 rounded border border-violet-300 hover:bg-violet-200 flex items-center gap-1"
+                          >
+                            <FaPlus size={10} /> Add
+                          </button>
+                        </div>
+                        <select
+                          className="input-field"
+                          value={form.title}
+                          onChange={(e) => handleTaskSelection(e.target.value)}
+                        >
+                          <option value="">Select from templates...</option>
+                          {dropdownOptions.taskTitles.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                        </select>
                       </div>
+
+                      {/* Custom Title (can override template) */}
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Task Title / Name * {form.title && <span className="text-violet-600">(from template)</span>}
+                        </label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          placeholder="Or enter custom task title"
+                          value={form.title}
+                          onChange={(e) => setForm({ ...form, title: e.target.value })}
+                          required
+                        />
+                      </div>
+
                       <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                        <textarea className="input-field" rows={2} placeholder="Task description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                        <textarea
+                          className="input-field"
+                          rows={2}
+                          placeholder="Task description"
+                          value={form.description}
+                          onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        />
                       </div>
+
+                      {/* Task Group */}
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Category</label>
-                        <select className="input-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-xs font-semibold text-gray-600 flex-1">Task Group</label>
+                          <button
+                            type="button"
+                            onClick={() => openAddOptionModal("taskGroups", "Task Group")}
+                            className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded border border-violet-300 hover:bg-violet-200"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <select
+                          className="input-field"
+                          value={form.taskGroup}
+                          onChange={(e) => setForm({ ...form, taskGroup: e.target.value })}
+                        >
+                          <option value="">None</option>
+                          {dropdownOptions.taskGroups.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
+                          ))}
                         </select>
                       </div>
+
+                      {/* Routine */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Routine (Yes/No)</label>
+                        <select
+                          className="input-field"
+                          value={form.isRoutine}
+                          onChange={(e) => setForm({ ...form, isRoutine: e.target.value === "true" })}
+                        >
+                          <option value="false">No</option>
+                          <option value="true">Yes</option>
+                        </select>
+                      </div>
+
+                      {/* Frequency */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-xs font-semibold text-gray-600 flex-1">Frequency</label>
+                          <button
+                            type="button"
+                            onClick={() => openAddOptionModal("frequencies", "Frequency")}
+                            className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded border border-violet-300 hover:bg-violet-200"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <select
+                          className="input-field"
+                          value={form.frequency}
+                          onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                        >
+                          <option value="">Select frequency</option>
+                          {dropdownOptions.frequencies.map((f) => (
+                            <option key={f} value={f}>
+                              {f}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Category */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-xs font-semibold text-gray-600 flex-1">Category</label>
+                          <button
+                            type="button"
+                            onClick={() => openAddOptionModal("categories", "Category")}
+                            className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded border border-violet-300 hover:bg-violet-200"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <select
+                          className="input-field"
+                          value={form.category}
+                          onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Priority */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Priority</label>
-                        <select className="input-field" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-                          {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                        <select
+                          className="input-field"
+                          value={form.priority}
+                          onChange={(e) => setForm({ ...form, priority: e.target.value })}
+                        >
+                          {PRIORITIES.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
                         </select>
                       </div>
+
+                      {/* Reminder Format */}
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Assign To</label>
-                        <select className="input-field" value={form.assignedTo} onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}>
-                          <option value="">Unassigned</option>
-                          {users.map((u) => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+                        <div className="flex items-center gap-2 mb-1">
+                          <label className="block text-xs font-semibold text-gray-600 flex-1">Reminder</label>
+                          <button
+                            type="button"
+                            onClick={() => openAddOptionModal("reminders", "Reminder")}
+                            className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded border border-violet-300 hover:bg-violet-200"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <select
+                          className="input-field"
+                          value={form.reminderFormat}
+                          onChange={(e) => setForm({ ...form, reminderFormat: e.target.value, reminderDaysBefore: reminderToDays(e.target.value) || "" })}
+                        >
+                          <option value="">None</option>
+                          {dropdownOptions.reminders.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
                         </select>
                       </div>
+
+                      {/* Assign To (user staff) */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Responsible Person *</label>
+                        <select
+                          className="input-field"
+                          value={form.assignedTo}
+                          onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
+                          required
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map((u) => (
+                            <option key={u._id} value={u._id}>
+                              {u.name} ({u.role})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-gray-400 mt-0.5">✓ Select from your staff</p>
+                      </div>
+
+                      {/* Due Date */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
-                        <input type="date" className="input-field" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+                        <input
+                          type="date"
+                          className="input-field"
+                          value={form.dueDate}
+                          onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                        />
                       </div>
+
+                      {/* Location */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Location</label>
-                        <select className="input-field" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value, paddock: "" })}>
+                        <select
+                          className="input-field"
+                          value={form.location}
+                          onChange={(e) => setForm({ ...form, location: e.target.value, paddock: "" })}
+                        >
                           <option value="">No location</option>
-                          {userLocations.map((l) => <option key={l._id} value={l._id}>{l.name}</option>)}
+                          {userLocations.map((l) => (
+                            <option key={l._id} value={l._id}>
+                              {l.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
-                      {form.location && (() => {
-                        const loc = userLocations.find(l => l._id === form.location);
-                        const paddocks = loc?.paddocks || [];
-                        if (paddocks.length === 0) return null;
-                        return (
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Paddock / Shed</label>
-                            <select className="input-field" value={form.paddock} onChange={(e) => setForm({ ...form, paddock: e.target.value })}>
-                              <option value="">None</option>
-                              {paddocks.map((p) => <option key={p._id} value={p.name}>{p.name} ({p.type})</option>)}
-                            </select>
-                          </div>
-                        );
-                      })()}
+
+                      {form.location &&
+                        (() => {
+                          const loc = userLocations.find((l) => l._id === form.location);
+                          const paddocks = loc?.paddocks || [];
+                          if (paddocks.length === 0) return null;
+                          return (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">Paddock / Shed</label>
+                              <select
+                                className="input-field"
+                                value={form.paddock}
+                                onChange={(e) => setForm({ ...form, paddock: e.target.value })}
+                              >
+                                <option value="">None</option>
+                                {paddocks.map((p) => (
+                                  <option key={p._id} value={p.name}>
+                                    {p.name} ({p.type})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })()}
+
+                      {/* Related Animal */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Related Animal</label>
-                        <select className="input-field" value={form.animal} onChange={(e) => setForm({ ...form, animal: e.target.value })}>
-                          <option value="">{form.location && form.paddock ? `All in paddock (${filteredAnimals.length} animals)` : "None"}</option>
-                          {filteredAnimals.map((a) => <option key={a._id} value={a._id}>{a.tagId} - {a.name || a.breed || "Animal"}</option>)}
+                        <select
+                          className="input-field"
+                          value={form.animal}
+                          onChange={(e) => setForm({ ...form, animal: e.target.value })}
+                        >
+                          <option value="">
+                            {form.location && form.paddock ? `All in paddock (${filteredAnimals.length} animals)` : "None"}
+                          </option>
+                          {filteredAnimals.map((a) => (
+                            <option key={a._id} value={a._id}>
+                              {a.tagId} - {a.name || a.breed || "Animal"}
+                            </option>
+                          ))}
                         </select>
                         {form.location && form.paddock && filteredAnimals.length > 0 && !form.animal && (
                           <p className="text-[10px] text-green-600 mt-0.5 font-medium">✓ Task applies to all {filteredAnimals.length} animals in {form.paddock}</p>
@@ -435,6 +718,58 @@ export default function TasksPage() {
                     </div>
                   </div>
                 </form>
+
+                {/* Add Option Modals */}
+                <AddOptionModal
+                  fieldType={addOptionModal.fieldType}
+                  fieldLabel={addOptionModal.fieldLabel}
+                  isOpen={addOptionModal.isOpen && addOptionModal.fieldType === "taskTitles"}
+                  onClose={() => setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null })}
+                  onOptionAdded={() => {
+                    handleOptionAdded("taskTitles");
+                    setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null });
+                  }}
+                />
+                <AddOptionModal
+                  fieldType={addOptionModal.fieldType}
+                  fieldLabel={addOptionModal.fieldLabel}
+                  isOpen={addOptionModal.isOpen && addOptionModal.fieldType === "taskGroups"}
+                  onClose={() => setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null })}
+                  onOptionAdded={() => {
+                    handleOptionAdded("taskGroups");
+                    setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null });
+                  }}
+                />
+                <AddOptionModal
+                  fieldType={addOptionModal.fieldType}
+                  fieldLabel={addOptionModal.fieldLabel}
+                  isOpen={addOptionModal.isOpen && addOptionModal.fieldType === "frequencies"}
+                  onClose={() => setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null })}
+                  onOptionAdded={() => {
+                    handleOptionAdded("frequencies");
+                    setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null });
+                  }}
+                />
+                <AddOptionModal
+                  fieldType={addOptionModal.fieldType}
+                  fieldLabel={addOptionModal.fieldLabel}
+                  isOpen={addOptionModal.isOpen && addOptionModal.fieldType === "categories"}
+                  onClose={() => setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null })}
+                  onOptionAdded={() => {
+                    handleOptionAdded("categories");
+                    setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null });
+                  }}
+                />
+                <AddOptionModal
+                  fieldType={addOptionModal.fieldType}
+                  fieldLabel={addOptionModal.fieldLabel}
+                  isOpen={addOptionModal.isOpen && addOptionModal.fieldType === "reminders"}
+                  onClose={() => setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null })}
+                  onOptionAdded={() => {
+                    handleOptionAdded("reminders");
+                    setAddOptionModal({ isOpen: false, fieldType: null, fieldLabel: null });
+                  }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
