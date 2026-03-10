@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUsers, FaSpinner, FaPlus, FaUserPlus } from "react-icons/fa";
@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
+import { displayRole } from "@/utils/formatting";
 
 export default function ManageUsers() {
   const router = useRouter();
@@ -28,14 +29,16 @@ export default function ManageUsers() {
   const [addingUser, setAddingUser] = useState(false);
 
   useEffect(() => {
+    if (roleLoading) return;
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
       return;
     }
+    if (!currentUser) return;
 
     // Check if current user is SuperAdmin only
-    if (currentUser && currentUser.role !== "SuperAdmin") {
+    if (currentUser.role !== "SuperAdmin") {
       router.push("/");
       return;
     }
@@ -213,7 +216,7 @@ export default function ManageUsers() {
     switch (role) {
       case "SuperAdmin":
         return "bg-red-100 text-red-800";
-      case "Admin":
+      case "SubAdmin":
         return "bg-orange-100 text-orange-800";
       case "Manager":
         return "bg-blue-100 text-blue-800";
@@ -227,21 +230,21 @@ export default function ManageUsers() {
   const getRoleIcon = (role) => {
     switch (role) {
       case "SuperAdmin":
-        return "ðŸ‘‘";
-      case "Admin":
-        return "ðŸ”‘";
+        return "👑";
+      case "SubAdmin":
+        return "🔑";
       case "Manager":
-        return "ðŸ“‹";
+        return "📋";
       case "Attendant":
-        return "ðŸ‘¤";
+        return "👤";
       default:
-        return "ðŸ‘¥";
+        return "👥";
     }
   };
 
   const roleCounts = {
     superAdmin: users.filter(u => u.role === "SuperAdmin").length,
-    Admin: users.filter(u => u.role === "Admin").length,
+    subAdmin: users.filter(u => u.role === "SubAdmin").length,
     manager: users.filter(u => u.role === "Manager").length,
     attendant: users.filter(u => u.role === "Attendant").length,
   };
@@ -257,7 +260,7 @@ export default function ManageUsers() {
         title="User Management"
         subtitle="Manage farm staff and access roles"
         gradient="from-orange-600 to-orange-700"
-        icon="ðŸ‘¥"
+        icon="👥"
         actions={
           <button
             onClick={() => { setShowAddUser(!showAddUser); setError(""); }}
@@ -300,10 +303,10 @@ export default function ManageUsers() {
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Role</label>
                   <select value={addUserForm.role} onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500">
-                    <option value="SuperAdmin">ðŸ‘‘ SuperAdmin</option>
-                    <option value="Admin">ðŸ”‘ Admin</option>
-                    <option value="Manager">ðŸ“‹ Manager</option>
-                    <option value="Attendant">ðŸ‘¤ Attendant</option>
+                    <option value="SuperAdmin">👑 SuperAdmin</option>
+                    <option value="SubAdmin">🔑 Admin</option>
+                    <option value="Manager">📋 Manager</option>
+                    <option value="Attendant">👤 Attendant</option>
                   </select>
                 </div>
                 <div>
@@ -314,7 +317,7 @@ export default function ManageUsers() {
                     {locations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
                   </select>
                 </div>
-                {addUserForm.role === "Admin" && (
+                {addUserForm.role === "SubAdmin" && (
                   <div className="col-span-full">
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Assigned Locations (Admin can manage multiple)</label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border-2 border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto">
@@ -356,7 +359,7 @@ export default function ManageUsers() {
             bgColor: "bg-gray-50",
             borderColor: "border-gray-200",
             textColor: "text-gray-900",
-            icon: "ðŸ‘¥",
+            icon: "👥",
             filterKey: "all",
             onClick: () => setFilterRole("all"),
           },
@@ -366,19 +369,19 @@ export default function ManageUsers() {
             bgColor: "bg-red-50",
             borderColor: "border-red-200",
             textColor: "text-red-700",
-            icon: "ðŸ‘‘",
+            icon: "👑",
             filterKey: "SuperAdmin",
             onClick: () => setFilterRole(filterRole === "SuperAdmin" ? "all" : "SuperAdmin"),
           },
           {
-            label: "Sub Admins",
-            value: roleCounts.Admin,
+            label: "Admins",
+            value: roleCounts.subAdmin,
             bgColor: "bg-orange-50",
             borderColor: "border-orange-200",
             textColor: "text-orange-700",
-            icon: "ðŸ”‘",
-            filterKey: "Admin",
-            onClick: () => setFilterRole(filterRole === "Admin" ? "all" : "Admin"),
+            icon: "🔑",
+            filterKey: "SubAdmin",
+            onClick: () => setFilterRole(filterRole === "SubAdmin" ? "all" : "SubAdmin"),
           },
           {
             label: "Managers",
@@ -386,7 +389,7 @@ export default function ManageUsers() {
             bgColor: "bg-blue-50",
             borderColor: "border-blue-200",
             textColor: "text-blue-700",
-            icon: "ðŸ“‹",
+            icon: "📋",
             filterKey: "Manager",
             onClick: () => setFilterRole(filterRole === "Manager" ? "all" : "Manager"),
           },
@@ -396,7 +399,7 @@ export default function ManageUsers() {
             bgColor: "bg-green-50",
             borderColor: "border-green-200",
             textColor: "text-green-700",
-            icon: "ðŸ‘¤",
+            icon: "👤",
             filterKey: "Attendant",
             onClick: () => setFilterRole(filterRole === "Attendant" ? "all" : "Attendant"),
           },
@@ -476,10 +479,10 @@ export default function ManageUsers() {
                             onChange={(e) => setEditingRole(e.target.value)}
                             className="px-3 py-2 border-2 border-green-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
                           >
-                            <option value="SuperAdmin">ðŸ‘‘ SuperAdmin</option>
-                            <option value="Admin">ðŸ”‘ Admin</option>
-                            <option value="Manager">ðŸ“‹ Manager</option>
-                            <option value="Attendant">ðŸ‘¤ Attendant</option>
+                            <option value="SuperAdmin">👑 SuperAdmin</option>
+                            <option value="SubAdmin">🔑 Admin</option>
+                            <option value="Manager">📋 Manager</option>
+                            <option value="Attendant">👤 Attendant</option>
                           </select>
                           <input
                             type="text"
@@ -495,7 +498,7 @@ export default function ManageUsers() {
                         </div>
                       ) : (
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>
-                          {getRoleIcon(user.role)} {user.role}
+                          {getRoleIcon(user.role)} {displayRole(user.role)}
                         </span>
                       )}
                     </td>
@@ -512,7 +515,7 @@ export default function ManageUsers() {
                               <option key={loc._id} value={loc._id}>{loc.name}</option>
                             ))}
                           </select>
-                          {editingRole === "Admin" && (
+                          {editingRole === "SubAdmin" && (
                             <div className="border-2 border-orange-300 rounded-lg p-2 max-h-32 overflow-y-auto bg-orange-50">
                               <p className="text-xs font-semibold text-orange-800 mb-1">Multi-Locations:</p>
                               {locations.map((loc) => (
@@ -531,23 +534,23 @@ export default function ManageUsers() {
                       ) : (
                         <span className="text-gray-700">
                           {user.role === "SuperAdmin" ? (
-                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold">ðŸŒ All Locations</span>
+                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold">🌐 All Locations</span>
                           ) : user.locations && user.locations.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {user.locations.map((loc) => (
-                                <span key={loc._id || loc} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-semibold">ðŸ“ {loc.name || loc}</span>
+                                <span key={loc._id || loc} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-semibold">📍 {loc.name || loc}</span>
                               ))}
                             </div>
                           ) : user.location?.name ? (
-                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">ðŸ“ {user.location.name}</span>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">📍 {user.location.name}</span>
                           ) : (
-                            <span className="text-gray-400 text-xs">â€”</span>
+                            <span className="text-gray-400 text-xs">—</span>
                           )}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                      ðŸ“… {new Date(user.createdAt).toLocaleDateString()}
+                      📅 {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       {editingUserId === user._id ? (
@@ -612,7 +615,7 @@ export default function ManageUsers() {
             >
               <p className="text-gray-600 text-sm font-semibold">Administrators</p>
               <p className="text-4xl font-black text-red-600 mt-2">
-                {users.filter(u => ["SuperAdmin", "Admin"].includes(u.role)).length}
+                {users.filter(u => ["SuperAdmin", "SubAdmin"].includes(u.role)).length}
               </p>
             </motion.div>
             <motion.div
@@ -623,7 +626,7 @@ export default function ManageUsers() {
             >
               <p className="text-gray-600 text-sm font-semibold">Managers & Attendants</p>
               <p className="text-4xl font-black text-purple-600 mt-2">
-                {users.filter(u => !["SuperAdmin", "Admin"].includes(u.role)).length}
+                {users.filter(u => !["SuperAdmin", "SubAdmin"].includes(u.role)).length}
               </p>
             </motion.div>
           </div>

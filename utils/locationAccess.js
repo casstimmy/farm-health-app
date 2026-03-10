@@ -1,7 +1,7 @@
 /**
  * Get the location IDs that the current user has access to.
  * - SuperAdmin: null (access to all)
- * - Manager/Admin: their locations array (or single location)
+ * - Manager/SubAdmin: their locations array (or single location)
  * - Attendant: their single assigned location only
  *
  * @param {Object} user - The decoded JWT user (req.user)
@@ -63,7 +63,7 @@ export function getClientLocationIds(user) {
     return [];
   }
 
-  // Manager/Admin: use their locations array
+  // Manager/SubAdmin: use their locations array
   if (user.locations && Array.isArray(user.locations) && user.locations.length > 0) {
     user.locations.forEach((l) => {
       const id = typeof l === "string" ? l : l?.toString();

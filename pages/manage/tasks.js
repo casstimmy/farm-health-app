@@ -8,7 +8,7 @@ import {
   FaCheckCircle, FaChevronDown, FaChevronUp, FaTrash, FaEdit,
 } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
-import { formatDateForInput } from "@/utils/formatting";
+import { formatDateForInput, displayRole } from "@/utils/formatting";
 import StatsSummary from "@/components/shared/StatsSummary";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
@@ -90,7 +90,7 @@ export default function TasksPage() {
     }
   }, []);
 
-  const isManager = user && ["SuperAdmin", "Admin", "Manager"].includes(user.role);
+  const isManager = user && ["SuperAdmin", "SubAdmin", "Manager"].includes(user.role);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   // Filter locations by user's assigned locations
@@ -597,7 +597,7 @@ export default function TasksPage() {
                           <option value="">-- Select Staff --</option>
                           {users.map((u) => (
                             <option key={u._id} value={u._id}>
-                              {u.name} ({u.role})
+                              {u.name} ({displayRole(u.role)})
                             </option>
                           ))}
                         </select>

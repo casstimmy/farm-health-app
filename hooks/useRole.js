@@ -9,25 +9,35 @@ import { useRouter } from 'next/router';
  */
 export function useRole(allowedRoles = []) {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    
-    if (!userData) {
-      setIsLoading(false);
-      return;
-    }
-
+  // Read user from localStorage synchronously on first client render to avoid
+  // an extra render cycle where user is null, which causes page flicker and
+  // unnecessary API calls.
+  const [user, setUser] = useState(() => {
+    if (typeof window === 'undefined') return null;
     try {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-    } catch (error) {
-      console.error('Failed to parse user data:', error);
-    } finally {
-      setIsLoading(false);
+      const userData = localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
     }
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return false; // On the client, user is already read above
+  });
+
+  // Keep user in sync if localStorage changes in another tab
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'user') {
+        try {
+          setUser(e.newValue ? JSON.parse(e.newValue) : null);
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const hasRole = (role) => {
@@ -41,7 +51,7 @@ export function useRole(allowedRoles = []) {
   };
 
   const isAdmin = () => user?.role === 'SuperAdmin';
-  const isLocationAdmin = () => user?.role === 'Admin';
+  const isSubAdmin = () => user?.role === 'SubAdmin';
   const isManager = () => user?.role === 'Manager';
   const isAttendant = () => user?.role === 'Attendant';
 
@@ -51,8 +61,7 @@ export function useRole(allowedRoles = []) {
     hasRole,
     canAccess,
     isAdmin,
-    isSubAdmin: isLocationAdmin,
-    isLocationAdmin,
+    isSubAdmin,
     isManager,
     isAttendant,
   };
@@ -65,8 +74,8 @@ export const menuItemVisibility = {
   // SuperAdmin: Full access to everything
   SuperAdmin: ['animals', 'operations', 'management', 'finance', 'setup', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'users', 'roles', 'transactions', 'reports', 'locations', 'business-setup', 'customers', 'orders', 'blog'],
   
-  // Admin: Like Manager but location-scoped, finance with location access
-  Admin: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
+  // SubAdmin: Like Manager but location-scoped, finance with location access
+  SubAdmin: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],
   
   // Manager: Can manage animals, operations, transactions, and view reports
   Manager: ['animals', 'operations', 'finance', 'health-records', 'treatments', 'inventory', 'feeding', 'weight', 'transactions', 'reports', 'locations', 'customers', 'orders', 'blog'],

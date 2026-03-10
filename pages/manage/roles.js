@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
@@ -7,6 +7,7 @@ import { FaShieldAlt, FaCheckCircle, FaTimesCircle, FaKey } from "react-icons/fa
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
+import { displayRole } from "@/utils/formatting";
 
 export default function RolesPermissions() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function RolesPermissions() {
   // UI styling per role (not stored in DB)
   const ROLE_STYLES = {
     SuperAdmin: { color: "from-red-500 to-pink-500", bgColor: "bg-red-50", badgeColor: "bg-red-100 text-red-800" },
-    Admin: { color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50", badgeColor: "bg-orange-100 text-orange-800" },
+    SubAdmin: { color: "from-orange-500 to-amber-500", bgColor: "bg-orange-50", badgeColor: "bg-orange-100 text-orange-800" },
     Manager: { color: "from-blue-500 to-cyan-500", bgColor: "bg-blue-50", badgeColor: "bg-blue-100 text-blue-800" },
     Attendant: { color: "from-green-500 to-emerald-500", bgColor: "bg-green-50", badgeColor: "bg-green-100 text-green-800" },
   };
@@ -108,7 +109,7 @@ export default function RolesPermissions() {
         const err = await res.json();
         throw new Error(err.error || "Failed to save");
       }
-      setStatusMsg({ type: "success", text: `${role.name || role.roleName} permissions saved!` });
+      setStatusMsg({ type: "success", text: `${displayRole(role.name || role.roleName)} permissions saved!` });
       setEditingRole(null);
     } catch (err) {
       setStatusMsg({ type: "error", text: err.message });
@@ -162,7 +163,7 @@ export default function RolesPermissions() {
                 <FaKey className="w-6 h-6" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-900">{role.name}</h3>
+                <h3 className="text-xl font-bold text-gray-900">{displayRole(role.name)}</h3>
                 <p className="text-sm text-gray-600">{role.description}</p>
               </div>
               <button
@@ -239,10 +240,10 @@ export default function RolesPermissions() {
                 </button>
               ) : (
                 <p className="text-xs text-gray-600 text-center">
-                  {role.name === "SuperAdmin" && "ðŸ‘‘ System Administrator â€” All Locations"}
-                  {role.name === "Admin" && "ðŸ”‘ Location Admin â€” Assigned Location Only"}
-                  {role.name === "Manager" && "ðŸ‘” Farm Manager"}
-                  {role.name === "Attendant" && "ðŸ‘· Farm Attendant"}
+                  {role.name === "SuperAdmin" && "👑 System Administrator — All Locations"}
+                  {role.name === "SubAdmin" && "🔑 Location Admin — Assigned Location Only"}
+                  {role.name === "Manager" && "👔 Farm Manager"}
+                  {role.name === "Attendant" && "👷 Farm Attendant"}
                 </p>
               )}
             </div>

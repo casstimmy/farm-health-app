@@ -1,4 +1,4 @@
-﻿import dbConnect from "@/lib/mongodb";
+import dbConnect from "@/lib/mongodb";
 import RolePermission from "@/models/RolePermission";
 import { withAuth } from "@/utils/middleware";
 
@@ -25,7 +25,7 @@ const DEFAULT_PERMISSIONS = {
       { feature: "Notifications", access: ["View", "Manage"] },
     ],
   },
-  Admin: {
+  SubAdmin: {
     description: "Location-scoped administrator",
     permissions: [
       { feature: "Animals", access: ["View", "Create", "Edit"] },

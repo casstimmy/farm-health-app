@@ -3,6 +3,19 @@
  * Uses business settings currency from context
  */
 
+/**
+ * Map DB role names to user-facing display names.
+ * DB stores "SubAdmin" but UI shows "Admin".
+ */
+const ROLE_DISPLAY_NAMES = {
+  SuperAdmin: "SuperAdmin",
+  SubAdmin: "Admin",
+  Manager: "Manager",
+  Attendant: "Attendant",
+};
+
+export const displayRole = (role) => ROLE_DISPLAY_NAMES[role] || role;
+
 export const getCurrencySymbol = (currency) => {
   const symbols = {
     NGN: "₦",

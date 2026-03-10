@@ -11,7 +11,7 @@ const RolePermissionSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      enum: ["SuperAdmin", "Admin", "Manager", "Attendant"],
+      enum: ["SuperAdmin", "SubAdmin", "Manager", "Attendant"],
     },
     description: String,
     permissions: [PermissionEntrySchema],

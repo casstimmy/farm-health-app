@@ -119,7 +119,7 @@ export default function AnimalsList({
   };
 
   const canDelete = useMemo(() => user?.role === "SuperAdmin", [user]);
-  const canSeePricing = useMemo(() => ["SuperAdmin", "Admin", "Manager"].includes(user?.role), [user]);
+  const canSeePricing = useMemo(() => ["SuperAdmin", "SubAdmin", "Manager"].includes(user?.role), [user]);
   const actionBtnClass = "px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors";
 
   const handleEditClick = (animal) => {

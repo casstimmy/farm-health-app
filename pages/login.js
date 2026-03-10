@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSpinner, FaLock, FaUser, FaMapMarkerAlt, FaArrowRight } from "react-icons/fa";
+import { displayRole } from "@/utils/formatting";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Location from "@/models/Location";
@@ -36,7 +37,7 @@ export default function Login({
       }
       return [];
     }
-    // Manager/Admin: only locations in their locations array (or single location)
+    // Manager/SubAdmin: only locations in their locations array (or single location)
     const userLocIds = selectedUser.locationIds && selectedUser.locationIds.length > 0
       ? selectedUser.locationIds
       : selectedUser.locationId ? [selectedUser.locationId] : [];
@@ -53,7 +54,7 @@ export default function Login({
   const staffByRole = useMemo(() => {
     return {
       SuperAdmin: staffList.filter((s) => s.role === "SuperAdmin"),
-      Admin: staffList.filter((s) => s.role === "Admin"),
+      SubAdmin: staffList.filter((s) => s.role === "SubAdmin"),
       Manager: staffList.filter((s) => s.role === "Manager"),
       Attendant: staffList.filter((s) => s.role === "Attendant"),
     };
@@ -243,7 +244,7 @@ export default function Login({
                   {Object.entries(staffByRole).map(([role, users]) => (
                     users.length > 0 && (
                       <div key={role}>
-                        <p className="text-[10px] text-gray-400 font-semibold px-2 py-0.5">{role}</p>
+                        <p className="text-[10px] text-gray-400 font-semibold px-2 py-0.5">{displayRole(role)}</p>
                         {users.map((user) => (
                           <motion.button
                             key={user.email}
@@ -253,8 +254,8 @@ export default function Login({
                               // Auto-fill location from user's assigned location
                               if (user.role === "Attendant" && user.locationId) {
                                 setSelectedLocationId(user.locationId);
-                              } else if (["Manager", "Admin"].includes(user.role)) {
-                                // Set first available location for Manager/Admin
+                              } else if (["Manager", "SubAdmin"].includes(user.role)) {
+                                // Set first available location for Manager/SubAdmin
                                 const userLocIds = user.locationIds && user.locationIds.length > 0
                                   ? user.locationIds
                                   : user.locationId ? [user.locationId] : [];

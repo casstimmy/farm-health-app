@@ -21,9 +21,9 @@ async function handler(req, res) {
 
       // Validate role if being updated
       if (updateData.role) {
-        const validRoles = ["SuperAdmin", "Admin", "Manager", "Attendant"];
+        const validRoles = ["SuperAdmin", "SubAdmin", "Manager", "Attendant"];
         if (!validRoles.includes(updateData.role)) {
-          return res.status(400).json({ error: "Invalid role. Must be one of: SuperAdmin, Admin, Manager, Attendant" });
+          return res.status(400).json({ error: "Invalid role. Must be one of: SuperAdmin, SubAdmin, Manager, Attendant" });
         }
 
         // Prevent removing all SuperAdmins

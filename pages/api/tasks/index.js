@@ -14,8 +14,8 @@ async function handler(req, res) {
       const filter = {};
 
       // Apply location-based access control
-      // Managers/Admins/SuperAdmins can see all assigned tasks
-      if (!["SuperAdmin", "Admin", "Manager"].includes(decoded.role)) {
+      // Managers/SubAdmins/SuperAdmins can see all assigned tasks
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(decoded.role)) {
         const locFilter = buildLocationFilter(decoded);
         if (locFilter) Object.assign(filter, locFilter);
       }
@@ -51,7 +51,7 @@ async function handler(req, res) {
 
   if (req.method === "POST") {
     try {
-      if (!["SuperAdmin", "Manager", "Admin"].includes(decoded.role)) {
+      if (!["SuperAdmin", "Manager", "SubAdmin"].includes(decoded.role)) {
         return res.status(403).json({ error: "Only managers can create tasks" });
       }
       const task = await Task.create({

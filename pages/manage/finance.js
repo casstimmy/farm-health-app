@@ -62,9 +62,11 @@ export default function Finance() {
   }, [locations, user]);
 
   useEffect(() => {
+    if (roleLoading) return;
     const token = localStorage.getItem("token");
     if (!token) { router.push("/login"); return; }
-    if (user && !["SuperAdmin", "Manager"].includes(user.role)) { router.push("/"); return; }
+    if (!user) return;
+    if (!["SuperAdmin", "SubAdmin", "Manager"].includes(user.role)) { router.push("/"); return; }
     fetchData();
     const onFocus = () => fetchData();
     window.addEventListener("focus", onFocus);
