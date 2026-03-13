@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaUsers, FaSpinner, FaPlus, FaUserPlus } from "react-icons/fa";
+import { FaUsers, FaSpinner, FaPlus, FaUserPlus, FaTimes } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
