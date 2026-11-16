@@ -8,6 +8,7 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Location from "@/models/Location";
 import BusinessSettings from "@/models/BusinessSettings";
+import AppIcon from "@/components/shared/AppIcon";
 
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1577720643272-265a02b3d099?q=80&w=2070&auto=format&fit=crop";
 
@@ -195,13 +196,13 @@ export default function Login({
           >
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: "📊", label: "Real-time Tracking" },
-                { icon: "💊", label: "Health Records" },
-                { icon: "👥", label: "Team Collaboration" },
-                { icon: "📈", label: "Performance Analytics" }
+                { icon: "chart", label: "Real-time Tracking" },
+                { icon: "treatment", label: "Health Records" },
+                { icon: "users", label: "Team Collaboration" },
+                { icon: "trend-up", label: "Performance Analytics" }
               ].map((feature, i) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/10 hover:border-emerald-300/50 transition-all">
-                  <span className="text-lg">{feature.icon}</span>
+                  <AppIcon name={feature.icon} className="w-4 h-4" />
                   <span className="text-xs font-medium text-emerald-50">{feature.label}</span>
                 </div>
               ))}
@@ -240,7 +241,7 @@ export default function Login({
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
                   <FaUser size={12} className="text-emerald-600" /> Select Staff
                 </label>
-                <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-1.5 bg-gray-50">
+                <div className="space-y-1 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-1.5 bg-gray-50">
                   {Object.entries(staffByRole).map(([role, users]) => (
                     users.length > 0 && (
                       <div key={role}>
@@ -284,7 +285,7 @@ export default function Login({
                               </div>
                               {user.locationName && (
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectedUser?.email === user.email ? "bg-emerald-400/30 text-emerald-100" : "bg-gray-100 text-gray-500"}`}>
-                                  📍 {user.locationName}
+                                  <AppIcon name="location" /> {user.locationName}
                                 </span>
                               )}
                             </div>
@@ -325,10 +326,10 @@ export default function Login({
                     ))}
                   </select>
                   {isLocationLocked && selectedUser?.locationName && (
-                    <p className="text-[11px] text-amber-600 mt-1">🔒 Location is locked for attendants</p>
+                    <p className="text-[11px] text-amber-600 mt-1"><AppIcon name="lock" /> Location is locked for attendants</p>
                   )}
                   {!isLocationLocked && selectedUser?.locationName && (
-                    <p className="text-[11px] text-emerald-600 mt-1">📍 Auto-selected from staff assignment</p>
+                    <p className="text-[11px] text-emerald-600 mt-1"><AppIcon name="location" /> Auto-selected from staff assignment</p>
                   )}
                 </motion.div>
               )}
@@ -411,7 +412,7 @@ export default function Login({
                     exit={{ opacity: 0 }}
                     className="bg-red-50 border border-red-200 rounded-md px-3 py-1.5 text-red-600 text-xs font-medium flex items-center gap-1.5"
                   >
-                    <span>⚠️</span> {error}
+                    <span><AppIcon name="warning" /></span> {error}
                   </motion.div>
                 )}
               </AnimatePresence>

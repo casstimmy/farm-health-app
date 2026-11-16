@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaPlus, FaTimes, FaCheck } from "react-icons/fa";
 import { addDropdownOption } from "@/lib/dropdownOptions";
+import AppIcon from "@/components/shared/AppIcon";
 
 /**
  * AddOptionModal Component
@@ -135,7 +136,7 @@ export default function AddOptionModal({
                   animate={{ opacity: 1, y: 0 }}
                   className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2"
                 >
-                  <span>⚠️</span> {error}
+                  <span><AppIcon name="warning" /></span> {error}
                 </motion.div>
               )}
 
@@ -167,7 +168,7 @@ export default function AddOptionModal({
                 >
                   {isSubmitting ? (
                     <>
-                      <span className="animate-spin">⚙️</span> Adding...
+                      <span className="animate-spin"><AppIcon name="setup" /></span> Adding...
                     </>
                   ) : (
                     <>

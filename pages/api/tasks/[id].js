@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Task from "@/models/Task";
 import { withAuth } from "@/utils/middleware";
+import { MANAGE } from "@/utils/permissions";
 import { createNotification } from "@/utils/notifications";
 
 async function handler(req, res) {
@@ -26,7 +27,22 @@ async function handler(req, res) {
 
   if (req.method === "PUT") {
     try {
-      const updates = { ...req.body };
+      let updates = { ...req.body };
+
+      // Attendants may only report progress on a task (status + notes).
+      // Reassigning, re-prioritising or rewriting a task is for managers.
+      if (!MANAGE.includes(decoded.role)) {
+        const progressOnly = {};
+        if (updates.status !== undefined) progressOnly.status = updates.status;
+        if (updates.notes !== undefined) progressOnly.notes = updates.notes;
+        updates = progressOnly;
+      }
+      // These are set by the server, never by the request.
+      delete updates._id;
+      delete updates.assignedBy;
+      delete updates.completedBy;
+      delete updates.completedAt;
+
       // If marking completed, record who and when
       if (updates.status === "Completed") {
         updates.completedAt = new Date();
@@ -84,7 +100,7 @@ async function handler(req, res) {
 
   if (req.method === "DELETE") {
     try {
-      if (!["SuperAdmin", "Manager"].includes(decoded.role)) {
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(decoded.role)) {
         return res.status(403).json({ error: "Only managers can delete tasks" });
       }
       const task = await Task.findByIdAndDelete(id);

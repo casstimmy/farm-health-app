@@ -16,6 +16,7 @@ import { getClientLocationIds } from "@/utils/locationAccess";
 import AddOptionModal from "@/components/tasks/AddOptionModal";
 import { TASK_TEMPLATES, CATEGORIES_DROPDOWN, PRIORITIES_DROPDOWN, getTaskTitles, getTaskTemplate, reminderToDays } from "@/lib/taskDefaults";
 import { getDropdownOptions } from "@/lib/dropdownOptions";
+import AppIcon from "@/components/shared/AppIcon";
 
 const CATEGORIES = [...new Set(["General", "Feeding", "Treatment", "Cleaning", "Breeding", "Vaccination", "Maintenance", "Inventory", "Other", ...CATEGORIES_DROPDOWN])];
 const PRIORITIES = [...new Set(["Low", "Medium", "High", "Urgent", ...PRIORITIES_DROPDOWN])];
@@ -36,8 +37,8 @@ const STATUS_BADGE = {
 };
 
 const CATEGORY_ICON = {
-  Feeding: "🍽️", Treatment: "💊", Cleaning: "🧹", Breeding: "💕",
-  Vaccination: "💉", Maintenance: "🔧", Inventory: "📦", General: "📋", Other: "📝",
+  Feeding: "meal", Treatment: "treatment", Cleaning: "cleaning", Breeding: "breeding",
+  Vaccination: "vaccine", Maintenance: "services", Inventory: "box", General: "list", Other: "note",
 };
 
 const initialForm = {
@@ -329,7 +330,7 @@ export default function TasksPage() {
         title="Task Management"
         subtitle="Assign, track, and manage farm tasks"
         gradient="from-violet-600 to-purple-700"
-        icon="✅"
+        icon="tasks"
       />
 
       {(loading || roleLoading) && (
@@ -356,11 +357,11 @@ export default function TasksPage() {
       {!loading && !roleLoading && (
         <>
           <StatsSummary activeFilter={filterStatus} stats={[
-            { label: "Total Tasks", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "active" : "all") },
-            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "active" : "Pending") },
-            { label: "In Progress", value: stats.inProgress, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄", filterKey: "In Progress", onClick: () => setFilterStatus(filterStatus === "In Progress" ? "active" : "In Progress") },
-            { label: "Overdue", value: stats.overdue, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "⚠️", filterKey: "Overdue", onClick: () => setFilterStatus(filterStatus === "Overdue" ? "active" : "Overdue") },
-            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "active" : "Completed") },
+            { label: "Total Tasks", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "list", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "active" : "all") },
+            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "pending", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "active" : "Pending") },
+            { label: "In Progress", value: stats.inProgress, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "sync", filterKey: "In Progress", onClick: () => setFilterStatus(filterStatus === "In Progress" ? "active" : "In Progress") },
+            { label: "Overdue", value: stats.overdue, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "warning", filterKey: "Overdue", onClick: () => setFilterStatus(filterStatus === "Overdue" ? "active" : "Overdue") },
+            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "success", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "active" : "Completed") },
           ]} />
 
           {/* Controls */}
@@ -601,7 +602,7 @@ export default function TasksPage() {
                             </option>
                           ))}
                         </select>
-                        <p className="text-[10px] text-gray-400 mt-0.5">✓ Select from your staff — location will auto-fill</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5"><AppIcon name="check" /> Select from your staff — location will auto-fill</p>
                       </div>
 
                       {/* Due Date */}
@@ -674,7 +675,7 @@ export default function TasksPage() {
                           ))}
                         </select>
                         {form.location && form.paddock && filteredAnimals.length > 0 && !form.animal && (
-                          <p className="text-[10px] text-green-600 mt-0.5 font-medium">✓ Task applies to all {filteredAnimals.length} animals in {form.paddock}</p>
+                          <p className="text-[10px] text-green-600 mt-0.5 font-medium"><AppIcon name="check" /> Task applies to all {filteredAnimals.length} animals in {form.paddock}</p>
                         )}
                         {form.location && !form.paddock && <p className="text-[10px] text-gray-400 mt-0.5">Select a paddock to auto-target all animals in it</p>}
                       </div>
@@ -699,7 +700,7 @@ export default function TasksPage() {
                     {/* Reminder Before Due Date */}
                     {form.dueDate && (
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">🔔 Reminder Before Due Date</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1"><AppIcon name="bell" /> Reminder Before Due Date</label>
                         <select className="input-field w-auto" value={form.reminderDaysBefore} onChange={(e) => setForm({ ...form, reminderDaysBefore: e.target.value })}>
                           <option value="">No reminder</option>
                           <option value="1">1 day before</option>
@@ -784,7 +785,7 @@ export default function TasksPage() {
           {/* Task Cards */}
           {filteredTasks.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-              <div className="text-4xl mb-2">✅</div>
+              <div className="text-4xl mb-2 text-gray-300"><AppIcon name="success" /></div>
               <p className="font-medium text-gray-600">No tasks found</p>
               <p className="text-sm text-gray-400 mt-1">Create a new task to get started</p>
             </div>
@@ -815,7 +816,7 @@ export default function TasksPage() {
                       }`} />
 
                       {/* Category icon */}
-                      <span className="text-xl flex-shrink-0">{CATEGORY_ICON[task.category] || "📋"}</span>
+                      <span className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg bg-violet-50 text-violet-600"><AppIcon name={CATEGORY_ICON[task.category] || "list"} className="w-4 h-4" /></span>
 
                       {/* Title & meta */}
                       <div className="flex-1 min-w-0">
@@ -891,7 +892,7 @@ export default function TasksPage() {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               <div className="bg-white rounded-lg p-3 border border-violet-100">
                                 <p className="text-xs text-gray-500 font-semibold">Category</p>
-                                <p className="text-sm font-bold">{CATEGORY_ICON[task.category]} {task.category}</p>
+                                <p className="text-sm font-bold flex items-center gap-1.5"><AppIcon name={CATEGORY_ICON[task.category] || "list"} /> {task.category}</p>
                               </div>
                               <div className="bg-white rounded-lg p-3 border border-violet-100">
                                 <p className="text-xs text-gray-500 font-semibold">Assigned To</p>

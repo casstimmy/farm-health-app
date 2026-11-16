@@ -177,7 +177,7 @@ export default function InventoryLossPage() {
         title="Inventory Losses"
         subtitle="Track wasted, damaged, lost, and expired inventory items"
         gradient="from-red-600 to-red-700"
-        icon="📉"
+        icon="loss"
       />
 
       <FilterBar

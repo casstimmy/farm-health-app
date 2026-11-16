@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaSpinner, FaCheckCircle, FaUser, FaEnvelope, FaLock, FaPhone, FaArrowRight } from "react-icons/fa";
 import dbConnect from "@/lib/mongodb";
 import BusinessSettings from "@/models/BusinessSettings";
+import AppIcon from "@/components/shared/AppIcon";
 
 const DEFAULT_HERO_IMAGE = "https://images.unsplash.com/photo-1578181545619-1c74f1ff3d0c?q=80&w=2070&auto=format&fit=crop";
 
@@ -24,6 +25,7 @@ export default function Register({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [pendingActivation, setPendingActivation] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -92,8 +94,11 @@ export default function Register({
         return;
       }
 
+      setPendingActivation(!!data.pendingActivation);
       setSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
+      // An account that still needs activation can't log in yet, so don't
+      // rush the person to the login screen before they've read the message.
+      if (!data.pendingActivation) setTimeout(() => router.push("/login"), 2000);
     } catch (err) {
       setError("Registration failed. Please try again.");
     } finally {
@@ -162,10 +167,10 @@ export default function Register({
             <p className="text-xs font-semibold text-emerald-200 uppercase tracking-wider">Why {businessName}?</p>
             <div className="space-y-2">
               {[
-                "✓ Centralized health tracking",
-                "✓ Secure team collaboration",
-                "✓ Instant alerts & insights",
-                "✓ Complete farm analytics"
+                "Centralized health tracking",
+                "Secure team collaboration",
+                "Instant alerts & insights",
+                "Complete farm analytics"
               ].map((item, i) => (
                 <p key={i} className="text-sm text-emerald-100 flex items-center gap-2">
                   {item}
@@ -210,9 +215,23 @@ export default function Register({
                   <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <FaCheckCircle className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">Account Created! 🎉</h3>
-                  <p className="text-gray-600 text-sm mb-4">Redirecting to login...</p>
-                  <div className="text-emerald-600 font-semibold text-sm">⏳ Please wait...</div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Account created</h3>
+                  {pendingActivation ? (
+                    <>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Your account is waiting for approval. Ask your administrator to
+                        activate it — you can log in as soon as that is done.
+                      </p>
+                      <Link href="/login" className="text-emerald-600 font-semibold text-sm hover:text-emerald-700">
+                        Back to login
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 text-sm mb-4">Redirecting to login...</p>
+                      <div className="text-emerald-600 font-semibold text-sm">Please wait...</div>
+                    </>
+                  )}
                 </motion.div>
               ) : (
                 <motion.form
@@ -297,7 +316,7 @@ export default function Register({
                     </div>
                   </div>
 
-                  <p className="text-[10px] text-gray-400">💡 PIN must be 4 digits</p>
+                  <p className="text-[10px] text-gray-400"><AppIcon name="tip" /> PIN must be 4 digits</p>
 
                   {/* Error */}
                   <AnimatePresence>
@@ -308,7 +327,7 @@ export default function Register({
                         exit={{ opacity: 0 }}
                         className="bg-red-50 border border-red-200 rounded-md px-3 py-1.5 text-red-600 text-xs font-medium flex items-center gap-1.5"
                       >
-                        <span>⚠️</span> {error}
+                        <span><AppIcon name="warning" /></span> {error}
                       </motion.div>
                     )}
                   </AnimatePresence>

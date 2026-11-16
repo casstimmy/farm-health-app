@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Animal from "@/models/Animal";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
 import { buildLocationFilter } from "@/utils/locationAccess";
+import { escapeRegex } from "@/utils/permissions";
 
 const SORTABLE_FIELDS = new Set([
   "createdAt",
@@ -59,7 +60,7 @@ async function handler(req, res) {
       }
 
       if (q && String(q).trim()) {
-        const regex = new RegExp(String(q).trim(), "i");
+        const regex = new RegExp(escapeRegex(String(q).trim()), "i");
         filter.$or = [
           { tagId: regex },
           { name: regex },
@@ -209,7 +210,7 @@ async function handler(req, res) {
   } else if (req.method === "POST") {
     try {
       // Only SuperAdmin and Manager can create animals
-      if (!["SuperAdmin", "Manager"].includes(req.user?.role)) {
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(req.user?.role)) {
         return res.status(403).json({ error: "Forbidden: Insufficient permissions" });
       }
 

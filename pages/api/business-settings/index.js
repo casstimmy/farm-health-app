@@ -1,12 +1,14 @@
 import dbConnect from "@/lib/mongodb";
 import BusinessSettings from "@/models/BusinessSettings";
+import { withAuth } from "@/utils/middleware";
+import { SENIOR } from "@/utils/permissions";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
     try {
-      let settings = await BusinessSettings.findOne().populate("owner").lean();
+      let settings = await BusinessSettings.findOne().lean();
       if (!settings) {
         settings = new BusinessSettings({
           businessName: "My Farm",
@@ -60,3 +62,6 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ error: "Method not allowed" });
 }
+
+// Any logged-in staff member can read the settings; only SuperAdmin/Manager can change them.
+export default withAuth(handler, { PUT: SENIOR });

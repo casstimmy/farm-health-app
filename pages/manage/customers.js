@@ -165,7 +165,7 @@ export default function CustomersPage() {
         title="Customers"
         subtitle="Manage customer records for farm orders"
         gradient="from-cyan-600 to-cyan-700"
-        icon="👥"
+        icon="customers"
       />
 
       {(loading || roleLoading) && (

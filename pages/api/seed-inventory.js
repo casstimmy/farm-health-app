@@ -3,6 +3,8 @@ import Inventory from "@/models/Inventory";
 import Medication from "@/models/Medication";
 import InventoryCategory from "@/models/InventoryCategory";
 import MedicationLookup from "@/models/MedicationLookup";
+import { withAuth } from "@/utils/middleware";
+import { ADMIN } from "@/utils/permissions";
 
 // Helper to parse expiration dates like "02/2029", "12/2027", "17/10/2027", etc.
 function parseExpiration(exp) {
@@ -141,7 +143,7 @@ const classCategories = [
   "Mineral Supplement",
 ];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -273,3 +275,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
+
+// Destructive (clears inventory, medications and categories first): SuperAdmin only.
+export default withAuth(handler, ADMIN);

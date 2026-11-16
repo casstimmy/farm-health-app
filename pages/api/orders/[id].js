@@ -1,10 +1,15 @@
 import dbConnect from "@/lib/mongodb";
 import Order from "@/models/Order";
 import { withRBACAuth } from "@/utils/middleware";
+import { ADMIN, MANAGE } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, Order, id)) return;
 
   if (req.method === "GET") {
     try {
@@ -44,4 +49,4 @@ async function handler(req, res) {
   return res.status(405).json({ error: "Method not allowed" });
 }
 
-export default withRBACAuth(["SuperAdmin", "Manager"])(handler);
+export default withRBACAuth(MANAGE, { DELETE: ADMIN })(handler);

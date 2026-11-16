@@ -14,6 +14,7 @@ import Loader from "@/components/Loader";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { invalidateCache } from "@/utils/cache";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 // Lazy-load Chart.js to reduce bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -174,7 +175,7 @@ export default function Finance() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Finance" subtitle="Track income, expenses, and financial analytics" icon="💰"
+      <PageHeader title="Finance" subtitle="Track income, expenses, and financial analytics" icon="finance"
         actions={<button onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialForm, location: user?.location || "" }); }} className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Add Record"}</button>}
       />
 
@@ -192,7 +193,7 @@ export default function Finance() {
           <div className="bg-orange-600 px-6 py-3"><h3 className="text-lg font-bold text-white">{editingId ? "Edit Financial Record" : "Add Financial Record"}</h3></div>
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
-              <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2">💰 Record Details</h4>
+              <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2"><AppIcon name="money" /> Record Details</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div><label className="label">Type *</label>
                   <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="input-field">
@@ -224,7 +225,7 @@ export default function Finance() {
               </div>
             </div>
             <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">📝 Description</h4>
+              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><AppIcon name="note" /> Description</h4>
               <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Optional notes..." className="input-field" />
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t">
@@ -267,7 +268,7 @@ export default function Finance() {
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="text-center py-16"><span className="text-5xl block mb-4">💰</span><p className="text-gray-500 text-lg">No records found</p><p className="text-gray-400 text-sm mt-1">Click &quot;Add Record&quot; to create one</p></div>
+          <div className="text-center py-16"><span className="text-5xl block mb-4 text-gray-300"><AppIcon name="money" /></span><p className="text-gray-500 text-lg">No records found</p><p className="text-gray-400 text-sm mt-1">Click &quot;Add Record&quot; to create one</p></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

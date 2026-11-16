@@ -266,7 +266,7 @@ export default function ManageInventory() {
       });
 
       if (res.ok) {
-        setSuccess(`✓ ${formData.name} added to inventory!`);
+        setSuccess(`${formData.name} added to inventory!`);
         setFormData({
           name: "",
           quantity: "",
@@ -355,7 +355,7 @@ export default function ManageInventory() {
       });
 
       if (res.ok) {
-        setSuccess("✓ Item updated!");
+        setSuccess("Item updated!");
         setEditingId(null);
         setEditValue("");
         setTimeout(() => setSuccess(""), 2000);
@@ -408,7 +408,7 @@ export default function ManageInventory() {
       });
 
       if (res.ok) {
-        setSuccess("✓ Item deleted successfully!");
+        setSuccess("Item deleted successfully!");
         setTimeout(() => setSuccess(""), 2000);
         invalidateCache("api/inventory");
         fetchInventory();
@@ -465,7 +465,7 @@ export default function ManageInventory() {
         const d = await res.json();
         throw new Error(d.error || "Failed to record consumption");
       }
-      setSuccess(`✓ ${consumeForm.quantity} ${consumeItem.unit || "units"} of ${consumeItem.item} consumed (${consumeForm.type})`);
+      setSuccess(`${consumeForm.quantity} ${consumeItem.unit || "units"} of ${consumeItem.item} consumed (${consumeForm.type})`);
       setShowConsumeModal(false);
       setConsumeItem(null);
       invalidateCache("api/inventory");
@@ -512,7 +512,7 @@ export default function ManageInventory() {
         title="Inventory Management"
         subtitle="Track farm supplies, equipment, and medication"
         gradient="from-purple-600 to-purple-700"
-        icon="📦"
+        icon="inventory"
       />
 
       {/* Add Form */}
@@ -1112,19 +1112,19 @@ export default function ManageInventory() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Item Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Unit</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Min Stock</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Cost Price</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Margin %</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Sales Price</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Consumed</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Show on Site</th>
-                  {canEdit && <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Actions</th>}
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Item Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Quantity</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Unit</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Min Stock</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Cost Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Margin %</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Sales Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Consumed</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Location</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Show on Site</th>
+                  {canEdit && <th className="px-4 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider whitespace-nowrap">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -1143,7 +1143,7 @@ export default function ManageInventory() {
                     }`}
                   >
                     {/* Item Name */}
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                       {editingId === item._id ? (
                         <input
                           type="text"
@@ -1157,7 +1157,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Category */}
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-4 py-3 text-sm">
                       {editingId === item._id ? (
                         <select
                           value={editValue.categoryId}
@@ -1176,7 +1176,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Quantity */}
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-4 py-3 text-sm">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1199,7 +1199,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Unit */}
-                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
                       {editingId === item._id ? (
                         <select
                           value={editValue.unit || "Unit"}
@@ -1224,7 +1224,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Min Stock */}
-                    <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1237,7 +1237,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Price */}
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1251,7 +1251,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Cost Price */}
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-4 py-3 text-sm text-gray-700">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1265,7 +1265,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Margin % */}
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-4 py-3 text-sm text-gray-700">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1279,7 +1279,7 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Sales Price */}
-                    <td className="px-6 py-4 text-sm font-semibold text-green-700">
+                    <td className="px-4 py-3 text-sm font-semibold text-green-700">
                       {editingId === item._id ? (
                         <input
                           type="number"
@@ -1293,15 +1293,15 @@ export default function ManageInventory() {
                       )}
                     </td>
                     {/* Consumed */}
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-4 py-3 text-sm text-gray-700">
                       {item.totalConsumed || 0}
                     </td>
                     {/* Location */}
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-4 py-3 text-sm text-gray-700">
                       {item.location?.name || "—"}
                     </td>
                     {/* Show on Site */}
-                    <td className="px-6 py-4 text-sm text-center">
+                    <td className="px-4 py-3 text-sm text-center">
                       <button
                         onClick={() => handleToggleShowOnSite(item)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${item.showOnSite ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -1312,9 +1312,9 @@ export default function ManageInventory() {
                     </td>
                     {/* Actions */}
                     {canEdit && (
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-4 py-3 text-sm">
                         {editingId === item._id ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
                             <button
                               onClick={handleSaveEdit}
                               disabled={editSaving}
@@ -1330,7 +1330,7 @@ export default function ManageInventory() {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap">
                             <button
                               onClick={() => { setRestockItem(item); setRestockForm({ quantity: 0, notes: "", costPrice: item.costPrice || item.price || "" }); setShowRestockModal(true); }}
                               className={`${actionBtnClass} border-green-200 bg-green-50 text-green-700 hover:bg-green-100`}
@@ -1533,7 +1533,7 @@ export default function ManageInventory() {
                     body: JSON.stringify(payload),
                   });
                   if (!res.ok) throw new Error("Failed to restock");
-                  setSuccess(`✓ Restocked ${restockForm.quantity} ${restockItem.unit || "units"} of ${restockItem.item}`);
+                  setSuccess(`Restocked ${restockForm.quantity} ${restockItem.unit || "units"} of ${restockItem.item}`);
                   setShowRestockModal(false);
                   setRestockItem(null);
                   invalidateCache("api/inventory");

@@ -5,7 +5,8 @@ import User from "@/models/User";
 import mongoose from "mongoose";
 import { withRBACAuth } from "@/utils/middleware";
 import { createNotifications } from "@/utils/notifications";
-import { buildLocationFilter } from "@/utils/locationAccess";
+import { getUserLocationIds } from "@/utils/locationAccess";
+import { escapeRegex, isObjectId } from "@/utils/permissions";
 
 function buildOrderNumber() {
   const d = new Date();
@@ -24,18 +25,30 @@ async function handler(req, res) {
       const { status = "all", location = "all", customer = "", q = "" } = req.query;
       const query = {};
 
-      // Apply location-based access control
-      const locFilter = buildLocationFilter(req.user);
-      if (locFilter) Object.assign(query, locFilter);
+      // Location-based access control. This query goes straight to the
+      // collection (no Mongoose casting), so ids must be real ObjectIds.
+      const allowedLocations = getUserLocationIds(req.user); // null = all locations
+      const requested = isObjectId(String(location)) ? String(location) : null;
 
-      if (status !== "all") query.status = status;
-      if (location !== "all") query.location = /^[0-9a-fA-F]{24}$/.test(String(location)) ? new mongoose.Types.ObjectId(String(location)) : location;
-      if (customer) query.customer = /^[0-9a-fA-F]{24}$/.test(String(customer)) ? new mongoose.Types.ObjectId(String(customer)) : customer;
+      if (allowedLocations === null) {
+        if (requested) query.location = new mongoose.Types.ObjectId(requested);
+      } else {
+        // A location filter may only narrow within the user's own locations.
+        const visible = requested
+          ? allowedLocations.filter((l) => l === requested)
+          : allowedLocations;
+        query.location = {
+          $in: visible.filter(isObjectId).map((l) => new mongoose.Types.ObjectId(l)),
+        };
+      }
+
+      if (status !== "all") query.status = String(status);
+      if (customer) query.customer = isObjectId(String(customer)) ? new mongoose.Types.ObjectId(String(customer)) : String(customer);
       if (q) {
         query.$or = [
-          { orderNumber: { $regex: q, $options: "i" } },
-          { customerName: { $regex: q, $options: "i" } },
-          { customerEmail: { $regex: q, $options: "i" } },
+          { orderNumber: { $regex: escapeRegex(q), $options: "i" } },
+          { customerName: { $regex: escapeRegex(q), $options: "i" } },
+          { customerEmail: { $regex: escapeRegex(q), $options: "i" } },
         ];
       }
 
@@ -90,7 +103,7 @@ async function handler(req, res) {
       // Notify SuperAdmins and Managers about the new order
       try {
         const managers = await User.find({
-          role: { $in: ["SuperAdmin", "Manager"] },
+          role: { $in: ["SuperAdmin", "SubAdmin", "Manager"] },
           isActive: true,
         }).select("_id").lean();
         const managerIds = managers.map((m) => m._id);
@@ -117,4 +130,4 @@ async function handler(req, res) {
   return res.status(405).json({ error: "Method not allowed" });
 }
 
-export default withRBACAuth(["SuperAdmin", "Manager"])(handler);
+export default withRBACAuth(["SuperAdmin", "SubAdmin", "Manager"])(handler);

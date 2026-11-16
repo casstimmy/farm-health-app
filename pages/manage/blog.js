@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import PageHeader from "@/components/shared/PageHeader";
 import Loader from "@/components/Loader";
 import { useRole } from "@/hooks/useRole";
+import AppIcon from "@/components/shared/AppIcon";
 
 const initialForm = {
   title: "",
@@ -133,7 +134,11 @@ export default function BlogManagement() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        body: fd,
+      });
       if (!res.ok) throw new Error("Failed to upload cover image");
       const data = await res.json();
       const uploaded = data?.links?.[0];
@@ -154,7 +159,7 @@ export default function BlogManagement() {
         title="Blog Management"
         subtitle="Manage e-commerce blog posts, visibility, and publishing status"
         gradient="from-violet-600 to-indigo-700"
-        icon="📝"
+        icon="blog"
       />
 
       {(loading || roleLoading) && (
@@ -226,7 +231,7 @@ export default function BlogManagement() {
         {/* Blog Preview Panel */}
         <div className="lg:col-span-1">
           <div className="bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border-2 border-violet-200 p-5 sticky top-20 space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">👁️ Preview</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-4"><AppIcon name="eye" /> Preview</h3>
             
             {/* Cover Image Preview */}
             {form.coverImage && (
@@ -250,7 +255,7 @@ export default function BlogManagement() {
                 <div className="flex gap-2 items-center text-xs text-gray-500">
                   <span className="bg-violet-100 text-violet-700 px-2 py-1 rounded-full font-semibold">{form.category || "General"}</span>
                   {form.showOnSite ? (
-                    <span className="text-green-700 font-semibold">✓ Visible</span>
+                    <span className="text-green-700 font-semibold"><AppIcon name="check" /> Visible</span>
                   ) : (
                     <span className="text-orange-700 font-semibold">⊘ Hidden</span>
                   )}
@@ -282,13 +287,13 @@ export default function BlogManagement() {
               )}
 
               <div className="text-xs text-gray-400 pt-2">
-                📅 {new Date().toLocaleDateString()}
+                <AppIcon name="calendar" /> {new Date().toLocaleDateString()}
               </div>
             </div>
 
             {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-              <p className="text-xs font-semibold text-blue-900 mb-2">💡 Preview Tips:</p>
+              <p className="text-xs font-semibold text-blue-900 mb-2"><AppIcon name="tip" /> Preview Tips:</p>
               <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
                 <li>Title must be provided</li>
                 <li>Featured image recommended</li>

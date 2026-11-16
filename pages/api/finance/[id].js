@@ -2,10 +2,15 @@ import dbConnect from "@/lib/mongodb";
 import Finance from "@/models/Finance";
 import { withRBACAuth } from "@/utils/middleware";
 import mongoose from "mongoose";
+import { ADMIN, MANAGE, SENIOR } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, Finance, id)) return;
 
   // Validate MongoDB ID
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -74,4 +79,4 @@ async function handler(req, res) {
   }
 }
 
-export default withRBACAuth(["SuperAdmin", "Manager"])(handler);
+export default withRBACAuth(MANAGE, { PUT: SENIOR, DELETE: ADMIN })(handler);

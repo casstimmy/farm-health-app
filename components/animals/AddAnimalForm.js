@@ -6,6 +6,7 @@ import { FaTag, FaPaw, FaSpinner, FaCheck, FaImage, FaTimes, FaCamera } from "re
 import Loader from "../Loader";
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { useRole } from "@/hooks/useRole";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function AddAnimalForm({ onSuccess, animal }) {
     const { animals: allAnimals, addAnimalToCache } = useAnimalData();
@@ -172,7 +173,9 @@ export default function AddAnimalForm({ onSuccess, animal }) {
     }));
     setImages((prev) => [...prev, ...previews]);
     try {
-      const res = await axios.post("/api/upload", formDataUpload);
+      const res = await axios.post("/api/upload", formDataUpload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
       const uploaded = res.data?.links || [];
       // replace temp previews with uploaded images, keep any existing uploaded images
       setImages((prev) => [
@@ -300,7 +303,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       }
 
       if (isEdit) {
-        setSuccess(`✓ ${formData.name || formData.tagId} has been updated successfully!`);
+        setSuccess(`${formData.name || formData.tagId} has been updated successfully!`);
         setTimeout(() => {
           if (onSuccess) onSuccess();
         }, 1000);
@@ -309,7 +312,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
         if (data && data._id) {
           addAnimalToCache(data);
         }
-        setSuccess(`✓ ${formData.name || formData.tagId} has been added successfully!`);
+        setSuccess(`${formData.name || formData.tagId} has been added successfully!`);
         setFormData({
           tagId: "",
           myNotes: "",
@@ -351,12 +354,12 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto pr-4">
-      {error && <div className="error-message flex items-center gap-2"><span>⚠️</span> {error}</div>}
+      {error && <div className="error-message flex items-center gap-2"><span><AppIcon name="warning" /></span> {error}</div>}
       {success && <div className="success-message flex items-center gap-2"><FaCheck /> {success}</div>}
 
       {/* BASIC INFORMATION */}
       <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-        <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">📋 Basic Information</h3>
+        <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2"><AppIcon name="list" /> Basic Information</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Tag ID */}
@@ -535,8 +538,8 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               onChange={handleChange}
               className="input-field"
             >
-              <option value="Male">Male ♂️</option>
-              <option value="Female">Female ♀️</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
           </div>
 
@@ -556,7 +559,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
       {/* ACQUISITION INFORMATION */}
       <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-        <h3 className="font-bold text-green-900 mb-4">🛒 Acquisition Information</h3>
+        <h3 className="font-bold text-green-900 mb-4"><AppIcon name="cart" /> Acquisition Information</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Acquisition Type */}
@@ -631,7 +634,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
       {/* LOCATION & STATUS */}
       <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
-        <h3 className="font-bold text-purple-900 mb-4">📍 Location & Status</h3>
+        <h3 className="font-bold text-purple-900 mb-4"><AppIcon name="location" /> Location & Status</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Location */}
@@ -703,10 +706,10 @@ export default function AddAnimalForm({ onSuccess, animal }) {
               onChange={handleChange}
               className="input-field"
             >
-              <option value="Alive">Alive ✓</option>
+              <option value="Alive">Alive</option>
               <option value="Quarantined">Quarantined</option>
-              <option value="Sold">Sold 💰</option>
-              <option value="Dead">Dead ✗</option>
+              <option value="Sold">Sold</option>
+              <option value="Dead">Dead</option>
             </select>
           </div>
         </div>
@@ -714,7 +717,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
       {/* WEIGHT & RECORDED INFO */}
       <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
-        <h3 className="font-bold text-orange-900 mb-4">⚖️ Weight & Recording</h3>
+        <h3 className="font-bold text-orange-900 mb-4"><AppIcon name="weight" /> Weight & Recording</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Weight */}
@@ -777,7 +780,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
       {/* FINANCIAL INFO - Hidden for Attendant role */}
       {!isAttendant && (
       <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4">
-        <h3 className="font-bold text-emerald-900 mb-4">💰 Financial & Projections</h3>
+        <h3 className="font-bold text-emerald-900 mb-4"><AppIcon name="money" /> Financial & Projections</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -859,7 +862,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
 
       {/* NOTES */}
       <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-        <h3 className="font-bold text-gray-900 mb-4">📝 Additional Notes</h3>
+        <h3 className="font-bold text-gray-900 mb-4"><AppIcon name="note" /> Additional Notes</h3>
         
         <textarea
           name="notes"
@@ -941,7 +944,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
           {formData.images.length > 0 && (
             <div className="bg-white rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-green-900">✓ Uploaded ({formData.images.length})</p>
+                <p className="text-sm font-semibold text-green-900"><AppIcon name="check" /> Uploaded ({formData.images.length})</p>
                 <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Ready</span>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -977,7 +980,7 @@ export default function AddAnimalForm({ onSuccess, animal }) {
                   </motion.div>
                 ))}
               </div>
-              <p className="text-xs text-gray-600 mt-3">💡 Drag to reorder images</p>
+              <p className="text-xs text-gray-600 mt-3"><AppIcon name="tip" /> Drag to reorder images</p>
             </div>
           )}
         </div>

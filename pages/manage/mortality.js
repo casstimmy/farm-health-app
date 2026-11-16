@@ -12,6 +12,7 @@ import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function MortalityTracking() {
   const router = useRouter();
@@ -251,16 +252,16 @@ export default function MortalityTracking() {
         title="Mortality Tracking"
         subtitle="Record and analyze animal deaths to improve farm health"
         gradient="from-gray-700 to-gray-900"
-        icon="📊"
+        icon="mortality"
       />
 
       {/* Stats Summary */}
       <StatsSummary
         stats={[
-          { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => { setFilterPeriod("all"); setFilterCause("all"); } },
-          { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "📅", filterKey: "month", onClick: () => setFilterPeriod(filterPeriod === "month" ? "all" : "month") },
-          { label: "Est. Loss", value: hideAmounts ? "***" : formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "💰", isText: true },
-          { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "🔍", isText: true, filterKey: topCause ? topCause[0] : "", onClick: () => { if (topCause) setFilterCause(filterCause === topCause[0] ? "all" : topCause[0]); } },
+          { label: "Total Deaths", value: mortalityRecords.length, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "list", filterKey: "all", onClick: () => { setFilterPeriod("all"); setFilterCause("all"); } },
+          { label: "This Month", value: monthlyDeaths, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "calendar", filterKey: "month", onClick: () => setFilterPeriod(filterPeriod === "month" ? "all" : "month") },
+          { label: "Est. Loss", value: hideAmounts ? "***" : formatCurrency(totalEstimatedLoss, businessSettings.currency), bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "money", isText: true },
+          { label: "Top Cause", value: topCause ? topCause[0] : "N/A", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700", icon: "search", isText: true, filterKey: topCause ? topCause[0] : "", onClick: () => { if (topCause) setFilterCause(filterCause === topCause[0] ? "all" : topCause[0]); } },
         ]}
         activeFilter={filterPeriod !== "all" ? filterPeriod : filterCause !== "all" ? filterCause : "all"}
       />
@@ -439,13 +440,13 @@ export default function MortalityTracking() {
 
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg">
-                  ⚠️ {error}
+                  <AppIcon name="warning" /> {error}
                 </div>
               )}
 
               {success && (
                 <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg">
-                  ✅ {success}
+                  <AppIcon name="success" /> {success}
                 </div>
               )}
 
@@ -478,7 +479,7 @@ export default function MortalityTracking() {
         <Loader message="Loading mortality records..." color="red-600" />
       ) : filteredRecords.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
-          <div className="text-6xl mb-4">📊</div>
+          <div className="text-6xl mb-4 text-gray-300"><AppIcon name="chart" /></div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Mortality Records</h3>
           <p className="text-gray-600">No animal deaths have been recorded yet.</p>
         </div>

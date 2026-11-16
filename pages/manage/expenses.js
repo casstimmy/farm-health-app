@@ -11,6 +11,7 @@ import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { useRole } from "@/hooks/useRole";
 import { getCachedData, invalidateCache } from "@/utils/cache";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 const EXPENSE_CATEGORIES = [
   "Feed",
@@ -213,7 +214,7 @@ export default function ExpenseEntry() {
           title="Record Expense"
           subtitle="Quick expense entry - accessible to all staff"
           gradient="from-amber-500 to-orange-500"
-          icon="$"
+          icon="expense"
           actions={
             <button
               onClick={() => setShowForm(!showForm)}
@@ -237,7 +238,7 @@ export default function ExpenseEntry() {
         title="Record Expense"
         subtitle="Quick expense entry — accessible to all staff"
         gradient="from-amber-500 to-orange-500"
-        icon="💸"
+        icon="expense"
         actions={
           <button
             onClick={() => setShowForm(!showForm)}
@@ -253,7 +254,7 @@ export default function ExpenseEntry() {
       {error && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center justify-between">
-          <span>⚠️ {error}</span>
+          <span><AppIcon name="warning" /> {error}</span>
           <button onClick={() => setError("")} className="text-red-500 hover:text-red-700"><FaTimes /></button>
         </motion.div>
       )}
@@ -304,7 +305,7 @@ export default function ExpenseEntry() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2">💸 Expense Details</h4>
+                <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2"><AppIcon name="expense" /> Expense Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="label">Title / Item *</label>
@@ -400,7 +401,7 @@ export default function ExpenseEntry() {
               </div>
 
               <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-                <h4 className="font-bold text-gray-700 mb-3">📝 Notes (optional)</h4>
+                <h4 className="font-bold text-gray-700 mb-3"><AppIcon name="note" /> Notes (optional)</h4>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => handleChange("notes", e.target.value)}
@@ -439,7 +440,7 @@ export default function ExpenseEntry() {
         </div>
         {dateExpenses.length === 0 ? (
           <div className="text-center py-16">
-            <span className="text-5xl mb-4 block">💸</span>
+            <span className="text-5xl mb-4 block text-gray-300"><AppIcon name="expense" /></span>
             <p className="text-gray-500 text-lg">No expenses recorded for this date</p>
             <p className="text-gray-400 text-sm mt-1">Use the form above to add an expense or change the filter date</p>
           </div>

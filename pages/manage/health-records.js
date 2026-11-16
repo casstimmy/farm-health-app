@@ -18,6 +18,7 @@ import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filter
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatCurrency, formatDateForInput, shouldHideAmounts } from "@/utils/formatting";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 const RECOVERY_STATUS = ["Under Treatment", "Improving", "Recovered", "Deteriorating", "Chronic", "Deceased"];
 const TREATMENT_TYPES = ["Antibiotics", "Ext-Parasite", "Deworming", "Vitamin Dosing", "Hydration/Electrolyte", "Vaccination", "Int-Parasite", "Injection", "Oral", "Topical", "IV Drip", "Surgical", "Other"];
@@ -484,7 +485,7 @@ export default function HealthRecords() {
         title="Health Records"
         subtitle="Comprehensive health & treatment tracking for all animals"
         gradient="from-teal-600 to-teal-700"
-        icon="🏥"
+        icon="health"
         actions={
           <button
             onClick={() => showForm ? closeForm() : openForm()}
@@ -498,16 +499,16 @@ export default function HealthRecords() {
       />
 
       <StatsSummary stats={[
-        { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "all" : "all") },
-        { label: "Under Treatment", value: stats.underTreatment, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "💊", filterKey: "Under Treatment", onClick: () => setFilterStatus(filterStatus === "Under Treatment" ? "all" : "Under Treatment") },
-        { label: "Improving", value: stats.improving, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "📈", filterKey: "Improving", onClick: () => setFilterStatus(filterStatus === "Improving" ? "all" : "Improving") },
-        { label: "Recovered", value: stats.recovered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Recovered", onClick: () => setFilterStatus(filterStatus === "Recovered" ? "all" : "Recovered") },
+        { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "list", filterKey: "all", onClick: () => setFilterStatus(filterStatus === "all" ? "all" : "all") },
+        { label: "Under Treatment", value: stats.underTreatment, bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700", icon: "treatment", filterKey: "Under Treatment", onClick: () => setFilterStatus(filterStatus === "Under Treatment" ? "all" : "Under Treatment") },
+        { label: "Improving", value: stats.improving, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "trend-up", filterKey: "Improving", onClick: () => setFilterStatus(filterStatus === "Improving" ? "all" : "Improving") },
+        { label: "Recovered", value: stats.recovered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "success", filterKey: "Recovered", onClick: () => setFilterStatus(filterStatus === "Recovered" ? "all" : "Recovered") },
       ]} activeFilter={filterStatus} />
 
       {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg font-semibold flex items-center justify-between">
-        <span>⚠️ {error}</span><button onClick={() => setError("")}><FaTimes /></button>
+        <span><AppIcon name="warning" /> {error}</span><button onClick={() => setError("")}><FaTimes /></button>
       </div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg font-semibold">✅ {success}</div>}
+      {success && <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg font-semibold"><AppIcon name="success" /> {success}</div>}
 
       {/* ─── Form ─── */}
       <AnimatePresence>
@@ -523,12 +524,12 @@ export default function HealthRecords() {
               {/* Selection Mode */}
               {!editId && (
                 <div className="bg-teal-50 border-2 border-teal-200 rounded-xl p-4">
-                  <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-3">🎯 Selection Mode</h4>
+                  <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-3"><AppIcon name="target" /> Selection Mode</h4>
                   <div className="flex flex-wrap gap-3 mb-4">
                     {[
-                      { key: "individual", label: "Individual Animal", icon: "🐐" },
-                      { key: "paddock", label: "By Paddock/Shed", icon: "🏠" },
-                      { key: "location", label: "By Location", icon: "📍" },
+                      { key: "individual", label: "Individual Animal", icon: "goat" },
+                      { key: "paddock", label: "By Paddock/Shed", icon: "paddock" },
+                      { key: "location", label: "By Location", icon: "location" },
                     ].map(m => (
                       <button key={m.key} type="button"
                         onClick={() => { setSelectionMode(m.key); setSelectedAnimals([]); }}
@@ -536,7 +537,7 @@ export default function HealthRecords() {
                           selectionMode === m.key ? "bg-teal-600 text-white border-teal-600" : "bg-white text-gray-700 border-gray-200 hover:border-teal-400"
                         }`}
                       >
-                        <span>{m.icon}</span> {m.label}
+                        <AppIcon name={m.icon} /> {m.label}
                       </button>
                     ))}
                   </div>
@@ -588,7 +589,7 @@ export default function HealthRecords() {
                         </select>
                       </div>
                       {selectedAnimals.length > 0 && (
-                        <p className="mt-2 text-sm text-teal-700 font-semibold">✅ {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
+                        <p className="mt-2 text-sm text-teal-700 font-semibold"><AppIcon name="success" /> {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
                       )}
                     </div>
                   )}
@@ -601,7 +602,7 @@ export default function HealthRecords() {
                         {userLocations.map(l => <option key={l._id} value={l._id}>{l.name}</option>)}
                       </select>
                       {selectedAnimals.length > 0 && (
-                        <p className="mt-2 text-sm text-teal-700 font-semibold">✅ {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
+                        <p className="mt-2 text-sm text-teal-700 font-semibold"><AppIcon name="success" /> {selectedAnimals.length} animal{selectedAnimals.length !== 1 ? "s" : ""} will receive this health record</p>
                       )}
                     </div>
                   )}
@@ -619,7 +620,7 @@ export default function HealthRecords() {
               {/* Edit mode: show animal dropdown */}
               {editId && (
                 <div className="border-b border-gray-100 pb-4">
-                  <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-3">🐐 Animal</h4>
+                  <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-3"><AppIcon name="goat" /> Animal</h4>
                   <select value={formData.animal} onChange={(e) => handleChange("animal", e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-teal-500" required>
                     <option value="">Select animal...</option>
@@ -632,7 +633,7 @@ export default function HealthRecords() {
 
               {/* Date, Time, Location row */}
               <div className="border-b border-gray-100 pb-6">
-                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4">📅 Record Info</h4>
+                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4"><AppIcon name="calendar" /> Record Info</h4>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Date *</label>
@@ -662,7 +663,7 @@ export default function HealthRecords() {
 
               {/* Diagnosis & Symptoms */}
               <div className="border-b border-gray-100 pb-6">
-                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4">🔍 Diagnosis & Symptoms</h4>
+                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4"><AppIcon name="search" /> Diagnosis & Symptoms</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Symptoms</label>
@@ -706,7 +707,7 @@ export default function HealthRecords() {
 
               {/* Treatment A */}
               <div className="border-b border-gray-100 pb-6">
-                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4">💊 Treatment A</h4>
+                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4"><AppIcon name="treatment" /> Treatment A</h4>
                 <TreatmentFields which="treatmentA" data={formData.treatmentA} onChange={handleTreatmentChange} medications={medications} />
               </div>
 
@@ -722,7 +723,7 @@ export default function HealthRecords() {
                 {formData.needsMultipleTreatments && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                     className="border-b border-gray-100 pb-6">
-                    <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wider mb-4">💊 Treatment B</h4>
+                    <h4 className="text-sm font-bold text-orange-700 uppercase tracking-wider mb-4"><AppIcon name="treatment" /> Treatment B</h4>
                     <TreatmentFields which="treatmentB" data={formData.treatmentB} onChange={handleTreatmentChange} medications={medications} />
                   </motion.div>
                 )}
@@ -730,7 +731,7 @@ export default function HealthRecords() {
 
               {/* Post-Treatment & Follow-up */}
               <div className="border-b border-gray-100 pb-6">
-                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4">📋 Post-Treatment & Follow-up</h4>
+                <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider mb-4"><AppIcon name="list" /> Post-Treatment & Follow-up</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-1 block">Treated By</label>
@@ -846,7 +847,7 @@ export default function HealthRecords() {
                     <div><span className="text-gray-500 block text-xs">Tag ID</span><span className="font-bold text-gray-900">{viewRecord.animalTagId || "—"}</span></div>
                     <div><span className="text-gray-500 block text-xs">Gender</span><span className="font-semibold">{viewRecord.animalGender || "—"}</span></div>
                     <div><span className="text-gray-500 block text-xs">Breed</span><span className="font-semibold">{viewRecord.animalBreed || "—"}</span></div>
-                    <div><span className="text-gray-500 block text-xs">Routine Check</span><span className="font-semibold">{viewRecord.isRoutine ? "✅ Yes" : "No"}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Routine Check</span><span className="font-semibold">{viewRecord.isRoutine ? "Yes" : "No"}</span></div>
                   </div>
                 </div>
 
@@ -909,7 +910,7 @@ export default function HealthRecords() {
                 {/* Notes */}
                 {viewRecord.notes && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">📝 Notes</h4>
+                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2"><AppIcon name="note" /> Notes</h4>
                     <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewRecord.notes}</p>
                   </div>
                 )}
@@ -940,7 +941,7 @@ export default function HealthRecords() {
           {viewMode === "records" && (
             filtered.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
-                <div className="text-6xl mb-4">🏥</div>
+                <div className="text-6xl mb-4 text-gray-300"><AppIcon name="health" /></div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">No Health Records</h3>
                 <p className="text-gray-600">{searchTerm ? "No matches found." : "Start by adding a health record."}</p>
               </div>
@@ -1001,7 +1002,7 @@ export default function HealthRecords() {
             <div className="space-y-4">
               {Object.values(animalHealthMap).length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                  <div className="text-6xl mb-4">🐑</div>
+                  <div className="text-6xl mb-4 text-gray-300"><AppIcon name="sheep" /></div>
                   <p className="text-gray-600">No animals found.</p>
                 </div>
               ) : (
@@ -1035,10 +1036,10 @@ export default function HealthRecords() {
                               <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{a.species} • {a.breed} • {a.gender}</span>
                             </div>
                             <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                              <span>📋 {entry.records.length} record{entry.records.length !== 1 ? "s" : ""}</span>
-                              {a.paddock && <span>🏠 {a.paddock}</span>}
-                              {a.currentWeight > 0 && <span>⚖️ {a.currentWeight} kg</span>}
-                              <span>💊 Med Cost: {hideAmounts ? "***" : formatCurrency(entry.totalMedCost, businessSettings.currency)}</span>
+                              <span><AppIcon name="list" /> {entry.records.length} record{entry.records.length !== 1 ? "s" : ""}</span>
+                              {a.paddock && <span><AppIcon name="paddock" /> {a.paddock}</span>}
+                              {a.currentWeight > 0 && <span><AppIcon name="weight" /> {a.currentWeight} kg</span>}
+                              <span><AppIcon name="treatment" /> Med Cost: {hideAmounts ? "***" : formatCurrency(entry.totalMedCost, businessSettings.currency)}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0">
@@ -1065,7 +1066,7 @@ export default function HealthRecords() {
                                       <div className="flex-1 min-w-0">
                                         <span className="font-semibold text-gray-900">{r.diagnosis || r.symptoms || "Routine Check"}</span>
                                         {r.treatmentA?.treatmentType && <span className="text-xs text-gray-500 ml-2">• {r.treatmentA.treatmentType}</span>}
-                                        {r.vaccines && <span className="text-xs text-purple-600 ml-2">💉 {r.vaccines}</span>}
+                                        {r.vaccines && <span className="text-xs text-purple-600 ml-2"><AppIcon name="vaccine" /> {r.vaccines}</span>}
                                       </div>
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         <StatusBadge status={r.recoveryStatus} />
@@ -1097,7 +1098,7 @@ export default function HealthRecords() {
             <div className="space-y-4">
               {scheduleItems.length === 0 ? (
                 <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                  <div className="text-6xl mb-4">📅</div>
+                  <div className="text-6xl mb-4 text-gray-300"><AppIcon name="calendar" /></div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">No Scheduled Follow-ups</h3>
                   <p className="text-gray-600">Health records with prescribed days will show upcoming due dates here.</p>
                 </div>
@@ -1167,7 +1168,7 @@ function ScheduleCard({ item, type }) {
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0 ${
         type === "overdue" ? "bg-red-100" : type === "soon" ? "bg-amber-100" : "bg-gray-100"
       }`}>
-        {type === "overdue" ? "🚨" : type === "soon" ? "⏰" : "📅"}
+        <AppIcon name={type === "overdue" ? "alert" : type === "soon" ? "pending" : "calendar"} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm">{item.animalTagId} {item.animalName ? `(${item.animalName})` : ""}</div>

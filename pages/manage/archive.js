@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaUndo, FaTrash, FaSearch, FaArchive } from "react-icons/fa";
 import PageHeader from "@/components/shared/PageHeader";
 import Loader from "@/components/Loader";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function ArchivedAnimals() {
   const router = useRouter();
@@ -76,7 +77,7 @@ export default function ArchivedAnimals() {
         title="Archived Animals"
         subtitle="Animals removed from active list. Restore them anytime to prevent data loss."
         gradient="from-gray-600 to-gray-800"
-        icon="📦"
+        icon="archive"
       />
 
       {/* Search */}
@@ -98,14 +99,14 @@ export default function ArchivedAnimals() {
         </div>
       </div>
 
-      {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg font-semibold">⚠️ {error}</div>}
-      {success && <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg font-semibold">✅ {success}</div>}
+      {error && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg font-semibold"><AppIcon name="warning" /> {error}</div>}
+      {success && <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg font-semibold"><AppIcon name="success" /> {success}</div>}
 
       {loading ? (
         <Loader message="Loading archived animals..." color="gray-600" />
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
-          <div className="text-6xl mb-4">📦</div>
+          <div className="text-6xl mb-4 text-gray-300"><AppIcon name="box" /></div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Archived Animals</h3>
           <p className="text-gray-600">
             {searchTerm ? "No matches found." : "When you delete an animal, it moves here instead of being permanently removed."}
@@ -166,7 +167,7 @@ export default function ArchivedAnimals() {
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-bold hover:bg-green-200 disabled:opacity-50"
                       >
                         {restoring === animal._id ? (
-                          <span className="animate-spin">⏳</span>
+                          <span className="animate-spin"><AppIcon name="pending" /></span>
                         ) : (
                           <FaUndo className="w-3 h-3" />
                         )}

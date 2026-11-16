@@ -20,6 +20,8 @@ export default function ManageAnimals() {
   useEffect(() => {
     if (router.query.registerKid === "true") {
       const { breedingRecordId: brId, species, breed, sire, dam, origin, acquisitionType, location } = router.query;
+      // One-off hand-over from the URL (set by the Breeding page) into form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBreedingRecordId(brId || null);
       setInitialAnimalData({
         species: species || "Goat",
@@ -69,7 +71,7 @@ export default function ManageAnimals() {
         title="Animal Management"
         subtitle="Manage your livestock records and health information"
         gradient="from-blue-600 to-blue-700"
-        icon="🐑"
+        icon="animals"
       />
 
       {/* Modal */}

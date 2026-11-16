@@ -43,7 +43,7 @@ const OrderSchema = new mongoose.Schema(
 OrderSchema.index({ status: 1, orderDate: -1 });
 OrderSchema.index({ paymentStatus: 1, orderDate: -1 });
 
-OrderSchema.pre("validate", function (next) {
+OrderSchema.pre("validate", function () {
   const items = Array.isArray(this.items) ? this.items : [];
   let subtotal = 0;
 
@@ -63,7 +63,6 @@ OrderSchema.pre("validate", function (next) {
   this.subtotal = Number(subtotal.toFixed(2));
   this.total = Number((this.total || this.subtotal).toFixed(2));
   this.balance = Number((this.total - Number(this.amountPaid || 0)).toFixed(2));
-  next();
 });
 
 export default mongoose.models.Order || mongoose.model("Order", OrderSchema);

@@ -10,6 +10,7 @@ import { useAnimalData } from "@/context/AnimalDataContext";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useRole } from "@/hooks/useRole";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function BreedingManagement() {
   const router = useRouter();
@@ -315,16 +316,16 @@ export default function BreedingManagement() {
         title="Breeding Management"
         subtitle="Track breeding records, pregnancies, and births"
         gradient="from-pink-600 to-rose-700"
-        icon="💕"
+        icon="breeding"
       />
 
       {/* Stats Summary */}
       <StatsSummary
         stats={[
-          { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📋", filterKey: "all", onClick: () => setFilterStatus("all") },
-          { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
-          { label: "Confirmed Pregnant", value: stats.confirmed, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🤰", filterKey: "Confirmed", onClick: () => setFilterStatus(filterStatus === "Confirmed" ? "all" : "Confirmed") },
-          { label: "Successfully Delivered", value: stats.delivered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "🐣", filterKey: "Delivered", onClick: () => setFilterStatus(filterStatus === "Delivered" ? "all" : "Delivered") },
+          { label: "Total Records", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "list", filterKey: "all", onClick: () => setFilterStatus("all") },
+          { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "pending", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
+          { label: "Confirmed Pregnant", value: stats.confirmed, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "pregnant", filterKey: "Confirmed", onClick: () => setFilterStatus(filterStatus === "Confirmed" ? "all" : "Confirmed") },
+          { label: "Successfully Delivered", value: stats.delivered, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "born", filterKey: "Delivered", onClick: () => setFilterStatus(filterStatus === "Delivered" ? "all" : "Delivered") },
         ]}
         activeFilter={filterStatus}
       />
@@ -483,13 +484,13 @@ export default function BreedingManagement() {
 
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg">
-                  ⚠️ {error}
+                  <AppIcon name="warning" /> {error}
                 </div>
               )}
 
               {success && (
                 <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg">
-                  ✅ {success}
+                  <AppIcon name="success" /> {success}
                 </div>
               )}
 
@@ -522,7 +523,7 @@ export default function BreedingManagement() {
         <Loader message="Loading breeding records..." color="pink-600" />
       ) : filteredRecords.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 text-center">
-          <div className="text-6xl mb-4">💕</div>
+          <div className="text-6xl mb-4 text-gray-300"><AppIcon name="breeding" /></div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No Breeding Records</h3>
           <p className="text-gray-600">Start tracking breeding by adding your first record.</p>
         </div>
@@ -593,7 +594,7 @@ export default function BreedingManagement() {
 
                   {record.location && (
                     <div className="text-xs text-gray-500">
-                      📍 Location: <span className="font-semibold text-gray-700">{typeof record.location === "object" ? record.location?.name : record.location}</span>
+                      <AppIcon name="location" /> Location: <span className="font-semibold text-gray-700">{typeof record.location === "object" ? record.location?.name : record.location}</span>
                     </div>
                   )}
 

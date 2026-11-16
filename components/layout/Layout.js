@@ -25,7 +25,7 @@ export default function Layout({ children, title = "Dashboard", showNav = true }
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 🔐 Check authentication on mount
+  // Check authentication on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
@@ -49,7 +49,7 @@ export default function Layout({ children, title = "Dashboard", showNav = true }
     }
   }, [router]);
 
-  // 🔄 Show loader while checking auth
+  // Show loader while checking auth
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100">
@@ -58,12 +58,12 @@ export default function Layout({ children, title = "Dashboard", showNav = true }
     );
   }
 
-  // 🔐 Redirect if not authenticated
+  // Redirect if not authenticated
   if (!isAuthenticated || !user) {
     return null;
   }
 
-  // 🔓 Render authenticated layout
+  // Render authenticated layout
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
       {/* Fixed TopHeader - 80px height */}
@@ -75,7 +75,7 @@ export default function Layout({ children, title = "Dashboard", showNav = true }
         {showNav && <Sidebar />}
 
         {/* Main Content Area - Takes remaining space */}
-        <main className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-12 lg:px-16 lg:py-16 bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <main className="flex-1 min-w-0 overflow-y-auto px-4 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10 bg-gradient-to-br from-gray-50 via-white to-gray-100">
           {/* Content Container */}
           <div>
             {children}

@@ -6,6 +6,7 @@ import Loader from "@/components/Loader";
 import ImageViewer from "./ImageViewer";
 import { BusinessContext } from "@/context/BusinessContext";
 import { formatCurrency } from "@/utils/formatting";
+import AppIcon from "@/components/shared/AppIcon";
 
 const PAGE_SIZE = 20;
 const SORT_FIELDS = [
@@ -426,7 +427,7 @@ export default function AnimalsList({
                         {costBreakdown?._id === animal._id && (
                           <div className="absolute right-0 top-full mt-1 z-50 bg-white border-2 border-blue-200 rounded-xl shadow-2xl p-4 w-64 text-left" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-bold text-gray-900 text-sm">💰 Cost Breakdown</h4>
+                              <h4 className="font-bold text-gray-900 text-sm"><AppIcon name="money" /> Cost Breakdown</h4>
                               <button onClick={() => setCostBreakdown(null)} className="text-gray-400 hover:text-gray-600"><FaTimes size={12} /></button>
                             </div>
                             <div className="space-y-2 text-xs">

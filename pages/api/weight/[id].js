@@ -2,10 +2,15 @@ import dbConnect from "@/lib/mongodb";
 import WeightRecord from "@/models/WeightRecord";
 import { withAuth } from "@/utils/middleware";
 import mongoose from "mongoose";
+import { ADMIN, MANAGE } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, WeightRecord, id)) return;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: "Invalid ID format" });
@@ -54,4 +59,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler);
+export default withAuth(handler, { PUT: MANAGE, DELETE: ADMIN });

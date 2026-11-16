@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Customer from "@/models/Customer";
 import "@/models/Location";
 import { withRBACAuth } from "@/utils/middleware";
+import { escapeRegex } from "@/utils/permissions";
 
 async function handler(req, res) {
   await dbConnect();
@@ -15,11 +16,11 @@ async function handler(req, res) {
       if (active !== "all") query.isActive = active === "true";
       if (q) {
         query.$or = [
-          { firstName: { $regex: q, $options: "i" } },
-          { lastName: { $regex: q, $options: "i" } },
-          { name: { $regex: q, $options: "i" } },
-          { phone: { $regex: q, $options: "i" } },
-          { email: { $regex: q, $options: "i" } },
+          { firstName: { $regex: escapeRegex(q), $options: "i" } },
+          { lastName: { $regex: escapeRegex(q), $options: "i" } },
+          { name: { $regex: escapeRegex(q), $options: "i" } },
+          { phone: { $regex: escapeRegex(q), $options: "i" } },
+          { email: { $regex: escapeRegex(q), $options: "i" } },
         ];
       }
 

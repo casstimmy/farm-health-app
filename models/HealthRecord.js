@@ -75,8 +75,13 @@ HealthRecordSchema.post("save", async function (doc) {
     const Animal = mongoose.model("Animal");
     let totalMedCost = 0;
 
+    // When this record was auto-created from a Treatment, the Treatment's own
+    // hook has already deducted the medication and added its cost. Doing it
+    // again here took stock twice.
+    const chargedByTreatment = !!doc.linkedTreatment;
+
     // Deduct Treatment A medication
-    if (doc.treatmentA?.medication) {
+    if (!chargedByTreatment && doc.treatmentA?.medication) {
       const qty = 1;
       const inv = await Inventory.findByIdAndUpdate(
         doc.treatmentA.medication,
@@ -89,7 +94,7 @@ HealthRecordSchema.post("save", async function (doc) {
     }
 
     // Deduct Treatment B medication
-    if (doc.needsMultipleTreatments && doc.treatmentB?.medication) {
+    if (!chargedByTreatment && doc.needsMultipleTreatments && doc.treatmentB?.medication) {
       const qty = 1;
       const inv = await Inventory.findByIdAndUpdate(
         doc.treatmentB.medication,

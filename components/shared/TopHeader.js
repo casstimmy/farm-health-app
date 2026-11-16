@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import Link from "next/link";
-import { FaSignOutAlt, FaBell } from "react-icons/fa";
+import { FaSignOutAlt, FaBell, FaExclamationTriangle } from "react-icons/fa";
 import { useRouter } from "next/router";
 import { BusinessContext } from "@/context/BusinessContext";
 import { useRole } from "@/hooks/useRole";
@@ -92,8 +92,8 @@ const TopHeader = ({ userName, userRole }) => {
             {showAlert && alertType === "stock" && lowStockCount > 0 && (
               <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-5 z-50 max-h-96 overflow-y-auto">
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
-                    !
+                  <div className="w-10 h-10 bg-yellow-100 text-yellow-700 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <FaExclamationTriangle className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm">Low Stock Alert</p>

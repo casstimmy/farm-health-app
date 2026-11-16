@@ -9,6 +9,7 @@ import FilterBar from "@/components/shared/FilterBar";
 import Loader from "@/components/Loader";
 import dynamic from "next/dynamic";
 import { invalidateCache } from "@/utils/cache";
+import AppIcon from "@/components/shared/AppIcon";
 
 const TreatmentForm = dynamic(() => import("@/components/treatment/TreatmentForm"), { ssr: false });
 
@@ -200,7 +201,7 @@ export default function Treatments() {
         title="Treatment Records"
         subtitle="Manage animal treatment records and medications"
         gradient="from-blue-600 to-blue-700"
-        icon="💊"
+        icon="treatment"
       />
 
 
@@ -257,7 +258,7 @@ export default function Treatments() {
         <Loader message="Loading treatments..." color="blue-600" />
       ) : filteredTreatments.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center border border-gray-200">
-          <div className="text-5xl mb-4">📋</div>
+          <div className="text-5xl mb-4 text-gray-300"><AppIcon name="list" /></div>
           <p className="text-gray-600 text-lg font-medium">No treatments found</p>
           <p className="text-gray-500 text-sm mt-2">Click the + button to add your first treatment record</p>
         </div>

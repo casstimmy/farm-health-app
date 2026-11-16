@@ -1,18 +1,36 @@
 import multiparty from "multiparty";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import sharp from "sharp";
-import { mongooseConnect } from "@/lib/mongodb";
+import crypto from "crypto";
+import { withAuth } from "@/utils/middleware";
 
 const S3BucketName = "image-bucket-admin";
 
-export default async function ImageHandler(req, res) {
-  try {
-    await mongooseConnect();
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB each
+const ALLOWED_FORMATS = new Set(["jpeg", "png", "webp", "gif", "heif", "tiff"]);
 
-    const form = new multiparty.Form();
+async function ImageHandler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const form = new multiparty.Form({
+      maxFilesSize: MAX_FILES * MAX_FILE_BYTES,
+      maxFields: 20,
+    });
     const { fields, files } = await new Promise((resolve, reject) => {
       form.parse(req, (error, fields, files) => (error ? reject(error) : resolve({ fields, files })));
     });
+
+    const uploads = Array.isArray(files?.file) ? files.file : [];
+    if (uploads.length === 0) {
+      return res.status(400).json({ error: "No file was uploaded" });
+    }
+    if (uploads.length > MAX_FILES) {
+      return res.status(400).json({ error: `You can upload at most ${MAX_FILES} images at a time` });
+    }
 
     const client = new S3Client({
       region: "eu-west-2",
@@ -27,26 +45,38 @@ export default async function ImageHandler(req, res) {
 
     // Process all files in parallel
     await Promise.all(
-      files.file.map(async (file) => {
-        const timestamp = Date.now() + Math.floor(Math.random() * 1000);
+      uploads.map(async (file) => {
+        // Random names: not guessable, and no collisions between simultaneous uploads.
+        const baseName = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
 
         try {
+          if (file.size > MAX_FILE_BYTES) {
+            throw new Error("File is larger than 10 MB");
+          }
+
+          // sharp only succeeds on real image data, whatever the file is named.
           const metadata = await sharp(file.path).metadata();
+          if (!ALLOWED_FORMATS.has(metadata.format)) {
+            throw new Error(`Unsupported image type: ${metadata.format || "unknown"}`);
+          }
+
           const format = metadata.format === "png" ? "png" : "jpeg";
-          const ext = format === "png" ? "png" : "jpeg";
+          const ext = format;
 
           // Create full and thumb buffers in parallel
           const [fullBuffer, thumbBuffer] = await Promise.all([
             sharp(file.path)
+              .rotate()
               .resize({ width: 1200, withoutEnlargement: true })[format]({ quality: 85 })
               .toBuffer(),
             sharp(file.path)
+              .rotate()
               .resize({ width: 400, withoutEnlargement: true })[format]({ quality: 70 })
               .toBuffer(),
           ]);
 
-          const fullKey = `${timestamp}.${ext}`;
-          const thumbKey = `${timestamp}_thumb.${ext}`;
+          const fullKey = `${baseName}.${ext}`;
+          const thumbKey = `${baseName}_thumb.${ext}`;
 
           // Upload both buffers in parallel
           await Promise.all([
@@ -75,11 +105,18 @@ export default async function ImageHandler(req, res) {
             thumb: `https://${S3BucketName}.s3.amazonaws.com/${thumbKey}`,
           });
         } catch (err) {
-          console.error("Upload failed for file:", file.originalFilename, err);
+          console.error("Upload failed for file:", file.originalFilename, err.message);
           failedUploads.push(file.originalFilename);
         }
       })
     );
+
+    if (links.length === 0) {
+      return res.status(400).json({
+        error: "None of the files could be uploaded. Use JPG or PNG images under 10 MB.",
+        failedUploads,
+      });
+    }
 
     res.status(200).json({
       message: "Upload finished",
@@ -89,11 +126,16 @@ export default async function ImageHandler(req, res) {
     });
   } catch (err) {
     console.error("Error during file upload:", err);
-    res.status(500).json({ error: "File upload failed" });
+    const tooLarge = err?.code === "ETOOBIG" || err?.statusCode === 413;
+    res.status(tooLarge ? 413 : 500).json({
+      error: tooLarge ? "Upload is too large (10 MB per image)" : "File upload failed",
+    });
   }
 }
+
+// Only logged-in staff may upload.
+export default withAuth(ImageHandler);
 
 export const config = {
   api: { bodyParser: false },
 };
-

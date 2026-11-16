@@ -241,7 +241,7 @@ export default function ManageLocations() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <PageHeader title="Farm Locations" subtitle="Manage farm locations and paddocks/sheds" gradient="from-green-600 to-green-700" icon={"\uD83D\uDCCD"} />
+      <PageHeader title="Farm Locations" subtitle="Manage farm locations and paddocks/sheds" gradient="from-green-600 to-green-700" icon="location" />
 
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center justify-between">

@@ -95,17 +95,11 @@ async function handler(req, res) {
         const currentWeight = animal.currentWeight || 0;
         const newProjectedWeight = +(currentWeight + weightGain).toFixed(2);
 
+        // Note: the feed cost itself is added to the animal by the
+        // FeedingRecord post-save hook. Adding it here too counted it twice.
         await Animal.findByIdAndUpdate(animalId, {
-          $inc: { totalFeedCost: totalFeedCost },
           projectedMaxWeight: newProjectedWeight,
         });
-      } else {
-        // Still track feed cost even with 0 consumed
-        if (totalFeedCost > 0) {
-          await Animal.findByIdAndUpdate(animalId, {
-            $inc: { totalFeedCost: totalFeedCost },
-          });
-        }
       }
 
       res.status(201).json({ message: "Feeding record added", feeding: record });

@@ -108,7 +108,9 @@ export default function BusinessSetup() {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const res = await axios.post("/api/upload", formDataUpload);
+      const res = await axios.post("/api/upload", formDataUpload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
       const uploaded = res.data?.links || [];
       
       if (uploaded.length > 0) {
@@ -153,7 +155,9 @@ export default function BusinessSetup() {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const res = await axios.post("/api/upload", formDataUpload);
+      const res = await axios.post("/api/upload", formDataUpload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
       const uploaded = res.data?.links || [];
       
       if (uploaded.length > 0) {
@@ -201,7 +205,7 @@ export default function BusinessSetup() {
       });
 
       if (res.ok) {
-        setSuccess("✓ Business settings updated successfully!");
+        setSuccess("Business settings updated successfully!");
         setTimeout(() => {
           setSuccess("");
           refreshSettings(); // Refresh context settings
@@ -225,7 +229,7 @@ export default function BusinessSetup() {
       className="space-y-8"
     >
       {/* Page Header */}
-      <PageHeader
+      <PageHeader icon="business"
         title="Business Setup"
         subtitle="Configure your farm business details"
         gradient="from-blue-600 to-blue-700"
@@ -430,10 +434,10 @@ export default function BusinessSetup() {
                   onChange={handleChange}
                   className="input-field"
                 >
-                  <option value="NGN">🇳🇬 Nigerian Naira (₦)</option>
-                  <option value="USD">🇺🇸 US Dollar ($)</option>
-                  <option value="EUR">🇪🇺 Euro (€)</option>
-                  <option value="GBP">🇬🇧 British Pound (£)</option>
+                  <option value="NGN">Nigerian Naira (₦)</option>
+                  <option value="USD">US Dollar ($)</option>
+                  <option value="EUR">Euro (€)</option>
+                  <option value="GBP">British Pound (£)</option>
                 </select>
               </div>
 

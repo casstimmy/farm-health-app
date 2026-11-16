@@ -96,7 +96,7 @@ export default function Reports() {
         title="Reports & Analytics"
         subtitle="Fast server-side summary for operations, finance, customers, and orders"
         gradient="from-yellow-600 to-yellow-700"
-        icon="📊"
+        icon="reports"
       />
 
       <FilterBar

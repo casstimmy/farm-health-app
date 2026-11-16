@@ -3,10 +3,14 @@ import MortalityRecord from "@/models/MortalityRecord";
 import Animal from "@/models/Animal";
 import { withAuth } from "@/utils/middleware";
 import mongoose from "mongoose";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, MortalityRecord, id)) return;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: "Invalid ID format" });
@@ -27,7 +31,7 @@ async function handler(req, res) {
     }
   } else if (req.method === "PUT") {
     try {
-      if (!["SuperAdmin", "Manager"].includes(req.user?.role)) {
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(req.user?.role)) {
         return res
           .status(403)
           .json({ error: "Forbidden: Insufficient permissions" });

@@ -1,10 +1,15 @@
 import dbConnect from "@/lib/mongodb";
 import HealthRecord from "@/models/HealthRecord";
 import { withAuth } from "@/utils/middleware";
+import { MANAGE } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, HealthRecord, id)) return;
 
   if (req.method === "GET") {
     try {
@@ -50,4 +55,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler);
+export default withAuth(handler, { PUT: MANAGE });

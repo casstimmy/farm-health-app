@@ -2,6 +2,8 @@ import dbConnect from "@/lib/mongodb";
 import Treatment from "@/models/Treatment";
 import HealthRecord from "@/models/HealthRecord";
 import { withAuth } from "@/utils/middleware";
+import { ADMIN, MANAGE } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 function isObjectIdString(value) {
   return typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
@@ -31,6 +33,9 @@ async function handler(req, res) {
     query: { id },
     method,
   } = req;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, Treatment, id)) return;
 
   if (method === "DELETE") {
     try {
@@ -75,4 +80,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler);
+export default withAuth(handler, { PUT: MANAGE, DELETE: ADMIN });

@@ -61,7 +61,7 @@ export default function InventoryCategories() {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        setSuccess("✓ Category added");
+        setSuccess("Category added");
         setFormData({ name: "", description: "" });
         fetchCategories();
       } else {
@@ -105,7 +105,7 @@ export default function InventoryCategories() {
         body: JSON.stringify(editValue)
       });
       if (res.ok) {
-        setSuccess("✓ Category updated");
+        setSuccess("Category updated");
         setEditingId(null);
         setEditValue({ name: "", description: "" });
         fetchCategories();
@@ -133,7 +133,7 @@ export default function InventoryCategories() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        setSuccess("✓ Category deleted");
+        setSuccess("Category deleted");
         fetchCategories();
       } else {
         const data = await res.json();
@@ -153,7 +153,7 @@ export default function InventoryCategories() {
         title="Inventory Categories"
         subtitle="Manage inventory categories for items and medications"
         gradient="from-green-600 to-green-700"
-        icon="🏷️"
+        icon="categories"
       />
 
       {canEdit && (

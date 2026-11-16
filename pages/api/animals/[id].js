@@ -1,11 +1,16 @@
 import dbConnect from "@/lib/mongodb";
 import Animal from "@/models/Animal";
 import { withAuth, withRBACAuth } from "@/utils/middleware";
+import { MANAGE } from "@/utils/permissions";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
 
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, Animal, id)) return;
 
   if (req.method === "GET") {
     try {
@@ -100,4 +105,4 @@ async function handler(req, res) {
 }
 
 // All authenticated users can GET animal details; PUT/DELETE restricted in handler if needed
-export default withAuth(handler);
+export default withAuth(handler, { PUT: MANAGE, DELETE: MANAGE });

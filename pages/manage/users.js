@@ -7,6 +7,7 @@ import StatsSummary from "@/components/shared/StatsSummary";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
 import { displayRole } from "@/utils/formatting";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function ManageUsers() {
   const router = useRouter();
@@ -156,28 +157,24 @@ export default function ManageUsers() {
     }
     setAddingUser(true);
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch("/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // The token proves a SuperAdmin is creating this account, which is what
+        // allows choosing a role and makes the account active straight away.
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: addUserForm.name.trim(),
           email: addUserForm.email.trim().toLowerCase(),
           pin: addUserForm.pin,
           role: addUserForm.role || "Attendant",
           phone: addUserForm.phone || "",
+          location: addUserForm.location || null,
+          locations: addUserForm.locations || [],
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to register user");
-      // If a location was selected, assign it
-      if ((addUserForm.location || addUserForm.locations?.length) && data.user?.id) {
-        const token = localStorage.getItem("token");
-        await fetch("/api/users", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: data.user.id, location: addUserForm.location, locations: addUserForm.locations || [] }),
-        });
-      }
       setSuccess(`User "${addUserForm.name}" created successfully!`);
       setAddUserForm({ name: "", email: "", pin: "", role: "Attendant", location: "", locations: [], phone: "" });
       setShowAddUser(false);
@@ -187,6 +184,30 @@ export default function ManageUsers() {
       setError(err.message || "Failed to add user");
     } finally {
       setAddingUser(false);
+    }
+  };
+
+  const handleToggleActive = async (user) => {
+    const activate = user.isActive === false;
+    if (!activate && !confirm(`Deactivate ${user.name}? They will be signed out and unable to log in.`)) return;
+    try {
+      setError("");
+      setSavingUserId(user._id);
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId: user._id, isActive: activate }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update user");
+      setUsers((prev) => prev.map((u) => (u._id === user._id ? data : u)));
+      setSuccess(`${user.name} ${activate ? "activated" : "deactivated"}.`);
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.message || "Failed to update user");
+    } finally {
+      setSavingUserId(null);
     }
   };
 
@@ -230,15 +251,15 @@ export default function ManageUsers() {
   const getRoleIcon = (role) => {
     switch (role) {
       case "SuperAdmin":
-        return "👑";
+        return "role-superadmin";
       case "SubAdmin":
-        return "🔑";
+        return "role-subadmin";
       case "Manager":
-        return "📋";
+        return "role-manager";
       case "Attendant":
-        return "👤";
+        return "role-attendant";
       default:
-        return "👥";
+        return "users";
     }
   };
 
@@ -260,7 +281,7 @@ export default function ManageUsers() {
         title="User Management"
         subtitle="Manage farm staff and access roles"
         gradient="from-orange-600 to-orange-700"
-        icon="👥"
+        icon="users"
         actions={
           <button
             onClick={() => { setShowAddUser(!showAddUser); setError(""); }}
@@ -303,10 +324,10 @@ export default function ManageUsers() {
                   <label className="text-sm font-semibold text-gray-700 mb-1 block">Role</label>
                   <select value={addUserForm.role} onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500">
-                    <option value="SuperAdmin">👑 SuperAdmin</option>
-                    <option value="SubAdmin">🔑 Admin</option>
-                    <option value="Manager">📋 Manager</option>
-                    <option value="Attendant">👤 Attendant</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                    <option value="SubAdmin">Admin</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Attendant">Attendant</option>
                   </select>
                 </div>
                 <div>
@@ -359,7 +380,7 @@ export default function ManageUsers() {
             bgColor: "bg-gray-50",
             borderColor: "border-gray-200",
             textColor: "text-gray-900",
-            icon: "👥",
+            icon: "users",
             filterKey: "all",
             onClick: () => setFilterRole("all"),
           },
@@ -369,7 +390,7 @@ export default function ManageUsers() {
             bgColor: "bg-red-50",
             borderColor: "border-red-200",
             textColor: "text-red-700",
-            icon: "👑",
+            icon: "role-superadmin",
             filterKey: "SuperAdmin",
             onClick: () => setFilterRole(filterRole === "SuperAdmin" ? "all" : "SuperAdmin"),
           },
@@ -379,7 +400,7 @@ export default function ManageUsers() {
             bgColor: "bg-orange-50",
             borderColor: "border-orange-200",
             textColor: "text-orange-700",
-            icon: "🔑",
+            icon: "role-subadmin",
             filterKey: "SubAdmin",
             onClick: () => setFilterRole(filterRole === "SubAdmin" ? "all" : "SubAdmin"),
           },
@@ -389,7 +410,7 @@ export default function ManageUsers() {
             bgColor: "bg-blue-50",
             borderColor: "border-blue-200",
             textColor: "text-blue-700",
-            icon: "📋",
+            icon: "role-manager",
             filterKey: "Manager",
             onClick: () => setFilterRole(filterRole === "Manager" ? "all" : "Manager"),
           },
@@ -399,7 +420,7 @@ export default function ManageUsers() {
             bgColor: "bg-green-50",
             borderColor: "border-green-200",
             textColor: "text-green-700",
-            icon: "👤",
+            icon: "role-attendant",
             filterKey: "Attendant",
             onClick: () => setFilterRole(filterRole === "Attendant" ? "all" : "Attendant"),
           },
@@ -464,6 +485,11 @@ export default function ManageUsers() {
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <span>{user.name}</span>
+                        {user.isActive === false && (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                            Awaiting activation
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">
@@ -479,10 +505,10 @@ export default function ManageUsers() {
                             onChange={(e) => setEditingRole(e.target.value)}
                             className="px-3 py-2 border-2 border-green-400 rounded-lg font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
                           >
-                            <option value="SuperAdmin">👑 SuperAdmin</option>
-                            <option value="SubAdmin">🔑 Admin</option>
-                            <option value="Manager">📋 Manager</option>
-                            <option value="Attendant">👤 Attendant</option>
+                            <option value="SuperAdmin">SuperAdmin</option>
+                            <option value="SubAdmin">Admin</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Attendant">Attendant</option>
                           </select>
                           <input
                             type="text"
@@ -498,7 +524,7 @@ export default function ManageUsers() {
                         </div>
                       ) : (
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>
-                          {getRoleIcon(user.role)} {displayRole(user.role)}
+                          <AppIcon name={getRoleIcon(user.role)} /> {displayRole(user.role)}
                         </span>
                       )}
                     </td>
@@ -534,15 +560,15 @@ export default function ManageUsers() {
                       ) : (
                         <span className="text-gray-700">
                           {user.role === "SuperAdmin" ? (
-                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold">🌐 All Locations</span>
+                            <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-lg text-xs font-semibold"><AppIcon name="globe" /> All Locations</span>
                           ) : user.locations && user.locations.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {user.locations.map((loc) => (
-                                <span key={loc._id || loc} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-semibold">📍 {loc.name || loc}</span>
+                                <span key={loc._id || loc} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs font-semibold"><AppIcon name="location" /> {loc.name || loc}</span>
                               ))}
                             </div>
                           ) : user.location?.name ? (
-                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold">📍 {user.location.name}</span>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-semibold"><AppIcon name="location" /> {user.location.name}</span>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
                           )}
@@ -550,7 +576,7 @@ export default function ManageUsers() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                      📅 {new Date(user.createdAt).toLocaleDateString()}
+                      <AppIcon name="calendar" /> {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       {editingUserId === user._id ? (
@@ -578,6 +604,19 @@ export default function ManageUsers() {
                           >
                             Edit
                           </button>
+                          {currentUser?.role === "SuperAdmin" && user._id !== currentUser.id && (
+                            <button
+                              onClick={() => handleToggleActive(user)}
+                              disabled={savingUserId === user._id}
+                              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
+                                user.isActive === false
+                                  ? "border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+                                  : "border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                              }`}
+                            >
+                              {user.isActive === false ? "Activate" : "Deactivate"}
+                            </button>
+                          )}
                           {currentUser?.role === "SuperAdmin" && user._id !== currentUser.id && (
                             <button
                               onClick={() => handleDeleteUser(user._id)}

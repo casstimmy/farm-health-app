@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import { BusinessContext } from "@/context/BusinessContext";
 import Loader from "@/components/Loader";
 import { getCachedData, invalidateCache } from "@/utils/cache";
+import AppIcon, { speciesIcon } from "@/components/shared/AppIcon";
 
 // Lazy-load Chart.js components to reduce initial bundle size
 const ChartLoader = () => <div className="h-48 flex items-center justify-center text-gray-400">Loading chart...</div>;
@@ -24,8 +25,6 @@ if (typeof window !== "undefined") {
 }
 
 const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#06b6d4", "#84cc16", "#e11d48"];
-const SPECIES_EMOJI = { Goat: "🐐", Cattle: "🐄", Cow: "🐄", Sheep: "🐑", Pig: "🐖", Chicken: "🐔", Poultry: "🐔", Horse: "🐴", Rabbit: "🐇", Fish: "🐟", Turkey: "🦃", Duck: "🦆", Dog: "🐕", Cat: "🐈" };
-const getSpeciesEmoji = (species) => SPECIES_EMOJI[species] || "🐾";
 
 const fmt = (v = 0) => Number(v).toLocaleString("en-US");
 const fmtMoney = (v = 0, c = "NGN") => {
@@ -303,15 +302,15 @@ export default function Home() {
   return (
     <>
       {/* Header */}
-      <header className="bg-gradient-to-r from-green-600 to-emerald-700 text-white px-8 py-8 -mx-6 -mt-10 md:-mx-12 md:-mt-12 mb-8 rounded-b-3xl shadow-lg">
+      <header className="bg-gradient-to-r from-green-600 to-emerald-700 text-white px-6 py-8 md:px-10 -mx-4 -mt-6 sm:-mx-6 md:-mx-8 md:-mt-8 lg:-mx-10 mb-8 rounded-b-3xl shadow-lg">
         <div className="flex justify-between items-start gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold mb-1">{businessSettings?.businessName || "Farm Dashboard"}</h1>
-            <p className="text-green-50 text-lg">Welcome back, <span className="font-bold text-white">{user.name}</span>! 👋</p>
+            <p className="text-green-50 text-lg">Welcome back, <span className="font-bold text-white">{user.name}</span>!</p>
           </div>
           <div className="flex gap-3 items-center flex-wrap">
             {!isOnline && (
-              <span className="px-3 py-1.5 bg-orange-500/90 text-white rounded-lg text-sm font-semibold">📡 Offline</span>
+              <span className="px-3 py-1.5 bg-orange-500/90 text-white rounded-lg text-sm font-semibold"><AppIcon name="offline" /> Offline</span>
             )}
           </div>
         </div>
@@ -363,22 +362,22 @@ export default function Home() {
           </div>
 
           {/* ─── Section: Livestock by Species ─── */}
-          <SectionTitle icon="🐾" title="Livestock by Species" />
+          <SectionTitle icon="animals" title="Livestock by Species" />
           {Object.keys(stats.speciesMap).length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
               {Object.entries(stats.speciesBreedMap).map(([species, info]) => (
                 <motion.div key={species} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-green-300 transition-all">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{getSpeciesEmoji(species)}</span>
+                    <span className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-green-50 text-green-700"><AppIcon name={speciesIcon(species)} className="w-6 h-6" /></span>
                     <div>
                       <h3 className="font-bold text-gray-900 text-sm">{species}</h3>
                       <p className="text-xs text-gray-500">{info.total} total</p>
                     </div>
                   </div>
                   <div className="flex gap-2 text-xs mt-1">
-                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">♂ {info.male}</span>
-                    <span className="px-2 py-0.5 bg-pink-50 text-pink-700 rounded font-semibold">♀ {info.female}</span>
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold"><AppIcon name="male" /> {info.male}</span>
+                    <span className="px-2 py-0.5 bg-pink-50 text-pink-700 rounded font-semibold"><AppIcon name="female" /> {info.female}</span>
                   </div>
                   {Object.keys(info.breeds).length > 0 && (
                     <div className="mt-2 border-t border-gray-100 pt-2">
@@ -396,67 +395,67 @@ export default function Home() {
           )}
 
           {/* Herd Overview KPIs */}
-          <SectionTitle icon="📊" title="Herd Overview" />
+          <SectionTitle icon="chart" title="Herd Overview" />
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
-            <KPI label="Total" value={fmt(stats.totalAnimals)} color="bg-blue-50 border-blue-200" icon="🐾" />
-            <KPI label="Alive" value={fmt(stats.aliveCount)} color="bg-green-50 border-green-200" icon="✅" />
-            <KPI label="Dead" value={fmt(stats.deadCount)} color="bg-red-50 border-red-200" icon="💀" />
-            <KPI label="Sold" value={fmt(stats.soldCount)} color="bg-yellow-50 border-yellow-200" icon="💵" />
-            <KPI label="Males" value={fmt(stats.maleCount)} color="bg-indigo-50 border-indigo-200" icon="♂️" />
-            <KPI label="Females" value={fmt(stats.femaleCount)} color="bg-pink-50 border-pink-200" icon="♀️" />
-            <KPI label="Quarantined" value={fmt(stats.quarantinedCount)} color="bg-orange-50 border-orange-200" icon="🔒" />
-            <KPI label="On Treatment" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="💊" />
+            <KPI label="Total" value={fmt(stats.totalAnimals)} color="bg-blue-50 border-blue-200" icon="animals" />
+            <KPI label="Alive" value={fmt(stats.aliveCount)} color="bg-green-50 border-green-200" icon="success" />
+            <KPI label="Dead" value={fmt(stats.deadCount)} color="bg-red-50 border-red-200" icon="mortality" />
+            <KPI label="Sold" value={fmt(stats.soldCount)} color="bg-yellow-50 border-yellow-200" icon="money" />
+            <KPI label="Males" value={fmt(stats.maleCount)} color="bg-indigo-50 border-indigo-200" icon="male" />
+            <KPI label="Females" value={fmt(stats.femaleCount)} color="bg-pink-50 border-pink-200" icon="female" />
+            <KPI label="Quarantined" value={fmt(stats.quarantinedCount)} color="bg-orange-50 border-orange-200" icon="lock" />
+            <KPI label="On Treatment" value={fmt(stats.activeTreatments)} color="bg-amber-50 border-amber-200" icon="treatment" />
           </div>
 
           {/* Financial Overview - SuperAdmin only */}
           {user?.role === "SuperAdmin" && (
             <>
-              <SectionTitle icon="💰" title="Financial Overview" />
+              <SectionTitle icon="money" title="Financial Overview" />
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-                <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="📈" />
-                <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="📉" />
-                <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "📊" : "⚠️"} />
-                <KPI label="Projected Sales" value={fmtMoney(stats.totalProjectedSales, currency)} color="bg-blue-50 border-blue-200" icon="🎯" />
-                <KPI label="Feed Costs" value={fmtMoney(stats.totalFeedCost, currency)} color="bg-orange-50 border-orange-200" icon="🌾" />
-                <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="💀" />
+                <KPI label="Total Income" value={fmtMoney(stats.totalIncome, currency)} color="bg-green-50 border-green-200" icon="trend-up" />
+                <KPI label="Total Expenses" value={fmtMoney(stats.totalExpense, currency)} color="bg-red-50 border-red-200" icon="trend-down" />
+                <KPI label="Net P/L" value={fmtMoney(stats.netPL, currency)} color={stats.netPL >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"} icon={stats.netPL >= 0 ? "chart" : "warning"} />
+                <KPI label="Projected Sales" value={fmtMoney(stats.totalProjectedSales, currency)} color="bg-blue-50 border-blue-200" icon="target" />
+                <KPI label="Feed Costs" value={fmtMoney(stats.totalFeedCost, currency)} color="bg-orange-50 border-orange-200" icon="feed" />
+                <KPI label="Mortality Loss" value={fmtMoney(stats.mortalityLoss, currency)} color="bg-gray-50 border-gray-200" icon="mortality" />
               </div>
             </>
           )}
 
           {/* Breeding & Operations */}
-          <SectionTitle icon="💕" title="Breeding & Operations" />
+          <SectionTitle icon="breeding" title="Breeding & Operations" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-            <KPI label="Breeding Records" value={fmt(stats.totalBreeding)} color="bg-pink-50 border-pink-200" icon="💕" />
-            <KPI label="Confirmed" value={fmt(stats.confirmed)} color="bg-blue-50 border-blue-200" icon="🤰" />
-            <KPI label="Pending" value={fmt(stats.pendingBreeding)} color="bg-yellow-50 border-yellow-200" icon="⏳" />
-            <KPI label="Delivered" value={fmt(stats.delivered)} color="bg-green-50 border-green-200" icon="🐣" />
-            <KPI label="Kids Born" value={fmt(stats.totalKids)} color="bg-emerald-50 border-emerald-200" icon="🎉" />
-            <KPI label="Total Deaths" value={fmt(stats.totalDeaths)} color="bg-red-50 border-red-200" icon="🪦" />
+            <KPI label="Breeding Records" value={fmt(stats.totalBreeding)} color="bg-pink-50 border-pink-200" icon="breeding" />
+            <KPI label="Confirmed" value={fmt(stats.confirmed)} color="bg-blue-50 border-blue-200" icon="pregnant" />
+            <KPI label="Pending" value={fmt(stats.pendingBreeding)} color="bg-yellow-50 border-yellow-200" icon="pending" />
+            <KPI label="Delivered" value={fmt(stats.delivered)} color="bg-green-50 border-green-200" icon="born" />
+            <KPI label="Kids Born" value={fmt(stats.totalKids)} color="bg-emerald-50 border-emerald-200" icon="star" />
+            <KPI label="Total Deaths" value={fmt(stats.totalDeaths)} color="bg-red-50 border-red-200" icon="mortality" />
           </div>
 
           {/* Inventory KPIs */}
-          <SectionTitle icon="📦" title="Inventory" />
+          <SectionTitle icon="box" title="Inventory" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
-            <KPI label="Inventory Items" value={fmt(stats.totalItems)} color="bg-indigo-50 border-indigo-200" icon="📦" />
-            <KPI label="Low Stock" value={fmt(stats.lowStock.length)} color={stats.lowStock.length > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"} icon="⚠️" />
-            <KPI label="Inventory Value" value={fmtMoney(stats.inventoryValue, currency)} color="bg-purple-50 border-purple-200" icon="🏷️" />
-            <KPI label="Recovered" value={fmt(stats.recovered)} color="bg-teal-50 border-teal-200" icon="✅" />
+            <KPI label="Inventory Items" value={fmt(stats.totalItems)} color="bg-indigo-50 border-indigo-200" icon="box" />
+            <KPI label="Low Stock" value={fmt(stats.lowStock.length)} color={stats.lowStock.length > 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"} icon="warning" />
+            <KPI label="Inventory Value" value={fmtMoney(stats.inventoryValue, currency)} color="bg-purple-50 border-purple-200" icon="tag" />
+            <KPI label="Recovered" value={fmt(stats.recovered)} color="bg-teal-50 border-teal-200" icon="success" />
           </div>
 
           {/* Average Weight by Species */}
           {Object.keys(stats.weightBySpecies).length > 0 && (
             <>
-              <SectionTitle icon="⚖️" title="Average Weight by Species" />
+              <SectionTitle icon="weight" title="Average Weight by Species" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8">
                 {Object.entries(stats.weightBySpecies).map(([sp, w]) => (
-                  <KPI key={sp} label={sp} value={`${w.avg} kg`} color="bg-purple-50 border-purple-200" icon={getSpeciesEmoji(sp)} />
+                  <KPI key={sp} label={sp} value={`${w.avg} kg`} color="bg-purple-50 border-purple-200" icon={speciesIcon(sp)} />
                 ))}
               </div>
             </>
           )}
 
           {/* Charts Row */}
-          <SectionTitle icon="📈" title="Visual Analytics" />
+          <SectionTitle icon="trend-up" title="Visual Analytics" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <ChartCard title="Species Distribution">
               {Object.keys(stats.speciesMap).length > 0 ? (
@@ -483,41 +482,41 @@ export default function Home() {
           </div>
 
           {/* Activity Feeds */}
-          <SectionTitle icon="📋" title="Recent Activity" />
+          <SectionTitle icon="list" title="Recent Activity" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Recent Breeding */}
-            <ListCard title="Breeding Updates" icon="💕" items={
+            <ListCard title="Breeding Updates" icon="breeding" items={
               stats.recentBreeding.slice(0, 6).map(b => ({
                 label: `${b.doe?.tagId || b.doe?.name || "?"} × ${b.buck?.tagId || b.buck?.name || "?"}`,
                 meta: `${b.pregnancyStatus || "—"}${b.kidsAlive > 0 ? ` • ${b.kidsAlive} kids` : ""}${b.matingDate ? ` • ${new Date(b.matingDate).toLocaleDateString()}` : ""}`,
-                emoji: b.pregnancyStatus === "Delivered" ? "🐣" : b.pregnancyStatus === "Confirmed" ? "🤰" : b.pregnancyStatus === "Not Pregnant" ? "❌" : "⏳",
+                emoji: b.pregnancyStatus === "Delivered" ? "born" : b.pregnancyStatus === "Confirmed" ? "pregnant" : b.pregnancyStatus === "Not Pregnant" ? "error" : "pending",
               }))
             } emptyText="No breeding records" link="/manage/breeding" />
 
             {/* Recent Health Records */}
-            <ListCard title="Health Records" icon="🏥" items={
+            <ListCard title="Health Records" icon="health" items={
               stats.recentTreatments.slice(0, 6).map(h => ({
                 label: h.animalTagId || h.animal?.tagId || h.animal?.name || "Unknown",
                 meta: `${h.symptoms || h.diagnosis || "Treatment"} • ${h.recoveryStatus || "—"}`,
-                emoji: h.recoveryStatus === "Recovered" ? "✅" : h.recoveryStatus === "Improving" ? "📈" : h.recoveryStatus === "Deteriorating" ? "📉" : "💊",
+                emoji: h.recoveryStatus === "Recovered" ? "success" : h.recoveryStatus === "Improving" ? "trend-up" : h.recoveryStatus === "Deteriorating" ? "trend-down" : "treatment",
               }))
             } emptyText="No health records" link="/manage/health-records" />
 
             {/* Low Stock Alerts */}
-            <ListCard title="Low Stock Alerts" icon="⚠️" items={
+            <ListCard title="Low Stock Alerts" icon="warning" items={
               stats.lowStock.slice(0, 6).map(i => ({
                 label: i.item || i.name,
                 meta: `${i.quantity} ${i.unit || "units"} remaining (min: ${i.minStock || 10})`,
-                emoji: i.quantity <= 0 ? "🚨" : "📦",
+                emoji: i.quantity <= 0 ? "alert" : "box",
               }))
-            } emptyText="All stock levels are healthy ✅" link="/manage/inventory" />
+            } emptyText="All stock levels are healthy" link="/manage/inventory" />
 
             {/* Recent Mortality */}
-            <ListCard title="Recent Mortality" icon="🪦" items={
+            <ListCard title="Recent Mortality" icon="mortality" items={
               stats.recentMortality.slice(0, 6).map(m => ({
                 label: m.animal?.tagId || m.animalTagId || "Unknown",
                 meta: `${m.causeOfDeath || "Unknown cause"}${m.dateOfDeath ? ` • ${new Date(m.dateOfDeath).toLocaleDateString()}` : ""}`,
-                emoji: "💀",
+                emoji: "mortality",
               }))
             } emptyText="No mortality records" link="/manage/mortality" />
           </div>
@@ -530,7 +529,7 @@ export default function Home() {
 function SectionTitle({ icon, title }) {
   return (
     <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-      <span>{icon}</span>{title}
+      <AppIcon name={icon} className="w-5 h-5 text-green-600" />{title}
     </h2>
   );
 }
@@ -548,7 +547,7 @@ function KPI({ label, value, color, icon }) {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className={`${color} border-2 p-3 rounded-xl shadow-sm hover:shadow-md transition-all`}>
       <div className="flex items-center gap-1.5 mb-0.5">
-        <span className="text-base">{icon}</span>
+        <AppIcon name={icon} className="w-3.5 h-3.5 text-gray-500" />
         <span className="text-xs font-semibold text-gray-600 truncate">{label}</span>
       </div>
       <div className="text-lg font-black text-gray-900 truncate">{value}</div>
@@ -573,13 +572,13 @@ function ListCard({ title, icon, items, emptyText, link }) {
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2"><span>{icon}</span>{title}</h3>
+        <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2"><AppIcon name={icon} className="w-4 h-4 text-green-600" />{title}</h3>
         {link && <Link href={link} className="text-xs text-green-600 font-semibold hover:underline">View All →</Link>}
       </div>
       <ul className="space-y-1.5">
         {items.length > 0 ? items.map((i, idx) => (
           <li key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50 hover:bg-green-50 transition-all">
-            <span className="text-sm flex-shrink-0 mt-0.5">{i.emoji}</span>
+            <AppIcon name={i.emoji} className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-gray-500" />
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 text-xs truncate">{i.label}</div>
               <div className="text-xs text-gray-500 truncate">{i.meta}</div>

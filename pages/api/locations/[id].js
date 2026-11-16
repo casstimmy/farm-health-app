@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import Location from "@/models/Location";
 import { withAuth } from "@/utils/middleware";
+import { ADMIN, SENIOR } from "@/utils/permissions";
 
 async function handler(req, res) {
   await dbConnect();
@@ -126,4 +127,4 @@ async function handler(req, res) {
   return res.status(405).json({ error: "Method not allowed" });
 }
 
-export default withAuth(handler);
+export default withAuth(handler, { PUT: SENIOR, PATCH: SENIOR, DELETE: ADMIN });

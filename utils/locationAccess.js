@@ -37,7 +37,9 @@ export function getUserLocationIds(user) {
 export function buildLocationFilter(user, fieldName = "location") {
   const locIds = getUserLocationIds(user);
   if (locIds === null) return null; // SuperAdmin - no filter
-  if (locIds.length === 0) return { [fieldName]: null }; // No locations assigned - show nothing
+  // No locations assigned: match nothing. (An empty $in never matches, whereas
+  // { location: null } would wrongly match every record without a location.)
+  if (locIds.length === 0) return { [fieldName]: { $in: [] } };
   if (locIds.length === 1) return { [fieldName]: locIds[0] };
   return { [fieldName]: { $in: locIds } };
 }

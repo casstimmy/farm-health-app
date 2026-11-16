@@ -1,10 +1,14 @@
 import dbConnect from "@/lib/mongodb";
 import Inventory from "@/models/Inventory";
 import { withAuth } from "@/utils/middleware";
+import { denyIfOutsideLocation } from "@/utils/recordAccess";
 
 async function handler(req, res) {
   await dbConnect();
   const { id } = req.query;
+
+  // Staff may only touch records that belong to their own location(s).
+  if (await denyIfOutsideLocation(req, res, Inventory, id)) return;
 
   if (req.method === "GET") {
     try {
@@ -19,7 +23,7 @@ async function handler(req, res) {
   } else if (req.method === "PUT") {
     try {
       // Only SuperAdmin and Manager can update inventory
-      if (!["SuperAdmin", "Manager"].includes(req.user?.role)) {
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(req.user?.role)) {
         return res.status(403).json({ error: "Forbidden: Insufficient permissions" });
       }
 

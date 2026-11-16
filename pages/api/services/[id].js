@@ -16,7 +16,7 @@ async function handler(req, res) {
     }
   } else if (req.method === "PUT") {
     try {
-      if (!["SuperAdmin", "Manager"].includes(req.user?.role)) {
+      if (!["SuperAdmin", "SubAdmin", "Manager"].includes(req.user?.role)) {
         return res.status(403).json({ error: "Forbidden" });
       }
       const service = await Service.findByIdAndUpdate(id, req.body, {

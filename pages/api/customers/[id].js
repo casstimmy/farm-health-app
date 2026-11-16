@@ -2,6 +2,7 @@ import dbConnect from "@/lib/mongodb";
 import Customer from "@/models/Customer";
 import "@/models/Location";
 import { withRBACAuth } from "@/utils/middleware";
+import { ADMIN, MANAGE } from "@/utils/permissions";
 
 async function handler(req, res) {
   await dbConnect();
@@ -62,4 +63,4 @@ async function handler(req, res) {
   return res.status(405).json({ error: "Method not allowed" });
 }
 
-export default withRBACAuth(["SuperAdmin", "Manager"])(handler);
+export default withRBACAuth(MANAGE, { DELETE: ADMIN })(handler);

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { FaShieldAlt, FaCheckCircle, FaTimesCircle, FaKey } from "react-icons/fa";
+import { FaShieldAlt, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import AppIcon, { ICONS } from "@/components/shared/AppIcon";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
 import Loader from "@/components/Loader";
@@ -137,7 +138,7 @@ export default function RolesPermissions() {
       <PageHeader 
         title="Roles & Permissions" 
         description="Manage user roles and their access levels"
-        icon={<FaShieldAlt className="w-8 h-8" />}
+        icon="roles"
       />
 
       {statusMsg && (
@@ -160,9 +161,13 @@ export default function RolesPermissions() {
             {/* Role Header */}
             <div className="flex items-center gap-4 mb-6">
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${role.color} flex items-center justify-center text-white text-2xl shadow-lg`}>
-                <FaKey className="w-6 h-6" />
+                {/* Same per-role icon as on the Users page */}
+                <AppIcon
+                  name={ICONS[`role-${String(role.name).toLowerCase()}`] ? `role-${String(role.name).toLowerCase()}` : "roles"}
+                  className="w-6 h-6"
+                />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-xl font-bold text-gray-900">{displayRole(role.name)}</h3>
                 <p className="text-sm text-gray-600">{role.description}</p>
               </div>
@@ -240,10 +245,10 @@ export default function RolesPermissions() {
                 </button>
               ) : (
                 <p className="text-xs text-gray-600 text-center">
-                  {role.name === "SuperAdmin" && "👑 System Administrator — All Locations"}
-                  {role.name === "SubAdmin" && "🔑 Location Admin — Assigned Location Only"}
-                  {role.name === "Manager" && "👔 Farm Manager"}
-                  {role.name === "Attendant" && "👷 Farm Attendant"}
+                  {role.name === "SuperAdmin" && "System Administrator — All Locations"}
+                  {role.name === "SubAdmin" && "Location Admin — Assigned Location Only"}
+                  {role.name === "Manager" && "Farm Manager"}
+                  {role.name === "Attendant" && "Farm Attendant"}
                 </p>
               )}
             </div>

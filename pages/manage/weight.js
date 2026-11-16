@@ -13,6 +13,7 @@ import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filter
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { formatDateForInput } from "@/utils/formatting";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 export default function WeightTracking() {
   const router = useRouter();
@@ -204,7 +205,7 @@ export default function WeightTracking() {
         <PageHeader
           title="Weight Tracking"
           subtitle="Monitor and compare animal weight progression"
-          icon="âš–ï¸"
+          icon="weight"
           actions={<button onClick={() => { setShowForm(!showForm); setError(""); resetForm(); }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Record Weight"}</button>}
         />
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
@@ -216,7 +217,7 @@ export default function WeightTracking() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Weight Tracking" subtitle="Monitor and compare animal weight progression" icon="⚖️"
+      <PageHeader title="Weight Tracking" subtitle="Monitor and compare animal weight progression" icon="weight"
         actions={<button onClick={() => { setShowForm(!showForm); setError(""); resetForm(); }} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium">{showForm ? <FaTimes /> : <FaPlus />} {showForm ? "Cancel" : "Record Weight"}</button>}
       />
 
@@ -246,7 +247,7 @@ export default function WeightTracking() {
           <div className="bg-purple-600 px-6 py-3"><h3 className="text-lg font-bold text-white">{editingId ? "Edit Weight Record" : "Record Weight"}</h3></div>
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
-              <h4 className="font-bold text-purple-900 mb-3 flex items-center gap-2">⚖️ Weight Details</h4>
+              <h4 className="font-bold text-purple-900 mb-3 flex items-center gap-2"><AppIcon name="weight" /> Weight Details</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div><label className="label">Species Filter</label><select value={filterSpecies} onChange={(e) => { setFilterSpecies(e.target.value); setFormAnimalId(""); }} className="input-field"><option value="all">All Species</option>{speciesList.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
                 <div><label className="label">Animal *</label><select value={formAnimalId} onChange={(e) => setFormAnimalId(e.target.value)} className="input-field" required disabled={!!editingId}><option value="">-- Select Animal --</option>{filteredAliveAnimals.map((a) => <option key={a._id} value={a._id}>{a.name ? `${a.name} (${a.tagId})` : a.tagId} — {a.currentWeight || "?"}kg</option>)}</select></div>
@@ -280,7 +281,7 @@ export default function WeightTracking() {
       {viewMode === "overview" ? (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
           {filtered.length === 0 ? (
-            <div className="text-center py-16"><span className="text-5xl mb-4 block">⚖️</span><p className="text-gray-500 text-lg">No animals found</p></div>
+            <div className="text-center py-16"><span className="text-5xl mb-4 block text-gray-300"><AppIcon name="weight" /></span><p className="text-gray-500 text-lg">No animals found</p></div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -361,7 +362,7 @@ export default function WeightTracking() {
           </div>
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {historyRecords.length === 0 ? (
-              <div className="text-center py-16"><span className="text-5xl mb-4 block">📊</span><p className="text-gray-500 text-lg">No records found</p></div>
+              <div className="text-center py-16"><span className="text-5xl mb-4 block text-gray-300"><AppIcon name="chart" /></span><p className="text-gray-500 text-lg">No records found</p></div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">

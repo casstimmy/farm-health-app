@@ -222,7 +222,7 @@ export default function ManageServices() {
       <PageHeader
         title="Services"
         subtitle="Manage farm services and offerings"
-        icon="🛠️"
+        icon="services"
         actions={
           canEdit && (
             <button

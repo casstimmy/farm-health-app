@@ -13,6 +13,7 @@ import { useRole } from "@/hooks/useRole";
 import { PERIOD_OPTIONS, filterByPeriod, filterByLocation } from "@/utils/filterHelpers";
 import { useAnimalData } from "@/context/AnimalDataContext";
 import { getClientLocationIds } from "@/utils/locationAccess";
+import AppIcon from "@/components/shared/AppIcon";
 
 const FEEDING_METHODS = ["Trough", "Hand-fed", "Grazing", "Paddock", "Automatic Feeder", "Bottle", "Creep Feeder", "Other"];
 
@@ -426,7 +427,7 @@ export default function Feeding() {
       <PageHeader
         title="Feeding Records"
         subtitle="Track and manage animal feeding schedules and nutrition"
-        icon="🌾"
+        icon="feed"
         actions={
           <button
             onClick={() => { setShowForm(!showForm); setError(""); setEditingId(null); setFormData({ ...initialFormState, location: user?.location || "" }); setFeedItems([{ ...emptyFeedItem }]); setEditingFeedIdx(null); }}
@@ -493,7 +494,7 @@ export default function Feeding() {
             {/* Feeding Mode Toggle - only show for new records */}
             {!editingId && (
               <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2">🔄 Feeding Mode</h4>
+                <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2"><AppIcon name="sync" /> Feeding Mode</h4>
                 <div className="flex items-center gap-4 flex-wrap">
                   <button
                     type="button"
@@ -520,7 +521,7 @@ export default function Feeding() {
                       feedingMode === "paddock" ? "bg-amber-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                     }`}
                   >
-                    🏠 By Paddock/Shed
+                    <AppIcon name="paddock" /> By Paddock/Shed
                   </button>
                 </div>
               </div>
@@ -528,7 +529,7 @@ export default function Feeding() {
 
             {/* Animal Selection */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-              <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">🐐 Animal Selection</h4>
+              <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><AppIcon name="goat" /> Animal Selection</h4>
               {feedingMode === "individual" || editingId ? (
                 <div>
                   <label className="label">Select Animal *</label>
@@ -610,7 +611,7 @@ export default function Feeding() {
                   {selectedPaddock && (
                     <div className="bg-white border border-blue-200 rounded-lg p-3">
                       <p className="text-sm font-semibold text-blue-800 mb-2">
-                        🏠 {selectedPaddock} — {selectedGroupIds.length} animal(s) selected
+                        <AppIcon name="paddock" /> {selectedPaddock} — {selectedGroupIds.length} animal(s) selected
                       </p>
                       <div className="max-h-32 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1">
                         {aliveAnimals
@@ -672,7 +673,7 @@ export default function Feeding() {
             <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") e.preventDefault(); }}>
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-green-900 flex items-center gap-2">🌾 Feed Items ({feedItems.filter(fi => fi.feedCategory?.trim()).length} added)</h4>
+                  <h4 className="font-bold text-green-900 flex items-center gap-2"><AppIcon name="feed" /> Feed Items ({feedItems.filter(fi => fi.feedCategory?.trim()).length} added)</h4>
                 </div>
 
                 <div className="space-y-4">
@@ -690,7 +691,7 @@ export default function Feeding() {
                       </select>
                     </div>
                     <div>
-                      <label className="label">Location {feedingMode === "paddock" && formData.location ? "🔒" : ""}</label>
+                      <label className="label">Location {feedingMode === "paddock" && formData.location && <AppIcon name="lock" className="text-gray-400" />}</label>
                       <select value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="input-field" disabled={feedingMode === "paddock" && !!formData.location}>
                         <option value="">-- Select Location --</option>
                         {userLocations.map((loc) => <option key={loc._id} value={loc._id}>{loc.name}</option>)}
@@ -841,7 +842,7 @@ export default function Feeding() {
 
               {/* Notes */}
               <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 mt-4">
-                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">📝 Notes</h4>
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><AppIcon name="note" /> Notes</h4>
                 <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2} placeholder="Optional notes..." className="input-field" />
               </div>
 
@@ -886,7 +887,7 @@ export default function Feeding() {
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         {filteredRecords.length === 0 ? (
           <div className="text-center py-16">
-            <span className="text-5xl mb-4 block">🌾</span>
+            <span className="text-5xl mb-4 block text-gray-300"><AppIcon name="feed" /></span>
             <p className="text-gray-500 text-lg">No feeding records found</p>
             <p className="text-gray-400 text-sm mt-1">Click &quot;Add Feeding&quot; to create a record</p>
           </div>

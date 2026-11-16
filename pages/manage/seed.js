@@ -7,23 +7,24 @@ import { FaDatabase, FaSpinner, FaCheckCircle, FaExclamationTriangle, FaFileExce
 import PageHeader from "@/components/shared/PageHeader";
 import { useRole } from "@/hooks/useRole";
 import { invalidateCachePattern } from "@/utils/cache";
+import AppIcon from "@/components/shared/AppIcon";
 
 const SEED_CATEGORIES = [
-  { key: "locations", label: "Locations", icon: "📍", desc: "Farm locations and zones" },
-  { key: "inventoryCategories", label: "Inventory Categories", icon: "📦", desc: "Category types" },
-  { key: "inventoryItems", label: "Inventory Items", icon: "🧴", desc: "Feed, medicine, equipment" },
-  { key: "feedTypes", label: "Feed Types", icon: "🌾", desc: "Feed type definitions" },
-  { key: "animals", label: "Animals", icon: "🐾", desc: "Sample animal profiles" },
-  { key: "treatments", label: "Treatments", icon: "💊", desc: "Treatment records" },
-  { key: "healthRecords", label: "Health Records", icon: "🏥", desc: "Health records" },
-  { key: "feedingRecords", label: "Feeding Records", icon: "🍽️", desc: "Feeding history" },
-  { key: "weightRecords", label: "Weight Records", icon: "⚖️", desc: "Weight tracking" },
-  { key: "vaccinationRecords", label: "Vaccinations", icon: "💉", desc: "Vaccination records" },
-  { key: "breedingRecords", label: "Breeding", icon: "❤️", desc: "Breeding history" },
-  { key: "mortalityRecords", label: "Mortality", icon: "💀", desc: "Mortality records" },
-  { key: "financialTransactions", label: "Finances", icon: "FIN", desc: "Income and expenses" },
-  { key: "services", label: "Services", icon: "🔧", desc: "Farm services" },
-  { key: "blogPosts", label: "Blog Posts", icon: "📝", desc: "E-commerce blog posts" },
+  { key: "locations", label: "Locations", icon: "location", desc: "Farm locations and zones" },
+  { key: "inventoryCategories", label: "Inventory Categories", icon: "box", desc: "Category types" },
+  { key: "inventoryItems", label: "Inventory Items", icon: "supplies", desc: "Feed, medicine, equipment" },
+  { key: "feedTypes", label: "Feed Types", icon: "feed", desc: "Feed type definitions" },
+  { key: "animals", label: "Animals", icon: "animals", desc: "Sample animal profiles" },
+  { key: "treatments", label: "Treatments", icon: "treatment", desc: "Treatment records" },
+  { key: "healthRecords", label: "Health Records", icon: "health", desc: "Health records" },
+  { key: "feedingRecords", label: "Feeding Records", icon: "meal", desc: "Feeding history" },
+  { key: "weightRecords", label: "Weight Records", icon: "weight", desc: "Weight tracking" },
+  { key: "vaccinationRecords", label: "Vaccinations", icon: "vaccine", desc: "Vaccination records" },
+  { key: "breedingRecords", label: "Breeding", icon: "breeding", desc: "Breeding history" },
+  { key: "mortalityRecords", label: "Mortality", icon: "mortality", desc: "Mortality records" },
+  { key: "financialTransactions", label: "Finances", icon: "finance", desc: "Income and expenses" },
+  { key: "services", label: "Services", icon: "services", desc: "Farm services" },
+  { key: "blogPosts", label: "Blog Posts", icon: "note", desc: "E-commerce blog posts" },
 ];
 
 const PASTE_DATA_TYPES = [
@@ -132,7 +133,7 @@ export default function SeedDatabase() {
       setError("Select at least one category to seed.");
       return;
     }
-    if (!confirm("⚠️ This will insert sample data into your database. Existing records with the same unique IDs will be skipped. Continue?")) return;
+    if (!confirm("This will insert sample data into your database. Existing records with the same unique IDs will be skipped. Continue?")) return;
 
     setSeeding(true);
     setResult(null);
@@ -407,9 +408,9 @@ export default function SeedDatabase() {
     : [];
 
   const tabs = [
-    { id: "seed", label: "🌱 Seed Data", desc: "Insert sample data" },
-    { id: "excel", label: "📄 Excel / CSV", desc: "Drag & drop files" },
-    { id: "paste", label: "📋 Copy & Paste", desc: "Paste from spreadsheet" },
+    { id: "seed", label: "Seed Data", desc: "Insert sample data" },
+    { id: "excel", label: "Excel / CSV", desc: "Drag & drop files" },
+    { id: "paste", label: "Copy & Paste", desc: "Paste from spreadsheet" },
   ];
 
   return (
@@ -418,13 +419,13 @@ export default function SeedDatabase() {
         title="Data Management"
         subtitle="Seed sample data, import from Excel, or paste from spreadsheet"
         gradient="from-purple-600 to-indigo-600"
-        icon="🌱"
+        icon="seed"
       />
 
       {!isOnline && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="p-4 rounded-lg border-l-4 bg-orange-50 border-orange-500 text-orange-700 font-semibold flex items-center gap-2">
-          <span>📡</span><span>You are currently offline. Data operations are disabled.</span>
+          <span><AppIcon name="offline" /></span><span>You are currently offline. Data operations are disabled.</span>
         </motion.div>
       )}
 
@@ -476,7 +477,7 @@ export default function SeedDatabase() {
                         }}
                         className="mt-0.5"
                       />
-                      <span className="text-lg">{cat.icon}</span>
+                      <AppIcon name={cat.icon} className="w-4 h-4 text-gray-600" />
                       <div className="min-w-0">
                         <span className="text-gray-700 font-medium text-xs block truncate">{cat.label}</span>
                         <p className="text-xs text-gray-400 truncate">{cat.desc}</p>
@@ -656,7 +657,7 @@ export default function SeedDatabase() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {resultItems.map((item) => (
                       <div key={item.label} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-green-100 text-sm">
-                        <span className="text-gray-700 flex items-center gap-1.5"><span className="text-sm">{item.icon}</span><span className="text-xs">{item.label}</span></span>
+                        <span className="text-gray-700 flex items-center gap-1.5"><AppIcon name={item.icon} className="w-3.5 h-3.5 text-gray-500" /><span className="text-xs">{item.label}</span></span>
                         <span className={`font-bold px-2 py-0.5 rounded text-xs ${item.count > 0 ? "text-green-700 bg-green-100" : "text-gray-400 bg-gray-100"}`}>
                           {item.count > 0 ? `+${item.count}` : "0"}
                         </span>

@@ -11,6 +11,7 @@ import { useRole } from "@/hooks/useRole";
 import { getClientLocationIds } from "@/utils/locationAccess";
 import { formatCurrency, shouldHideAmounts } from "@/utils/formatting";
 import { BusinessContext } from "@/context/BusinessContext";
+import AppIcon from "@/components/shared/AppIcon";
 
 const STATUS_FLOW = {
   Pending: { next: "Confirmed", label: "Confirm", color: "bg-blue-600 hover:bg-blue-700", icon: "checkCircle" },
@@ -278,7 +279,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Order Management" subtitle="Create orders and manage fulfillment pipeline" gradient="from-indigo-600 to-indigo-700" icon="🧾" />
+      <PageHeader title="Order Management" subtitle="Create orders and manage fulfillment pipeline" gradient="from-indigo-600 to-indigo-700" icon="orders" />
 
       {(loading || roleLoading) && <div className="bg-white rounded-xl border border-gray-200 p-10"><Loader message="Loading orders..." color="blue-600" /></div>}
 
@@ -303,7 +304,7 @@ export default function OrdersPage() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4 border border-gray-200">
               <div className="text-center mb-4">
-                <span className="text-4xl mb-2 block">📧</span>
+                <span className="text-4xl mb-2 block text-gray-300"><AppIcon name="email" /></span>
                 <h3 className="text-lg font-bold text-gray-900">Send Email Notification?</h3>
                 <p className="text-sm text-gray-500 mt-1">
                   Would you like to notify the customer about the order status change to <strong>{emailModal.status}</strong>?
@@ -327,10 +328,10 @@ export default function OrdersPage() {
       {!loading && !roleLoading && (
         <>
           <StatsSummary stats={[
-            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "📦", filterKey: "all", onClick: () => setFilterStatus("all") },
-            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "⏳", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
-            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "🔄", filterKey: "Processing", onClick: () => setFilterStatus(filterStatus === "Processing" ? "all" : "Processing") },
-            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "✅", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "all" : "Completed") },
+            { label: "Total Orders", value: stats.total, bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-900", icon: "box", filterKey: "all", onClick: () => setFilterStatus("all") },
+            { label: "Pending", value: stats.pending, bgColor: "bg-yellow-50", borderColor: "border-yellow-200", textColor: "text-yellow-700", icon: "pending", filterKey: "Pending", onClick: () => setFilterStatus(filterStatus === "Pending" ? "all" : "Pending") },
+            { label: "In Progress", value: stats.processing, bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700", icon: "sync", filterKey: "Processing", onClick: () => setFilterStatus(filterStatus === "Processing" ? "all" : "Processing") },
+            { label: "Completed", value: stats.completed, bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700", icon: "success", filterKey: "Completed", onClick: () => setFilterStatus(filterStatus === "Completed" ? "all" : "Completed") },
           ]} activeFilter={filterStatus} />
 
           <div className="flex flex-col md:flex-row md:items-center gap-3">
